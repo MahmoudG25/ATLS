@@ -1,0 +1,53 @@
+import React from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const isProd = import.meta.env.PROD;
+      
+      return (
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh" bgcolor="#f8fafc" p={3}>
+          <WarningAmberIcon sx={{ fontSize: 80, color: '#f59e0b', mb: 2 }} />
+          <Typography variant="h4" fontWeight="bold" color="textPrimary" gutterBottom>
+            عذراً، حدث خطأ غير متوقع
+          </Typography>
+          <Typography variant="body1" color="textSecondary" mb={4} textAlign="center" maxWidth="sm">
+             نواجه مشكلة فنية حالياً. المرجو المحاولة مرة أخرى أو العودة للرئيسية.
+             {!isProd && this.state.error && (
+               <>
+                 <br/>
+                 <span style={{color: '#ef4444', fontSize: '12px'}}>{this.state.error.toString()}</span>
+               </>
+             )}
+          </Typography>
+          <Box display="flex" gap={2}>
+            <Button variant="outlined" color="primary" onClick={() => this.setState({ hasError: false, error: null })}>
+              إعادة المحاولة
+            </Button>
+            <Button variant="contained" color="primary" onClick={() => window.location.href = '/'}>
+              العودة للرئيسية
+            </Button>
+          </Box>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
