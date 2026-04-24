@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SimpleTreeView, TreeItem } from '@mui/x-tree-view';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, CircularProgress, Alert, Grid, Card } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, CircularProgress, Alert, Grid, Card, Drawer, IconButton, Box } from '@mui/material';
 import { getFarms, getCropTypes, getFarmStructure, createSector, createPlot, getPlotStats } from '../../features/farm/services';
 import { useTranslation } from 'react-i18next';
 import TerrainIcon  from '@mui/icons-material/Terrain';
@@ -8,9 +7,31 @@ import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import './FarmStructure.css';
+
+const OrgNode = ({ title, subtitle, isRoot, isSector, active, onClick, badge }) => (
+  <div 
+    onClick={onClick}
+    className={`relative flex flex-col items-center justify-center px-4 py-3 rounded-lg border cursor-pointer transition-all ${
+      active 
+        ? 'border-green-600 bg-green-50 shadow-sm ring-1 ring-green-600 z-10' 
+        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm z-0'
+    }`}
+    style={{ minWidth: '150px' }}
+    dir="rtl"
+  >
+    {badge && <span className="absolute -top-2.5 -right-2 bg-slate-800 text-white text-[0.65rem] px-2 py-0.5 rounded shadow-sm tracking-wide">{badge}</span>}
+    <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-2 ${isRoot ? 'bg-slate-800 text-white shadow-sm' : isSector ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
+      {isRoot ? <AccountTreeOutlinedIcon fontSize="small" /> : isSector ? <AutoGraphIcon fontSize="small" /> : <TerrainIcon fontSize="small" />}
+    </div>
+    <p className="font-semibold text-slate-800 text-sm tracking-tight">{title}</p>
+    {subtitle && <p className="text-[0.7rem] font-medium text-slate-500 mt-1">{subtitle}</p>}
+  </div>
+);
 
 const FarmStructure = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [structure, setStructure] = useState([]);
   const [farms, setFarms]         = useState([]);
   const [cropTypes, setCropTypes] = useState([]);
@@ -62,7 +83,7 @@ const FarmStructure = () => {
   if (loading) return <div className="p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
@@ -97,66 +118,103 @@ const FarmStructure = () => {
 
       {error && <Alert severity="error" className="mb-6">{error}</Alert>}
 
-      <Grid container spacing={6}>
-        <Grid item xs={12} md={7}>
-          <Card sx={{ p: 3, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)', minHeight: '400px' }}>
-            {structure.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full pt-16 pb-8">
-                <AccountTreeOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
-                <p className="text-slate-400 font-semibold text-center">{t('farm.no_sectors', 'لا توجد قطاعات مسجلة')}</p>
-              </div>
-            ) : (
-              <SimpleTreeView sx={{ '& .MuiTreeItem-root': { mb: 1 } }}>
-                {structure.map((sector) => (
-                  <TreeItem key={`sec-${sector.id}`} itemId={`sec-${sector.id}`}
-                    label={<div className="font-bold text-slate-800 py-1.5 text-[1.05rem]">{sector.name} <span className="text-[0.65rem] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full ml-3">{sector.crop_type_name}</span></div>}>
-                    {sector.plots.map((plot) => (
-                      <TreeItem key={`plot-${plot.id}`} itemId={`plot-${plot.id}`}
-                        onClick={(e) => { e.stopPropagation(); fetchPlotDetails(plot); }}
-                        label={<div className="text-slate-600 font-semibold flex items-center gap-2 py-1.5 px-3 hover:bg-slate-50 rounded-xl transition-colors">{plot.name} {plot.is_general && <span className="text-[0.65rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md">{t('farm.general_badge', 'عام')}</span>}</div>}
-                      />
+      <Card sx={{ p: 4, bgcolor: 'white', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', width: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+        {structure.length === 0 ? (
+          <div className="flex flex-col items-center justify-center flex-grow pt-16 pb-8">
+            <AccountTreeOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
+            <p className="text-slate-400 font-semibold text-center">{t('farm.no_sectors', 'لا توجد قطاعات مسجلة')}</p>
+          </div>
+        ) : (
+          <div className="org-tree-container flex-grow">
+            <div className="org-tree">
+              <ul>
+                <li>
+                  <OrgNode 
+                    title={t('farm.main_farm', 'المزرعة الرئيسية')} 
+                    isRoot={true} 
+                    active={!activePlot}
+                    onClick={() => setActivePlot(null)}
+                  />
+                  <ul>
+                    {structure.map((sector) => (
+                      <li key={`sec-${sector.id}`}>
+                        <OrgNode 
+                          title={sector.name} 
+                          subtitle={sector.crop_type_name} 
+                          isSector={true} 
+                        />
+                        {sector.plots && sector.plots.length > 0 && (
+                          <ul>
+                            {sector.plots.map((plot) => (
+                              <li key={`plot-${plot.id}`}>
+                                <OrgNode 
+                                  title={plot.name} 
+                                  badge={plot.is_general ? t('farm.general_badge', 'عام') : null}
+                                  active={activePlot?.id === plot.id}
+                                  onClick={(e) => { e.stopPropagation(); fetchPlotDetails(plot); }}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
                     ))}
-                  </TreeItem>
-                ))}
-              </SimpleTreeView>
-            )}
-          </Card>
-        </Grid>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </Card>
 
-        <Grid item xs={12} md={5}>
-          {activePlot ? (
-            <Card sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)', position: 'sticky', top: 32 }}>
-              <h3 className="text-2xl font-black text-slate-800 mb-1">{activePlot.name}</h3>
-              <p className="text-xs font-bold tracking-widest text-green-600 uppercase mb-6">{t('farm.sector_coordinates', 'إحصائيات الحقل')}</p>
+      {/* PLOT DETAILS DRAWER */}
+      <Drawer
+        anchor={i18n.language === 'ar' ? 'left' : 'right'}
+        open={!!activePlot}
+        onClose={() => setActivePlot(null)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 400 }, p: 0, bgcolor: '#f8fafc' } }}
+      >
+        {activePlot && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ p: 3, borderBottom: '1px solid #e2e8f0', bgcolor: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <h3 className="text-xl font-bold text-slate-800 mb-1">{activePlot.name}</h3>
+                <p className="text-xs font-semibold tracking-widest text-green-600 uppercase">{t('farm.sector_coordinates', 'إحصائيات الحقل')}</p>
+              </Box>
+              <IconButton onClick={() => setActivePlot(null)} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', '&:hover': { bgcolor: '#e2e8f0' } }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            
+            <Box sx={{ p: 3, flexGrow: 1, overflowY: 'auto' }}>
               {loadingStats ? (
                 <div className="flex justify-center p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-slate-50 p-5 border border-slate-100 rounded-3xl flex items-center gap-5 transition-transform hover:-translate-y-1">
-                    <div className="w-14 h-14 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center shrink-0"><TerrainIcon fontSize="medium" /></div>
+                  <div className="bg-white p-5 border border-slate-200 rounded-xl flex items-center gap-4 shadow-sm">
+                    <div className="w-12 h-12 rounded-lg bg-green-50 text-green-600 flex items-center justify-center shrink-0 border border-green-100">
+                      <TerrainIcon fontSize="medium" />
+                    </div>
                     <div>
-                      <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.trees_count', 'عدد الأشجار')}</p>
-                      <p className="text-3xl font-black text-slate-800">{plotStats?.total_trees || 0} <span className="text-sm font-semibold text-slate-500">{t('farm.trunks', 'جذع')}</span></p>
+                      <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.trees_count', 'عدد الأشجار')}</p>
+                      <p className="text-2xl font-bold text-slate-800">{plotStats?.total_trees || 0} <span className="text-xs font-medium text-slate-500">{t('farm.trunks', 'جذع')}</span></p>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-5 border border-slate-100 rounded-3xl flex items-center gap-5 transition-transform hover:-translate-y-1">
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><AutoGraphIcon fontSize="medium" /></div>
+                  <div className="bg-white p-5 border border-slate-200 rounded-xl flex items-center gap-4 shadow-sm">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center shrink-0 border border-slate-100">
+                      <AutoGraphIcon fontSize="medium" />
+                    </div>
                     <div>
-                      <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.lifetime_yield', 'الإنتاج التراكمي')}</p>
-                      <p className="text-3xl font-black text-slate-800">{parseFloat(plotStats?.lifetime_yield || 0).toLocaleString()} <span className="text-sm font-semibold text-slate-500">{t('farm.tonnes', 'طن')}</span></p>
+                      <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.lifetime_yield', 'الإنتاج التراكمي')}</p>
+                      <p className="text-2xl font-bold text-slate-800">{parseFloat(plotStats?.lifetime_yield || 0).toLocaleString()} <span className="text-xs font-medium text-slate-500">{t('farm.tonnes', 'طن')}</span></p>
                     </div>
                   </div>
                 </div>
               )}
-            </Card>
-          ) : (
-            <Card sx={{ borderRadius: 4, border: '1px dashed #cbd5e1', bgcolor: '#f8fafc', boxShadow: 'none', height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
-              <MapOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
-              <p className="text-slate-400 font-semibold">{t('farm.plot_hint', 'حدد حقلاً من القائمة لعرض تفاصيله وإحصائياته')}</p>
-            </Card>
-          )}
-        </Grid>
-      </Grid>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
 
       {/* SECTOR MODAL */}
       <Dialog open={openSectorModal} onClose={() => setOpenSectorModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>

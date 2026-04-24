@@ -4,6 +4,7 @@ from api.endpoints import farm_views
 from api.endpoints import palm_views
 from api.endpoints import olive_views
 from api.endpoints import warehouse_views
+from api.endpoints.warehouse_views import items_view, movements_view, item_detail_view
 from api.endpoints import equipment_views
 from api.endpoints import accounting_views
 from api.endpoints import production_views
@@ -44,8 +45,9 @@ urlpatterns = [
     path('olive/records/<int:id>', olive_views.olive_detail_view, name='olive_detail'),
 
     # Warehouse Mappings
-    path('warehouse/items', warehouse_views.items_view, name='warehouse_items'),
-    path('warehouse/movements', warehouse_views.movements_view, name='warehouse_movements'),
+    path('warehouse/items/', items_view, name='warehouse-items'),
+    path('warehouse/items/<int:pk>/', item_detail_view, name='warehouse-item-detail'),
+    path('warehouse/movements/', movements_view, name='warehouse-movements'),
 
     # Equipment Mappings
     path('equipment/list', equipment_views.equipment_list_view, name='equipment_list'),

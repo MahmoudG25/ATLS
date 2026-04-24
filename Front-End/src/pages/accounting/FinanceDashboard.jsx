@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, Grid, Paper, Box, Typography, useMediaQuery, useTheme, Card } from '@mui/material';
 import { getFinancialSummary, getExpenses, createExpense, getRevenues, createRevenue } from '../../features/accounting/services';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +53,7 @@ const FinanceDashboard = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 4, md: 8 }, maxWidth: '1280px', mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, sm: 4, md: 8 }, width: '100%', mx: 'auto' }}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyItems: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 6, gap: 4 }}>
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="h3" sx={{ fontWeight: 900, color: 'slate.900', tracking: '-0.02em', display: 'flex', alignItems: 'center', gap: 2 }}>

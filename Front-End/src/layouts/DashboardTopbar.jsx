@@ -14,17 +14,17 @@ import NotificationBell from '../components/NotificationBell';
 
 // Maps route paths to their translation keys
 const ROUTE_LABELS = {
-  '/dashboard':  'sidebar.dashboard',
-  '/farm':       'sidebar.farm',
-  '/palm':       'sidebar.palm',
-  '/olive':      'sidebar.olive',
-  '/warehouse':  'sidebar.warehouse',
-  '/equipment':  'sidebar.equipment',
-  '/reports':    'sidebar.reports',
+  '/dashboard': 'sidebar.dashboard',
+  '/farm': 'sidebar.farm',
+  '/palm': 'sidebar.palm',
+  '/olive': 'sidebar.olive',
+  '/warehouse': 'sidebar.warehouse',
+  '/equipment': 'sidebar.equipment',
+  '/reports': 'sidebar.reports',
   '/production': 'sidebar.production',
   '/accounting': 'sidebar.accounting',
-  '/admin':      'sidebar.admin',
-  '/profile':    'nav.dashboard',
+  '/admin': 'sidebar.admin',
+  '/profile': 'nav.dashboard',
 };
 
 const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawerWidth }) => {
@@ -37,7 +37,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
 
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  
+
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
@@ -57,14 +57,14 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
   // We should ideally get this from a theme map or utility, but using standard palette for now
   const ROLE_COLORS = {
     SUPER_ADMIN: theme.palette.info.dark,
-    OWNER:       theme.palette.info.main,
-    MANAGER:     theme.palette.info.light,
-    ENGINEER:    theme.palette.primary.main,
-    ACCOUNTANT:  theme.palette.warning.dark,
-    WAREHOUSE:   theme.palette.warning.main,
-    HR:          theme.palette.secondary.main,
+    OWNER: theme.palette.info.main,
+    MANAGER: theme.palette.info.light,
+    ENGINEER: theme.palette.primary.main,
+    ACCOUNTANT: theme.palette.warning.dark,
+    WAREHOUSE: theme.palette.warning.main,
+    HR: theme.palette.secondary.main,
   };
-  
+
   const roleColor = ROLE_COLORS[user?.role] || theme.palette.primary.main;
 
   const toggleLanguage = () => {
@@ -81,8 +81,9 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
         position="fixed"
         elevation={0}
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: '100%',
+          left: 0,
+          right: 0,
           zIndex: (theme) => theme.zIndex.drawer + 1,
           bgcolor: 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(12px)',
@@ -96,8 +97,8 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           }),
         }}
       >
-        <Toolbar sx={{ 
-          minHeight: { xs: 64, sm: 64 }, 
+        <Toolbar sx={{
+          minHeight: { xs: 64, sm: 64 },
           px: { xs: 2, md: 4 },
           display: 'flex',
           justifyContent: 'space-between'
@@ -128,11 +129,11 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
               <Typography variant="h6" sx={{ fontWeight: 800, tracking: '-0.02em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                 {pageTitle}
               </Typography>
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: 'text.secondary', 
-                  fontWeight: 600, 
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 600,
                   display: { xs: 'none', sm: 'block' },
                   mt: -0.5
                 }}
@@ -145,7 +146,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           {/* Right side: Notifications + User */}
           <div className="flex items-center gap-1">
             <NotificationBell />
-            <Box 
+            <Box
               onClick={handleMenuClick}
               aria-controls={open ? 'user-menu' : undefined}
               aria-haspopup="true"
@@ -228,17 +229,17 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary={t('nav.account_settings', 'إعدادات الحساب')} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
         </MenuItem>
-        
+
         <MenuItem onClick={() => { handleMenuClose(); toggleLanguage(); }} sx={{ py: 1.5 }}>
           <ListItemIcon><Brightness4Icon fontSize="small" /></ListItemIcon>
-          <ListItemText 
-            primary={i18n.language === 'ar' ? 'English' : 'عربي'} 
-            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} 
+          <ListItemText
+            primary={i18n.language === 'ar' ? 'English' : 'عربي'}
+            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
           />
         </MenuItem>
-        
+
         <Divider sx={{ my: 0.5, borderColor: 'border.subtle' }} />
-        
+
         <MenuItem onClick={() => { handleMenuClose(); logout(); }} sx={{ color: 'error.main', py: 1.5 }}>
           <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText primary={t('sidebar.logout', 'تسجيل الخروج')} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />

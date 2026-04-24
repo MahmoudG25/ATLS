@@ -4,21 +4,21 @@ import { useTranslation } from 'react-i18next';
 import {
   Box, Drawer, List, ListItem, ListItemButton,
   ListItemText, ListItemIcon, IconButton, useMediaQuery, useTheme,
-  Typography, Avatar, Tooltip
+  Typography, Avatar, Tooltip, Toolbar
 } from '@mui/material';
-import DashboardIcon    from '@mui/icons-material/Dashboard';
-import AccountTreeIcon  from '@mui/icons-material/AccountTree';
-import ForestIcon       from '@mui/icons-material/Forest';
-import SpaIcon          from '@mui/icons-material/Spa';
-import WarehouseIcon    from '@mui/icons-material/Warehouse';
-import AgricultureIcon  from '@mui/icons-material/Agriculture';
-import AutoGraphIcon    from '@mui/icons-material/AutoGraph';
-import DynamicFeedIcon  from '@mui/icons-material/DynamicFeed';
-import PaymentsIcon     from '@mui/icons-material/Payments';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ForestIcon from '@mui/icons-material/Forest';
+import SpaIcon from '@mui/icons-material/Spa';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
+import PaymentsIcon from '@mui/icons-material/Payments';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import LogoutIcon       from '@mui/icons-material/Logout';
-import LanguageIcon     from '@mui/icons-material/Language';
-import CloseIcon        from '@mui/icons-material/Close';
+import LogoutIcon from '@mui/icons-material/Logout';
+import LanguageIcon from '@mui/icons-material/Language';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../app/AuthContext';
 import DashboardTopbar from './DashboardTopbar';
 import { hasAccess } from '../utils/accessControl';
@@ -31,10 +31,10 @@ const DashboardLayout = ({ children }) => {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const location = useLocation();
-  
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  
+
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const handleCollapseToggle = () => setCollapsed(!collapsed);
 
@@ -52,7 +52,7 @@ const DashboardLayout = ({ children }) => {
     const next = i18n.language === 'ar' ? 'en' : 'ar';
     i18n.changeLanguage(next);
     localStorage.setItem('atlas_lang', next);
-    document.documentElement.dir  = next === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = next;
   };
 
@@ -127,15 +127,17 @@ const DashboardLayout = ({ children }) => {
     );
   };
 
-    const sidebarContent = (
+  const sidebarContent = (
     <>
+      {/* Spacer for full-width Topbar */}
+      <Toolbar sx={{ minHeight: { xs: 64, sm: 64 } }} />
       {/* Header */}
       <Box sx={{ px: collapsed ? 1 : 2.5, py: 2.5, borderBottom: 1, borderColor: 'border.subtle', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ 
-            width: 40, height: 40, borderRadius: 2, 
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`, 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          <Box sx={{
+            width: 40, height: 40, borderRadius: 2,
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0
           }}>
             <AgricultureIcon sx={{ color: '#fff', fontSize: 22 }} />
@@ -159,17 +161,17 @@ const DashboardLayout = ({ children }) => {
       {/* Nav */}
       <Box sx={{ flex: 1, p: 1.5, pt: 2, overflowY: 'auto' }}>
         <SectionLabel label={t('sidebar.operations')} />
-        <NavItem to="/dashboard"  icon={<DashboardIcon   fontSize="small" />} labelKey="sidebar.dashboard" />
-        {hasAccessCheck('farm')      && <NavItem to="/farm"       icon={<AccountTreeIcon fontSize="small" />} labelKey="sidebar.farm"       color="primary.main" />}
-        {hasAccessCheck('palm')      && <NavItem to="/palm"       icon={<SpaIcon         fontSize="small" />} labelKey="sidebar.palm"       color="primary.dark" />}
-        {hasAccessCheck('olive')     && <NavItem to="/olive"      icon={<ForestIcon      fontSize="small" />} labelKey="sidebar.olive"      color="success.main" />}
-        {hasAccessCheck('warehouse') && <NavItem to="/warehouse"  icon={<WarehouseIcon   fontSize="small" />} labelKey="sidebar.warehouse"  color="warning.main" />}
-        {hasAccessCheck('equipment') && <NavItem to="/equipment"  icon={<AgricultureIcon fontSize="small" />} labelKey="sidebar.equipment"  color="info.main" />}
+        <NavItem to="/dashboard" icon={<DashboardIcon fontSize="small" />} labelKey="sidebar.dashboard" />
+        {hasAccessCheck('farm') && <NavItem to="/farm" icon={<AccountTreeIcon fontSize="small" />} labelKey="sidebar.farm" color="primary.main" />}
+        {hasAccessCheck('palm') && <NavItem to="/palm" icon={<SpaIcon fontSize="small" />} labelKey="sidebar.palm" color="primary.dark" />}
+        {hasAccessCheck('olive') && <NavItem to="/olive" icon={<ForestIcon fontSize="small" />} labelKey="sidebar.olive" color="success.main" />}
+        {hasAccessCheck('warehouse') && <NavItem to="/warehouse" icon={<WarehouseIcon fontSize="small" />} labelKey="sidebar.warehouse" color="warning.main" />}
+        {hasAccessCheck('equipment') && <NavItem to="/equipment" icon={<AgricultureIcon fontSize="small" />} labelKey="sidebar.equipment" color="info.main" />}
 
         <SectionLabel label={t('sidebar.business')} />
-        {hasAccessCheck('reports')    && <NavItem to="/reports"    icon={<DynamicFeedIcon fontSize="small" />} labelKey="sidebar.reports"    color="info.dark" />}
-        {hasAccessCheck('production') && <NavItem to="/production" icon={<AutoGraphIcon   fontSize="small" />} labelKey="sidebar.production" color="secondary.main" />}
-        {hasAccessCheck('accounting') && <NavItem to="/accounting" icon={<PaymentsIcon    fontSize="small" />} labelKey="sidebar.accounting" color="warning.dark" />}
+        {hasAccessCheck('reports') && <NavItem to="/reports" icon={<DynamicFeedIcon fontSize="small" />} labelKey="sidebar.reports" color="info.dark" />}
+        {hasAccessCheck('production') && <NavItem to="/production" icon={<AutoGraphIcon fontSize="small" />} labelKey="sidebar.production" color="secondary.main" />}
+        {hasAccessCheck('accounting') && <NavItem to="/accounting" icon={<PaymentsIcon fontSize="small" />} labelKey="sidebar.accounting" color="warning.dark" />}
 
         {user?.role && ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role) && (
           <>
@@ -218,7 +220,7 @@ const DashboardLayout = ({ children }) => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', backgroundColor: 'background.default' }}>
       {/* Sidebar (Permanent on Desktop) */}
       <Drawer
         variant={isDesktop ? "permanent" : "temporary"}
@@ -237,7 +239,8 @@ const DashboardLayout = ({ children }) => {
             width: drawerWidth,
             boxSizing: 'border-box',
             border: 'none',
-            borderRight: isDesktop ? 1 : 0,
+            borderRight: !isRTL && isDesktop ? 1 : 0,
+            borderLeft: isRTL && isDesktop ? 1 : 0,
             borderColor: 'border.subtle',
             backgroundColor: 'background.paper',
             display: 'flex',
@@ -253,32 +256,27 @@ const DashboardLayout = ({ children }) => {
       </Drawer>
 
       {/* Main Content Area */}
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          minWidth: 0, 
-          display: 'flex', 
-          flexDirection: 'column', 
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
           minHeight: '100vh',
           pb: { xs: 8, md: 0 },
-          transition: theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
         }}
       >
-        <DashboardTopbar 
-          onDrawerToggle={handleDrawerToggle} 
-          onCollapseToggle={handleCollapseToggle} 
-          isCollapsed={collapsed} 
+        <DashboardTopbar
+          onDrawerToggle={handleDrawerToggle}
+          onCollapseToggle={handleCollapseToggle}
+          isCollapsed={collapsed}
           drawerWidth={drawerWidth}
         />
         {/* Spacer for fixed AppBar */}
         <Box sx={{ minHeight: { xs: 64, sm: 64 } }} />
-        <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ flex: 1, overflow: 'auto', width: '100%' }}>
           {children}
         </Box>
         <BottomNav />

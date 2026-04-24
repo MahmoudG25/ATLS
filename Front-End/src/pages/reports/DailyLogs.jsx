@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, MenuItem, Grid, Card, Box } from '@mui/material';
 import { getReports, createReport } from '../../features/reports/services';
 import { getFarmStructure } from '../../features/farm/services';
@@ -50,7 +50,7 @@ const DailyLogs = () => {
   const availablePlots = formData.sector ? (structure.find(s => s.id === formData.sector)?.plots || []) : [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 w-full space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">

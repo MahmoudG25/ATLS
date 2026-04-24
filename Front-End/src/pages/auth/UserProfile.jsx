@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Card, Button, TextField, Avatar, Tabs, Tab, Box, Alert, CircularProgress, LinearProgress } from '@mui/material';
 import { useAuth } from '../../app/AuthContext';
 import { updateMe, updatePassword } from '../../features/auth/services';
@@ -106,7 +106,7 @@ const UserProfile = () => {
   if (!user) return null;
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 w-full space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200 border border-slate-800 relative overflow-hidden">
         <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-green-600/20 rounded-full blur-[80px] pointer-events-none"></div>

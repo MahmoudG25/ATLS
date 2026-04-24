@@ -11,17 +11,30 @@ def get_movements(item_id=None):
         qs = qs.filter(item_id=item_id)
     return qs
 
-def create_item(data):
+def create_item(data, user=None):
     # Cannot set quantity initially, it computes from movements naturally
     data.pop('quantity', None)
-    return Item.objects.create(**data)
+    return Item.objects.create(**data, updated_by=user)
+
+def update_item(item_id, data, user=None):
+    item = Item.objects.get(id=item_id)
+    data.pop('quantity', None) # Prevent direct quantity manipulation
+    for attr, value in data.items():
+        setattr(item, attr, value)
+    item.updated_by = user
+    item.save()
+    return item
+
+def delete_item(item_id):
+    item = Item.objects.get(id=item_id)
+    item.delete()
 
 @transaction.atomic
-def create_movement(data):
+def create_movement(data, user=None):
     if data['quantity'] <= 0:
         raise ValidationError({'quantity': 'Quantity must be positive'})
         
-    movement = Movement.objects.create(**data)
+    movement = Movement.objects.create(**data, user=user)
     item = movement.item
     
     if movement.movement_type == 'IN':
