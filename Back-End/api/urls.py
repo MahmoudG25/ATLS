@@ -1,6 +1,7 @@
 from django.urls import path
 from api.endpoints import auth_views
 from api.endpoints import farm_views
+from api.endpoints.farm_views import sector_detail_view, plot_detail_view
 from api.endpoints import palm_views
 from api.endpoints import olive_views
 from api.endpoints import warehouse_views
@@ -10,8 +11,10 @@ from api.endpoints import accounting_views
 from api.endpoints import production_views
 from api.endpoints import reports_views
 from api.endpoints import notification_views
+from api.endpoints import activity_views
 
 urlpatterns = [
+    path('auth/activity-logs', activity_views.activity_log_view, name='activity_logs'),
     path('auth/register', auth_views.register_view, name='register'),
     path('auth/login', auth_views.login_view, name='login'),
     path('auth/me', auth_views.me_view, name='me'),
@@ -33,7 +36,9 @@ urlpatterns = [
     path('farm/croptypes', farm_views.croptypes_list_view, name='croptypes_list'),
     path('farm/structure', farm_views.structure_view, name='structure'),
     path('farm/sectors', farm_views.create_sector_view, name='create_sector'),
+    path('farm/sectors/<int:pk>/', sector_detail_view, name='sector_detail'),
     path('farm/plots', farm_views.create_plot_view, name='create_plot'),
+    path('farm/plots/<int:pk>/', plot_detail_view, name='plot_detail'),
     path('farm/plots/<int:id>/stats', farm_views.plot_stats_view, name='plot_stats'),
     
     # Palm Mappings

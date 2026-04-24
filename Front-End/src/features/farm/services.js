@@ -26,6 +26,12 @@ export const createPlot = async (data) => {
     return response.data;
 };
 
+export const updateSector = async (id, data) => (await api.put(`farm/sectors/${id}/`, data)).data;
+export const deleteSector = async (id) => (await api.delete(`farm/sectors/${id}/`)).data;
+
+export const updatePlot = async (id, data) => (await api.put(`farm/plots/${id}/`, data)).data;
+export const deletePlot = async (id) => (await api.delete(`farm/plots/${id}/`)).data;
+
 export const getPlotStats = async (id) => {
     const response = await api.get(`farm/plots/${id}/stats`);
     return response.data;

@@ -103,3 +103,17 @@ class Notification(models.Model):
     def __str__(self):
         return f"[{self.type}] → {self.recipient.email}"
 
+class ActivityLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
+    action = models.CharField(max_length=255)
+    module = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.action} ({self.created_at})"
+

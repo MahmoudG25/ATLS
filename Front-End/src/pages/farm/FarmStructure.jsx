@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, CircularProgress, Alert, Grid, Card, Drawer, IconButton, Box } from '@mui/material';
-import { getFarms, getCropTypes, getFarmStructure, createSector, createPlot, getPlotStats } from '../../features/farm/services';
+import { getFarms, getCropTypes, getFarmStructure, createSector, createPlot, getPlotStats, updateSector, deleteSector, updatePlot, deletePlot } from '../../features/farm/services';
 import { useTranslation } from 'react-i18next';
 import TerrainIcon  from '@mui/icons-material/Terrain';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
@@ -8,12 +8,14 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import './FarmStructure.css';
 
-const OrgNode = ({ title, subtitle, isRoot, isSector, active, onClick, badge }) => (
+const OrgNode = ({ title, subtitle, isRoot, isSector, active, onClick, onEdit, onDelete, badge }) => (
   <div 
     onClick={onClick}
-    className={`relative flex flex-col items-center justify-center px-4 py-3 rounded-lg border cursor-pointer transition-all ${
+    className={`group relative flex flex-col items-center justify-center px-4 py-3 rounded-lg border cursor-pointer transition-all ${
       active 
         ? 'border-green-600 bg-green-50 shadow-sm ring-1 ring-green-600 z-10' 
         : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm z-0'
@@ -21,8 +23,14 @@ const OrgNode = ({ title, subtitle, isRoot, isSector, active, onClick, badge }) 
     style={{ minWidth: '150px' }}
     dir="rtl"
   >
+    {!isRoot && (
+      <div className="absolute top-1 left-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(); }} sx={{ p: 0.5, color: '#64748b', '&:hover': { color: '#0ea5e9' } }}><EditOutlinedIcon sx={{ fontSize: 14 }} /></IconButton>
+        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(); }} sx={{ p: 0.5, color: '#64748b', '&:hover': { color: '#ef4444' } }}><DeleteOutlineOutlinedIcon sx={{ fontSize: 14 }} /></IconButton>
+      </div>
+    )}
     {badge && <span className="absolute -top-2.5 -right-2 bg-slate-800 text-white text-[0.65rem] px-2 py-0.5 rounded shadow-sm tracking-wide">{badge}</span>}
-    <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-2 ${isRoot ? 'bg-slate-800 text-white shadow-sm' : isSector ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
+    <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-2 mt-1 ${isRoot ? 'bg-slate-800 text-white shadow-sm' : isSector ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
       {isRoot ? <AccountTreeOutlinedIcon fontSize="small" /> : isSector ? <AutoGraphIcon fontSize="small" /> : <TerrainIcon fontSize="small" />}
     </div>
     <p className="font-semibold text-slate-800 text-sm tracking-tight">{title}</p>
@@ -44,8 +52,8 @@ const FarmStructure = () => {
 
   const [openSectorModal, setOpenSectorModal] = useState(false);
   const [openPlotModal, setOpenPlotModal]     = useState(false);
-  const [sectorForm, setSectorForm] = useState({ name: '', farm: '', crop_type: '' });
-  const [plotForm, setPlotForm]     = useState({ name: '', sector: '', is_general: false });
+  const [sectorForm, setSectorForm] = useState({ id: null, name: '', farm: '', crop_type: '' });
+  const [plotForm, setPlotForm]     = useState({ id: null, name: '', sector: '', is_general: false });
   const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
@@ -66,18 +74,56 @@ const FarmStructure = () => {
     finally { setLoadingStats(false); }
   };
 
-  const handleCreateSector = async () => {
+  const handleSaveSector = async () => {
     setFormLoading(true);
-    try { await createSector(sectorForm); setOpenSectorModal(false); fetchData(); }
+    try { 
+      if (sectorForm.id) {
+        await updateSector(sectorForm.id, sectorForm);
+      } else {
+        await createSector(sectorForm); 
+      }
+      setOpenSectorModal(false); 
+      fetchData(); 
+    }
     catch (err) { console.error(err); }
     finally { setFormLoading(false); }
   };
 
-  const handleCreatePlot = async () => {
+  const handleSavePlot = async () => {
     setFormLoading(true);
-    try { await createPlot(plotForm); setOpenPlotModal(false); fetchData(); }
+    try { 
+      if (plotForm.id) {
+        await updatePlot(plotForm.id, plotForm);
+      } else {
+        await createPlot(plotForm); 
+      }
+      setOpenPlotModal(false); 
+      fetchData(); 
+    }
     catch (err) { console.error(err); }
     finally { setFormLoading(false); }
+  };
+
+  const handleDeleteSector = async (id) => {
+    if (window.confirm(t('farm.confirm_delete_sector', 'هل أنت متأكد من حذف هذا القطاع؟ سيتم أرشفته.'))) {
+      try { await deleteSector(id); fetchData(); } catch(err) { console.error(err); }
+    }
+  };
+
+  const handleDeletePlot = async (id) => {
+    if (window.confirm(t('farm.confirm_delete_plot', 'هل أنت متأكد من حذف هذا الحقل؟ سيتم أرشفته.'))) {
+      try { await deletePlot(id); fetchData(); if (activePlot?.id === id) setActivePlot(null); } catch(err) { console.error(err); }
+    }
+  };
+
+  const openEditSector = (sector) => {
+    setSectorForm({ id: sector.id, name: sector.name, farm: sector.farm || (farms.length ? farms[0].id : ''), crop_type: sector.crop_type.id });
+    setOpenSectorModal(true);
+  };
+
+  const openEditPlot = (plot) => {
+    setPlotForm({ id: plot.id, name: plot.name, sector: plot.sector, is_general: plot.is_general });
+    setOpenPlotModal(true);
   };
 
   if (loading) return <div className="p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>;
@@ -99,7 +145,7 @@ const FarmStructure = () => {
             fullWidth={false}
             variant="outlined" 
             startIcon={<AddCircleOutlineIcon />}
-            onClick={() => setOpenSectorModal(true)}
+            onClick={() => { setSectorForm({ id: null, name: '', farm: farms[0]?.id || '', crop_type: '' }); setOpenSectorModal(true); }}
             sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, borderColor: '#16a34a', color: '#16a34a', '&:hover': { borderColor: '#15803d', bgcolor: '#f0fdf4' } }}
           >
             {t('farm.add_sector', 'إضافة قطاع')}
@@ -108,7 +154,7 @@ const FarmStructure = () => {
             fullWidth={false}
             variant="contained" 
             startIcon={<TerrainIcon />}
-            onClick={() => setOpenPlotModal(true)}
+            onClick={() => { setPlotForm({ id: null, name: '', sector: '', is_general: false }); setOpenPlotModal(true); }}
             sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 14px 0 rgba(22, 163, 74, 0.39)' }}
           >
             {t('farm.add_plot', 'إضافة حقل')}
@@ -142,6 +188,8 @@ const FarmStructure = () => {
                           title={sector.name} 
                           subtitle={sector.crop_type_name} 
                           isSector={true} 
+                          onEdit={() => openEditSector(sector)}
+                          onDelete={() => handleDeleteSector(sector.id)}
                         />
                         {sector.plots && sector.plots.length > 0 && (
                           <ul>
@@ -152,6 +200,8 @@ const FarmStructure = () => {
                                   badge={plot.is_general ? t('farm.general_badge', 'عام') : null}
                                   active={activePlot?.id === plot.id}
                                   onClick={(e) => { e.stopPropagation(); fetchPlotDetails(plot); }}
+                                  onEdit={() => openEditPlot(plot)}
+                                  onDelete={() => handleDeletePlot(plot.id)}
                                 />
                               </li>
                             ))}
@@ -218,7 +268,9 @@ const FarmStructure = () => {
 
       {/* SECTOR MODAL */}
       <Dialog open={openSectorModal} onClose={() => setOpenSectorModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>{t('farm.add_sector_title', 'إضافة قطاع جديد')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+          {sectorForm.id ? t('farm.edit_sector_title', 'تعديل القطاع') : t('farm.add_sector_title', 'إضافة قطاع جديد')}
+        </DialogTitle>
         <DialogContent className="space-y-5 pt-2">
           <TextField select fullWidth label={t('farm.select_farm', 'تحديد المزرعة')} value={sectorForm.farm} onChange={(e) => setSectorForm({...sectorForm, farm: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
             {farms.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontWeight: 600 }}>{f.name}</MenuItem>)}
@@ -230,7 +282,7 @@ const FarmStructure = () => {
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setOpenSectorModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
-          <Button onClick={handleCreateSector} variant="contained" disabled={formLoading || !sectorForm.name || !sectorForm.farm || !sectorForm.crop_type} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
+          <Button onClick={handleSaveSector} variant="contained" disabled={formLoading || !sectorForm.name || !sectorForm.farm || !sectorForm.crop_type} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
             {formLoading ? <CircularProgress size={20} /> : t('farm.save_sector', 'حفظ القطاع')}
           </Button>
         </DialogActions>
@@ -238,7 +290,9 @@ const FarmStructure = () => {
 
       {/* PLOT MODAL */}
       <Dialog open={openPlotModal} onClose={() => setOpenPlotModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>{t('farm.add_plot_title', 'إضافة حقل جديد')}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+          {plotForm.id ? t('farm.edit_plot_title', 'تعديل الحقل') : t('farm.add_plot_title', 'إضافة حقل جديد')}
+        </DialogTitle>
         <DialogContent className="space-y-5 pt-2">
           <TextField select fullWidth label={t('farm.parent_sector', 'القطاع التابع')} value={plotForm.sector} onChange={(e) => setPlotForm({...plotForm, sector: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
             {structure.map((s) => <MenuItem key={s.id} value={s.id} sx={{ fontWeight: 600 }}>{s.name} ({s.crop_type_name})</MenuItem>)}
@@ -251,7 +305,7 @@ const FarmStructure = () => {
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setOpenPlotModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
-          <Button onClick={handleCreatePlot} variant="contained" disabled={formLoading || !plotForm.name || !plotForm.sector} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
+          <Button onClick={handleSavePlot} variant="contained" disabled={formLoading || !plotForm.name || !plotForm.sector} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
             {formLoading ? <CircularProgress size={20} /> : t('farm.save_plot', 'حفظ الحقل')}
           </Button>
         </DialogActions>

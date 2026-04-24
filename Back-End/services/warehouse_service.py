@@ -1,9 +1,10 @@
 from apps.warehouse.models import Item, Movement
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
+from services.activity_service import log_activity
 
 def list_items():
-    return Item.objects.all()
+    return Item.objects.filter(is_active=True)
 
 def get_movements(item_id=None):
     qs = Movement.objects.select_related('item').all().order_by('-date')
@@ -14,7 +15,9 @@ def get_movements(item_id=None):
 def create_item(data, user=None):
     # Cannot set quantity initially, it computes from movements naturally
     data.pop('quantity', None)
-    return Item.objects.create(**data, updated_by=user)
+    item = Item.objects.create(**data, updated_by=user)
+    log_activity(user, f"Created Warehouse Item: {item.name}", "Warehouse")
+    return item
 
 def update_item(item_id, data, user=None):
     item = Item.objects.get(id=item_id)
@@ -23,11 +26,16 @@ def update_item(item_id, data, user=None):
         setattr(item, attr, value)
     item.updated_by = user
     item.save()
+    log_activity(user, f"Updated Warehouse Item: {item.name}", "Warehouse")
     return item
 
-def delete_item(item_id):
+def delete_item(item_id, user=None):
     item = Item.objects.get(id=item_id)
-    item.delete()
+    item_name = item.name
+    item.is_active = False
+    item.save()
+    if user:
+        log_activity(user, f"Archived Warehouse Item: {item_name}", "Warehouse")
 
 @transaction.atomic
 def create_movement(data, user=None):
@@ -45,4 +53,4 @@ def create_movement(data, user=None):
         item.quantity -= movement.quantity
         
     item.save()
-    return movement
+    log_activity(user, f"Warehouse Movement ({movement.movement_type}): {movement.quantity} {item.unit} of {item.name}", "Warehouse")

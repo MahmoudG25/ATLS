@@ -34,7 +34,7 @@ def item_detail_view(request, pk):
         return Response(ItemSerializer(item).data)
         
     elif request.method == 'DELETE':
-        delete_item(pk)
+        delete_item(pk, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET', 'POST'])

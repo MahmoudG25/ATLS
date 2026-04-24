@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Button, TextField, Avatar, Tabs, Tab, Box, Alert, CircularProgress, LinearProgress } from '@mui/material';
 import { useAuth } from '../../app/AuthContext';
 import { updateMe, updatePassword } from '../../features/auth/services';
@@ -9,6 +9,8 @@ import SecurityIcon from '@mui/icons-material/Security';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import HistoryIcon from '@mui/icons-material/History';
+import { getActivityLogs } from '../../features/auth/services';
 
 const TabPanel = (props) => {
   const { children, value, index, ...other } = props;
@@ -55,6 +57,26 @@ const UserProfile = () => {
   const [secMsg, setSecMsg] = useState({ type: '', text: '' });
 
   const passwordStrength = useMemo(() => getPasswordStrength(passwords.new_password), [passwords.new_password]);
+
+  // Activity Log
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const data = await getActivityLogs();
+      setLogs(data);
+    } catch (err) {
+      console.error('Error fetching logs:', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (tabIndex === 2) fetchLogs();
+  }, [tabIndex]);
 
   const handleUpdateIdentity = async () => {
     setLoading(true); setIdentityMsg({ type: '', text: '' });
@@ -147,6 +169,7 @@ const UserProfile = () => {
         <Tabs value={tabIndex} onChange={(e, val) => setTabIndex(val)} variant="scrollable" scrollButtons="auto" sx={{ '& .MuiTabs-indicator': { backgroundColor: '#16a34a', height: 3 } }}>
           <Tab icon={<BadgeIcon />} iconPosition="start" label={t('profile.tab_identity', 'البيانات الشخصية')} sx={{ textTransform: 'none', fontWeight: 700, '&.Mui-selected': { color: '#16a34a' } }} />
           <Tab icon={<SecurityIcon />} iconPosition="start" label={t('profile.tab_security', 'الأمان والمرور')} sx={{ textTransform: 'none', fontWeight: 700, '&.Mui-selected': { color: '#16a34a' } }} />
+          <Tab icon={<HistoryIcon />} iconPosition="start" label={t('profile.tab_activity', 'سجل النشاط')} sx={{ textTransform: 'none', fontWeight: 700, '&.Mui-selected': { color: '#16a34a' } }} />
           <Tab icon={<SettingsIcon />} iconPosition="start" label={t('profile.tab_settings', 'الإعدادات')} sx={{ textTransform: 'none', fontWeight: 700, '&.Mui-selected': { color: '#16a34a' } }} />
         </Tabs>
 
@@ -233,8 +256,64 @@ const UserProfile = () => {
           </div>
         </TabPanel>
 
-        {/* Settings Tab */}
+        {/* Activity Log Tab */}
         <TabPanel value={tabIndex} index={2}>
+          <div className="max-w-4xl mx-auto space-y-4 pt-4 pb-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">{t('profile.activity_history', 'سجل العمليات الأخير')}</h3>
+              <Button size="small" onClick={fetchLogs} startIcon={<HistoryIcon />} sx={{ color: '#16a34a' }}>
+                {t('profile.refresh', 'تحديث')}
+              </Button>
+            </div>
+
+            {logsLoading ? (
+              <div className="flex flex-col items-center py-12">
+                <CircularProgress size={40} sx={{ color: '#16a34a', mb: 2 }} />
+                <p className="text-slate-500 font-medium">{t('profile.loading_logs', 'جاري تحميل السجلات...')}</p>
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                <HistoryIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 2 }} />
+                <p className="text-slate-500 font-bold">{t('profile.no_logs', 'لا توجد سجلات نشاط حتى الآن')}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {logs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-green-200 hover:shadow-md transition-all group">
+                    <div className={`mt-1 p-2 rounded-xl flex items-center justify-center ${
+                      log.module === 'Warehouse' ? 'bg-amber-100 text-amber-600' :
+                      log.module === 'Farm' ? 'bg-green-100 text-green-600' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      <HistoryIcon fontSize="small" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <p className="font-bold text-slate-800 group-hover:text-green-700 transition-colors">{log.action}</p>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">
+                          {log.module}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        <CalendarTodayIcon sx={{ fontSize: 10 }} /> {formatDate(log.created_at)}
+                        {log.ip_address && <span className="mx-2">•</span>}
+                        {log.ip_address && <span className="opacity-60">{log.ip_address}</span>}
+                      </p>
+                      {user.role === 'SUPER_ADMIN' && log.user_name && (
+                         <p className="text-[10px] text-green-600 font-bold mt-1 uppercase">
+                           By: {log.user_name}
+                         </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabPanel>
+
+        {/* Settings Tab */}
+        <TabPanel value={tabIndex} index={3}>
            <div className="max-w-xl mx-auto space-y-6 pt-4 pb-8">
              <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-slate-50">
                <div>

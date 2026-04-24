@@ -33,3 +33,9 @@ export const updateUserRole = async (id, role) => (await api.patch(`users/${id}/
 
 export const getCMSContent = async () => (await api.get('admin/landing-content')).data;
 export const updateCMSContent = async (payload) => (await api.patch('admin/landing-content', payload)).data;
+
+// Activity Log Service
+export const getActivityLogs = async (module = '') => {
+  const response = await api.get(`auth/activity-logs${module ? `?module=${module}` : ''}`);
+  return response.data;
+};

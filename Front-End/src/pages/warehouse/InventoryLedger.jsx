@@ -132,7 +132,7 @@ const InventoryLedger = () => {
 
       <Grid container spacing={3} sx={{ width: '100%', m: 0 }}>
         {/* Stock Matrix with Tabs */}
-        <Grid item xs={12} md={7} lg={8} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
+        <Grid item xs={12} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
           <Card sx={{ p: 0, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', overflow: 'hidden' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f8fafc' }}>
               <Tabs value={tabValue} onChange={(e, val) => setTabValue(val)} variant="fullWidth" TabIndicatorProps={{ sx: { height: 3, borderRadius: '3px 3px 0 0', bgcolor: '#16a34a' } }}>
@@ -191,7 +191,7 @@ const InventoryLedger = () => {
         </Grid>
 
         {/* Movements Ledger */}
-        <Grid item xs={12} md={5} lg={4} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
+        <Grid item xs={12} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
           <Card sx={{ p: 0, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 460 }}>
             <Box sx={{ p: 3, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: '#f8fafc' }}>
               <ReceiptLongOutlinedIcon sx={{ color: '#64748b' }} />

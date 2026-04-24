@@ -19,31 +19,31 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       const isProd = import.meta.env.PROD;
-      
+
       return (
-        <Box 
-          display="flex" 
-          flexDirection="column" 
-          alignItems="center" 
-          justifyContent="center" 
-          height="100vh" 
-          bgcolor="background.default" 
-          p={3}
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          bgcolor="background.default"
+          p={5}
         >
           <WarningAmberIcon sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
           <Typography variant="h4" color="text.primary" gutterBottom>
             عذراً، حدث خطأ غير متوقع
           </Typography>
           <Typography variant="body1" color="text.secondary" mb={4} textAlign="center" maxWidth="sm">
-             نواجه مشكلة فنية حالياً. المرجو المحاولة مرة أخرى أو العودة للرئيسية.
-             {!isProd && this.state.error && (
-               <>
-                 <br/>
-                 <Typography component="span" variant="caption" sx={{ color: 'error.main' }}>
-                   {this.state.error.toString()}
-                 </Typography>
-               </>
-             )}
+            نواجه مشكلة فنية حالياً. المرجو المحاولة مرة أخرى أو العودة للرئيسية.
+            {!isProd && this.state.error && (
+              <>
+                <br />
+                <Typography component="span" variant="caption" sx={{ color: 'error.main' }}>
+                  {this.state.error.toString()}
+                </Typography>
+              </>
+            )}
           </Typography>
           <Box display="flex" gap={2}>
             <Button variant="outlined" color="primary" onClick={() => this.setState({ hasError: false, error: null })}>

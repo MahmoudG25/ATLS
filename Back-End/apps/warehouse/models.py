@@ -13,6 +13,7 @@ class Item(models.Model):
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='updated_items')
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} ({self.category})"
