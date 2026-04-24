@@ -74,10 +74,12 @@ const Login = () => {
                   label: { color: '#94a3b8' },
                   '& .MuiFilledInput-root': {
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    '&::before, &::after': { display: 'none' },
                     '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
                     '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
                   },
-                  '& .MuiFormHelperText-root': { color: '#f87171' },
+                  '& .MuiFormHelperText-root': { color: '#f87171', ml: 0 },
                 }}
               />
             )}
@@ -99,10 +101,12 @@ const Login = () => {
                   label: { color: '#94a3b8' },
                   '& .MuiFilledInput-root': {
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    '&::before, &::after': { display: 'none' },
                     '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
                     '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
                   },
-                  '& .MuiFormHelperText-root': { color: '#f87171' },
+                  '& .MuiFormHelperText-root': { color: '#f87171', ml: 0 },
                 }}
               />
             )}

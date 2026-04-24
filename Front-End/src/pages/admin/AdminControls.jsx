@@ -100,15 +100,20 @@ const AdminControls = () => {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4, md: 8 }, maxWidth: '1280px', mx: 'auto' }}>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 4, gap: 2 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: 'slate.800', tracking: '-0.02em' }}>{t('admin.title')}</Typography>
-          <Typography variant="body1" sx={{ color: 'slate.500', mt: 0.5 }}>{t('admin.subtitle')}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyItems: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 6, gap: 4 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h3" sx={{ fontWeight: 900, color: 'slate.900', tracking: '-0.02em', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ p: 1.5, bgcolor: '#f1f5f9', borderRadius: 3, color: '#334155', display: 'flex' }}>
+              <VerifiedUserIcon fontSize="large" />
+            </Box>
+            {t('admin.title')}
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'slate.500', mt: 1, fontWeight: 500 }}>{t('admin.subtitle')}</Typography>
         </Box>
       </Box>
 
-      <div className="bg-white border-b border-slate-200 mb-8 rounded-t-2xl px-4">
-        <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)} indicatorColor="primary" textColor="primary">
+      <div className="bg-white border-b border-slate-200 mb-8 rounded-t-3xl px-4 shadow-sm border">
+        <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)} indicatorColor="primary" textColor="primary" sx={{ '& .MuiTab-root': { fontWeight: 800, py: 3, fontSize: '1rem' } }}>
           <Tab icon={<VerifiedUserIcon />} iconPosition="start" label={t('admin.tab_security')} />
           {currentUser?.role === 'SUPER_ADMIN' && <Tab icon={<ViewQuiltIcon />}    iconPosition="start" label={t('admin.tab_cms')} />}
         </Tabs>
@@ -341,31 +346,34 @@ const AdminControls = () => {
 
       {/* ── CMS TAB ──────────────────────────────────── */}
       {activeTab === 1 && currentUser?.role === 'SUPER_ADMIN' && (
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-800 mb-6">{t('admin.cms_title')}</h2>
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={6} className="space-y-4">
-              <p className="font-bold text-sky-600 uppercase tracking-widest text-xs">{t('admin.hero_section')}</p>
-              <TextField fullWidth label={t('admin.hero_title_en')} value={cmsData.hero_title_en} onChange={(e) => setCmsData({...cmsData, hero_title_en: e.target.value})} variant="filled" />
-              <TextField fullWidth label={t('admin.hero_title_ar')} value={cmsData.hero_title_ar} onChange={(e) => setCmsData({...cmsData, hero_title_ar: e.target.value})} variant="filled" />
-              <TextField fullWidth multiline rows={2} label={t('admin.hero_text_en')} value={cmsData.hero_text_en} onChange={(e) => setCmsData({...cmsData, hero_text_en: e.target.value})} variant="filled" />
-              <TextField fullWidth multiline rows={2} label={t('admin.hero_text_ar')} value={cmsData.hero_text_ar} onChange={(e) => setCmsData({...cmsData, hero_text_ar: e.target.value})} variant="filled" />
+        <Card sx={{ p: { xs: 4, md: 6 }, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }} elevation={0}>
+          <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3"><ViewQuiltIcon color="primary" fontSize="large" /> {t('admin.cms_title')}</h2>
+          <Grid container spacing={6}>
+            <Grid item xs={12} md={6} className="space-y-5">
+              <p className="font-bold text-sky-600 uppercase tracking-widest text-xs flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-sky-500"></div>{t('admin.hero_section')}</p>
+              <TextField fullWidth label={t('admin.hero_title_en')} value={cmsData.hero_title_en} onChange={(e) => setCmsData({...cmsData, hero_title_en: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              <TextField fullWidth label={t('admin.hero_title_ar')} value={cmsData.hero_title_ar} onChange={(e) => setCmsData({...cmsData, hero_title_ar: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              <TextField fullWidth multiline rows={3} label={t('admin.hero_text_en')} value={cmsData.hero_text_en} onChange={(e) => setCmsData({...cmsData, hero_text_en: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              <TextField fullWidth multiline rows={3} label={t('admin.hero_text_ar')} value={cmsData.hero_text_ar} onChange={(e) => setCmsData({...cmsData, hero_text_ar: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
             </Grid>
-            <Grid item xs={12} md={6} className="space-y-4">
-              <p className="font-bold text-green-600 uppercase tracking-widest text-xs">{t('admin.palm_section')}</p>
-              <TextField fullWidth multiline rows={2} label={t('admin.palm_text_en')} value={cmsData.palm_text_en} onChange={(e) => setCmsData({...cmsData, palm_text_en: e.target.value})} variant="filled" />
-              <TextField fullWidth multiline rows={2} label={t('admin.palm_text_ar')} value={cmsData.palm_text_ar} onChange={(e) => setCmsData({...cmsData, palm_text_ar: e.target.value})} variant="filled" />
-              <p className="font-bold text-orange-500 uppercase tracking-widest text-xs mt-4">{t('admin.olive_section')}</p>
-              <TextField fullWidth multiline rows={2} label={t('admin.olive_text_en')} value={cmsData.olive_text_en} onChange={(e) => setCmsData({...cmsData, olive_text_en: e.target.value})} variant="filled" />
-              <TextField fullWidth multiline rows={2} label={t('admin.olive_text_ar')} value={cmsData.olive_text_ar} onChange={(e) => setCmsData({...cmsData, olive_text_ar: e.target.value})} variant="filled" />
+            <Grid item xs={12} md={6} className="space-y-5">
+              <p className="font-bold text-emerald-600 uppercase tracking-widest text-xs flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>{t('admin.palm_section')}</p>
+              <TextField fullWidth multiline rows={3} label={t('admin.palm_text_en')} value={cmsData.palm_text_en} onChange={(e) => setCmsData({...cmsData, palm_text_en: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              <TextField fullWidth multiline rows={3} label={t('admin.palm_text_ar')} value={cmsData.palm_text_ar} onChange={(e) => setCmsData({...cmsData, palm_text_ar: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              
+              <Box sx={{ my: 4, height: '1px', bgcolor: 'slate.100' }} />
+
+              <p className="font-bold text-amber-500 uppercase tracking-widest text-xs flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500"></div>{t('admin.olive_section')}</p>
+              <TextField fullWidth multiline rows={3} label={t('admin.olive_text_en')} value={cmsData.olive_text_en} onChange={(e) => setCmsData({...cmsData, olive_text_en: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
+              <TextField fullWidth multiline rows={3} label={t('admin.olive_text_ar')} value={cmsData.olive_text_ar} onChange={(e) => setCmsData({...cmsData, olive_text_ar: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2.5 } }} />
             </Grid>
           </Grid>
-          <div className="mt-8 text-right">
-            <Button variant="contained" color="primary" onClick={handleUpdateCMS} disabled={cmsLoading} sx={{ px: 6, py: 1.5, borderRadius: 8 }}>
-              {cmsLoading ? <CircularProgress size={20} /> : t('admin.deploy_btn')}
+          <div className="mt-10 pt-6 border-t border-slate-100 text-right">
+            <Button variant="contained" color="primary" onClick={handleUpdateCMS} disabled={cmsLoading} sx={{ px: 8, py: 1.5, borderRadius: 3, fontWeight: 800, fontSize: '1rem', boxShadow: '0 4px 14px 0 rgba(59, 130, 246, 0.39)' }}>
+              {cmsLoading ? <CircularProgress size={24} color="inherit" /> : t('admin.deploy_btn')}
             </Button>
           </div>
-        </div>
+        </Card>
       )}
     </Box>
   );

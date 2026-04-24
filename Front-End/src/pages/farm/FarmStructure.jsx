@@ -5,6 +5,9 @@ import { getFarms, getCropTypes, getFarmStructure, createSector, createPlot, get
 import { useTranslation } from 'react-i18next';
 import TerrainIcon  from '@mui/icons-material/Terrain';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 
 const FarmStructure = () => {
   const { t } = useTranslation();
@@ -60,113 +63,138 @@ const FarmStructure = () => {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('farm.title')}</h1>
-          <p className="text-slate-500 mt-1">{t('farm.subtitle')}</p>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+            <div className="p-2 bg-green-50 rounded-xl text-green-600 flex items-center">
+              <AccountTreeOutlinedIcon fontSize="large" />
+            </div>
+            {t('farm.title', 'هيكل المزرعة')}
+          </h1>
+          <p className="text-slate-500 mt-2 font-medium">{t('farm.subtitle', 'إدارة القطاعات والحقول الجغرافية')}</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outlined" color="primary" onClick={() => setOpenSectorModal(true)}>{t('farm.add_sector')}</Button>
-          <Button variant="contained" color="primary" onClick={() => setOpenPlotModal(true)}>{t('farm.add_plot')}</Button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button 
+            fullWidth={false}
+            variant="outlined" 
+            startIcon={<AddCircleOutlineIcon />}
+            onClick={() => setOpenSectorModal(true)}
+            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, borderColor: '#16a34a', color: '#16a34a', '&:hover': { borderColor: '#15803d', bgcolor: '#f0fdf4' } }}
+          >
+            {t('farm.add_sector', 'إضافة قطاع')}
+          </Button>
+          <Button 
+            fullWidth={false}
+            variant="contained" 
+            startIcon={<TerrainIcon />}
+            onClick={() => setOpenPlotModal(true)}
+            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 14px 0 rgba(22, 163, 74, 0.39)' }}
+          >
+            {t('farm.add_plot', 'إضافة حقل')}
+          </Button>
         </div>
       </div>
 
-      {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+      {error && <Alert severity="error" className="mb-6">{error}</Alert>}
 
       <Grid container spacing={6}>
         <Grid item xs={12} md={7}>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[400px]">
+          <Card sx={{ p: 3, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)', minHeight: '400px' }}>
             {structure.length === 0 ? (
-              <p className="text-slate-400 italic text-center mt-12">{t('farm.no_sectors')}</p>
+              <div className="flex flex-col items-center justify-center h-full pt-16 pb-8">
+                <AccountTreeOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
+                <p className="text-slate-400 font-semibold text-center">{t('farm.no_sectors', 'لا توجد قطاعات مسجلة')}</p>
+              </div>
             ) : (
-              <SimpleTreeView>
+              <SimpleTreeView sx={{ '& .MuiTreeItem-root': { mb: 1 } }}>
                 {structure.map((sector) => (
                   <TreeItem key={`sec-${sector.id}`} itemId={`sec-${sector.id}`}
-                    label={<div className="font-semibold text-slate-700 py-1">{sector.name} <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full ml-2">{sector.crop_type_name}</span></div>}>
+                    label={<div className="font-bold text-slate-800 py-1.5 text-[1.05rem]">{sector.name} <span className="text-[0.65rem] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full ml-3">{sector.crop_type_name}</span></div>}>
                     {sector.plots.map((plot) => (
                       <TreeItem key={`plot-${plot.id}`} itemId={`plot-${plot.id}`}
                         onClick={(e) => { e.stopPropagation(); fetchPlotDetails(plot); }}
-                        label={<div className="text-slate-600 flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded-lg">{plot.name} {plot.is_general && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded">{t('farm.general_badge')}</span>}</div>}
+                        label={<div className="text-slate-600 font-semibold flex items-center gap-2 py-1.5 px-3 hover:bg-slate-50 rounded-xl transition-colors">{plot.name} {plot.is_general && <span className="text-[0.65rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md">{t('farm.general_badge', 'عام')}</span>}</div>}
                       />
                     ))}
                   </TreeItem>
                 ))}
               </SimpleTreeView>
             )}
-          </div>
+          </Card>
         </Grid>
 
         <Grid item xs={12} md={5}>
           {activePlot ? (
-            <Card elevation={0} className="p-8 border border-slate-200 shadow-sm rounded-3xl sticky top-8">
-              <h3 className="text-xl font-black text-slate-800 mb-2">{activePlot.name}</h3>
-              <p className="text-sm font-bold tracking-widest text-green-600 uppercase mb-6">{t('farm.sector_coordinates')}</p>
+            <Card sx={{ p: 4, borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)', position: 'sticky', top: 32 }}>
+              <h3 className="text-2xl font-black text-slate-800 mb-1">{activePlot.name}</h3>
+              <p className="text-xs font-bold tracking-widest text-green-600 uppercase mb-6">{t('farm.sector_coordinates', 'إحصائيات الحقل')}</p>
               {loadingStats ? (
                 <div className="flex justify-center p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 border border-slate-100 rounded-2xl flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shrink-0"><TerrainIcon /></div>
+                  <div className="bg-slate-50 p-5 border border-slate-100 rounded-3xl flex items-center gap-5 transition-transform hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center shrink-0"><TerrainIcon fontSize="medium" /></div>
                     <div>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{t('farm.trees_count')}</p>
-                      <p className="text-2xl font-black text-slate-800">{plotStats?.total_trees || 0} {t('farm.trunks')}</p>
+                      <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.trees_count', 'عدد الأشجار')}</p>
+                      <p className="text-3xl font-black text-slate-800">{plotStats?.total_trees || 0} <span className="text-sm font-semibold text-slate-500">{t('farm.trunks', 'جذع')}</span></p>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-4 border border-slate-100 rounded-2xl flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><AutoGraphIcon /></div>
+                  <div className="bg-slate-50 p-5 border border-slate-100 rounded-3xl flex items-center gap-5 transition-transform hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><AutoGraphIcon fontSize="medium" /></div>
                     <div>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{t('farm.lifetime_yield')}</p>
-                      <p className="text-2xl font-black text-slate-800">{parseFloat(plotStats?.lifetime_yield || 0).toLocaleString()} {t('farm.tonnes')}</p>
+                      <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.lifetime_yield', 'الإنتاج التراكمي')}</p>
+                      <p className="text-3xl font-black text-slate-800">{parseFloat(plotStats?.lifetime_yield || 0).toLocaleString()} <span className="text-sm font-semibold text-slate-500">{t('farm.tonnes', 'طن')}</span></p>
                     </div>
                   </div>
                 </div>
               )}
             </Card>
           ) : (
-            <div className="border border-dashed border-slate-300 rounded-3xl h-full flex items-center justify-center text-slate-400 p-8 text-center bg-slate-50">
-              {t('farm.plot_hint')}
-            </div>
+            <Card sx={{ borderRadius: 4, border: '1px dashed #cbd5e1', bgcolor: '#f8fafc', boxShadow: 'none', height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
+              <MapOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
+              <p className="text-slate-400 font-semibold">{t('farm.plot_hint', 'حدد حقلاً من القائمة لعرض تفاصيله وإحصائياته')}</p>
+            </Card>
           )}
         </Grid>
       </Grid>
 
       {/* SECTOR MODAL */}
-      <Dialog open={openSectorModal} onClose={() => setOpenSectorModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('farm.add_sector_title')}</DialogTitle>
-        <DialogContent className="space-y-4 pt-4">
-          <TextField select fullWidth label={t('farm.select_farm')} value={sectorForm.farm} onChange={(e) => setSectorForm({...sectorForm, farm: e.target.value})} className="mt-2" variant="filled">
-            {farms.map((f) => <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>)}
+      <Dialog open={openSectorModal} onClose={() => setOpenSectorModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>{t('farm.add_sector_title', 'إضافة قطاع جديد')}</DialogTitle>
+        <DialogContent className="space-y-5 pt-2">
+          <TextField select fullWidth label={t('farm.select_farm', 'تحديد المزرعة')} value={sectorForm.farm} onChange={(e) => setSectorForm({...sectorForm, farm: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
+            {farms.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontWeight: 600 }}>{f.name}</MenuItem>)}
           </TextField>
-          <TextField fullWidth label={t('farm.sector_name')} value={sectorForm.name} onChange={(e) => setSectorForm({...sectorForm, name: e.target.value})} variant="filled" />
-          <TextField select fullWidth label={t('farm.crop_type')} value={sectorForm.crop_type} onChange={(e) => setSectorForm({...sectorForm, crop_type: e.target.value})} variant="filled">
-            {cropTypes.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+          <TextField fullWidth label={t('farm.sector_name', 'اسم القطاع')} value={sectorForm.name} onChange={(e) => setSectorForm({...sectorForm, name: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }} />
+          <TextField select fullWidth label={t('farm.crop_type', 'نوع المحصول')} value={sectorForm.crop_type} onChange={(e) => setSectorForm({...sectorForm, crop_type: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
+            {cropTypes.map((c) => <MenuItem key={c.id} value={c.id} sx={{ fontWeight: 600 }}>{c.name}</MenuItem>)}
           </TextField>
         </DialogContent>
-        <DialogActions className="p-4">
-          <Button onClick={() => setOpenSectorModal(false)}>{t('farm.cancel')}</Button>
-          <Button onClick={handleCreateSector} variant="contained" disabled={formLoading || !sectorForm.name || !sectorForm.farm || !sectorForm.crop_type}>
-            {formLoading ? <CircularProgress size={20} /> : t('farm.save_sector')}
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenSectorModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
+          <Button onClick={handleCreateSector} variant="contained" disabled={formLoading || !sectorForm.name || !sectorForm.farm || !sectorForm.crop_type} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
+            {formLoading ? <CircularProgress size={20} /> : t('farm.save_sector', 'حفظ القطاع')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* PLOT MODAL */}
-      <Dialog open={openPlotModal} onClose={() => setOpenPlotModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('farm.add_plot_title')}</DialogTitle>
-        <DialogContent className="space-y-4 pt-4">
-          <TextField select fullWidth label={t('farm.parent_sector')} value={plotForm.sector} onChange={(e) => setPlotForm({...plotForm, sector: e.target.value})} className="mt-2" variant="filled">
-            {structure.map((s) => <MenuItem key={s.id} value={s.id}>{s.name} ({s.crop_type_name})</MenuItem>)}
+      <Dialog open={openPlotModal} onClose={() => setOpenPlotModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>{t('farm.add_plot_title', 'إضافة حقل جديد')}</DialogTitle>
+        <DialogContent className="space-y-5 pt-2">
+          <TextField select fullWidth label={t('farm.parent_sector', 'القطاع التابع')} value={plotForm.sector} onChange={(e) => setPlotForm({...plotForm, sector: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
+            {structure.map((s) => <MenuItem key={s.id} value={s.id} sx={{ fontWeight: 600 }}>{s.name} ({s.crop_type_name})</MenuItem>)}
           </TextField>
-          <TextField fullWidth label={t('farm.plot_name')} value={plotForm.name} onChange={(e) => setPlotForm({...plotForm, name: e.target.value})} variant="filled" />
-          <TextField select fullWidth label={t('farm.plot_type')} value={plotForm.is_general} onChange={(e) => setPlotForm({...plotForm, is_general: e.target.value})} variant="filled">
-            <MenuItem value={false}>{t('farm.plot_specific')}</MenuItem>
-            <MenuItem value={true}>{t('farm.plot_general')}</MenuItem>
+          <TextField fullWidth label={t('farm.plot_name', 'اسم الحقل')} value={plotForm.name} onChange={(e) => setPlotForm({...plotForm, name: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }} />
+          <TextField select fullWidth label={t('farm.plot_type', 'نوع الحقل')} value={plotForm.is_general} onChange={(e) => setPlotForm({...plotForm, is_general: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
+            <MenuItem value={false} sx={{ fontWeight: 600 }}>{t('farm.plot_specific', 'محصول محدد')}</MenuItem>
+            <MenuItem value={true} sx={{ fontWeight: 600 }}>{t('farm.plot_general', 'مرافق عامة')}</MenuItem>
           </TextField>
         </DialogContent>
-        <DialogActions className="p-4">
-          <Button onClick={() => setOpenPlotModal(false)}>{t('farm.cancel')}</Button>
-          <Button onClick={handleCreatePlot} variant="contained" color="secondary" disabled={formLoading || !plotForm.name || !plotForm.sector}>
-            {formLoading ? <CircularProgress size={20} /> : t('farm.save_plot')}
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenPlotModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
+          <Button onClick={handleCreatePlot} variant="contained" disabled={formLoading || !plotForm.name || !plotForm.sector} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
+            {formLoading ? <CircularProgress size={20} /> : t('farm.save_plot', 'حفظ الحقل')}
           </Button>
         </DialogActions>
       </Dialog>

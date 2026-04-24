@@ -110,8 +110,16 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
             >
               <MenuIcon />
             </IconButton>
-            
-
+            {isDesktop && (
+              <IconButton
+                color="inherit"
+                aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                onClick={onCollapseToggle}
+                sx={{ mr: 1, display: { xs: 'none', md: 'inline-flex' } }}
+              >
+                {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              </IconButton>
+            )}
 
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, tracking: '-0.02em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>

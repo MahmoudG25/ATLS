@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, Table, TableBody, TableCell, TableHead, TableRow, Paper, TableContainer, MenuItem, Grid, Chip, Box, Typography, useMediaQuery, useTheme, Card } from '@mui/material';
 import { getItems, getMovements, createItem, createMovement } from '../../features/warehouse/services';
 import { useTranslation } from 'react-i18next';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';

@@ -43,6 +43,7 @@ const DashboardLayout = ({ children }) => {
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   const drawerWidth = collapsed ? 80 : 264;
+  const activeEdge = isRTL ? 'left' : 'right';
 
   // Wrapper so nav items can call hasAccessCheck('farm') etc.
   const hasAccessCheck = (module) => hasAccess(user, module);
@@ -103,12 +104,12 @@ const DashboardLayout = ({ children }) => {
             '&::before': isActive && !collapsed ? {
               content: '""',
               position: 'absolute',
-              right: 0,
+              [activeEdge]: 0,
               top: '20%',
               height: '60%',
               width: 3,
               bgcolor: '#16a34a',
-              borderRadius: '3px 0 0 3px',
+              borderRadius: isRTL ? '0 3px 3px 0' : '3px 0 0 3px',
             } : {},
           }}
         >

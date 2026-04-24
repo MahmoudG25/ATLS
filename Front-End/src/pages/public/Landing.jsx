@@ -42,7 +42,7 @@ const Landing = () => {
       .finally(() => setLoading(false));
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [i18n]);
 
   const toggleLanguage = () => {
     const next = i18n.language === 'ar' ? 'en' : 'ar';
@@ -164,17 +164,17 @@ const Landing = () => {
         bgcolor: '#0f172a',
         overflow: 'hidden'
       }}>
-        {/* Background Image with Overlay */}
+        {/* Hero background with gradient overlays */}
         <Box sx={{ 
           position: 'absolute', inset: 0, 
-          backgroundImage: 'url("/farm_management_hero_1776973800136.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          '&::after': {
+          background: 'linear-gradient(180deg, rgba(15,23,42,0.97) 0%, rgba(15,23,42,0.90) 30%, rgba(15,23,42,0.80) 100%)',
+          '&::before': {
             content: '""',
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to bottom, rgba(15,23,42,0.8), rgba(15,23,42,0.4), rgba(15,23,42,0.9))'
-          }
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at 20% 20%, rgba(22,163,74,0.16), transparent 28%), radial-gradient(circle at 85% 20%, rgba(74,222,128,0.12), transparent 22%), radial-gradient(circle at 50% 80%, rgba(34,197,94,0.15), transparent 20%)',
+            opacity: 0.95,
+          },
         }} />
 
         <Container maxWidth="lg" sx={{ relative: 'relative', zIndex: 10, textAlign: 'center', pt: 12 }}>
