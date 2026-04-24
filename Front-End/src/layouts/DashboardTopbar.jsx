@@ -27,22 +27,11 @@ const ROUTE_LABELS = {
   '/profile':    'nav.dashboard',
 };
 
-const ROLE_COLORS = {
-  SUPER_ADMIN: '#7c3aed',
-  OWNER:       '#0284c7',
-  MANAGER:     '#0369a1',
-  ENGINEER:    '#16a34a',
-  ACCOUNTANT:  '#b45309',
-  WAREHOUSE:   '#c2410c',
-  HR:          '#db2777',
-};
-
 const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawerWidth }) => {
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const isRTL = i18n.language === 'ar';
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -65,7 +54,18 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
     ? t(ROUTE_LABELS[location.pathname])
     : 'Atlas ERP';
 
-  const roleColor = ROLE_COLORS[user?.role] || '#16a34a';
+  // We should ideally get this from a theme map or utility, but using standard palette for now
+  const ROLE_COLORS = {
+    SUPER_ADMIN: theme.palette.info.dark,
+    OWNER:       theme.palette.info.main,
+    MANAGER:     theme.palette.info.light,
+    ENGINEER:    theme.palette.primary.main,
+    ACCOUNTANT:  theme.palette.warning.dark,
+    WAREHOUSE:   theme.palette.warning.main,
+    HR:          theme.palette.secondary.main,
+  };
+  
+  const roleColor = ROLE_COLORS[user?.role] || theme.palette.primary.main;
 
   const toggleLanguage = () => {
     const next = i18n.language === 'ar' ? 'en' : 'ar';
@@ -84,9 +84,12 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          bgcolor: '#ffffff',
-          color: '#1e293b',
-          borderBottom: '1px solid #e2e8f0',
+          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          color: 'text.primary',
+          borderBottom: 1,
+          borderColor: 'border.subtle',
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
@@ -142,15 +145,28 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           {/* Right side: Notifications + User */}
           <div className="flex items-center gap-1">
             <NotificationBell />
-            <div 
-              className={`flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 rounded-xl transition-colors`}
+            <Box 
               onClick={handleMenuClick}
               aria-controls={open ? 'user-menu' : undefined}
               aria-haspopup="true"
               aria-expanded={open ? 'true' : undefined}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                cursor: 'pointer',
+                p: 0.75,
+                borderRadius: 3,
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  backgroundColor: 'background.default'
+                }
+              }}
             >
-              <div className="text-end hidden sm:block">
-                <p className="text-sm font-bold text-slate-800">{user?.name}</p>
+              <Box sx={{ textAlign: 'end', display: { xs: 'none', sm: 'block' } }}>
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 800, color: 'text.primary' }}>
+                  {user?.name}
+                </Typography>
                 <Chip
                   label={user?.role?.replace('_', ' ')}
                   size="small"
@@ -163,7 +179,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
                     borderRadius: '6px',
                   }}
                 />
-              </div>
+              </Box>
               <Avatar
                 sx={{
                   width: 38,
@@ -175,7 +191,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
               >
                 {user?.name?.charAt(0)?.toUpperCase()}
               </Avatar>
-            </div>
+            </Box>
           </div>
         </Toolbar>
       </AppBar>
@@ -188,22 +204,22 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
         onClose={handleMenuClose}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ elevation: 3, sx: { minWidth: 240, mt: 1.5, borderRadius: '14px', overflow: 'hidden' } }}
+        PaperProps={{ elevation: 3, sx: { minWidth: 240, mt: 1.5, overflow: 'hidden' } }}
       >
         {/* Mini Profile Header */}
-        <Box sx={{ px: 2.5, py: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+        <Box sx={{ px: 2.5, py: 2, bgcolor: 'background.default', borderBottom: 1, borderColor: 'border.subtle' }}>
           <Box display="flex" alignItems="center" gap={1.5}>
             <Avatar sx={{ width: 36, height: 36, bgcolor: roleColor, fontWeight: 800, fontSize: 14 }}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </Avatar>
             <Box>
-              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{user?.name}</Typography>
-              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>{user?.role?.replace('_', ' ')}</Typography>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'text.primary' }}>{user?.name}</Typography>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.disabled' }}>{user?.role?.replace('_', ' ')}</Typography>
             </Box>
           </Box>
         </Box>
 
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }} sx={{ py: 1.5 }}>
+        <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }} sx={{ py: 1.5, mt: 1 }}>
           <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary={t('nav.dashboard', 'ملفي الشخصي')} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
         </MenuItem>
@@ -221,7 +237,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           />
         </MenuItem>
         
-        <Divider sx={{ my: 0.5 }} />
+        <Divider sx={{ my: 0.5, borderColor: 'border.subtle' }} />
         
         <MenuItem onClick={() => { handleMenuClose(); logout(); }} sx={{ color: 'error.main', py: 1.5 }}>
           <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>

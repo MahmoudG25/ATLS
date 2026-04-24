@@ -64,7 +64,7 @@ const DashboardLayout = ({ children }) => {
         mt: 2,
         mb: 0.5,
         display: 'block',
-        color: '#94a3b8',
+        color: 'text.disabled', // mapped to text.muted in theme
         fontWeight: 700,
         fontSize: '0.65rem',
         letterSpacing: '0.08em',
@@ -92,13 +92,13 @@ const DashboardLayout = ({ children }) => {
             mx: 1,
             borderRadius: 2,
             justifyContent: collapsed ? 'center' : 'flex-start',
-            bgcolor: isActive ? '#f0fdf4' : 'transparent',
-            color: isActive ? '#16a34a' : '#475569',
+            bgcolor: isActive ? 'semanticBg.success' : 'transparent',
+            color: isActive ? 'primary.main' : 'text.secondary',
             fontWeight: isActive ? 700 : 500,
             transition: 'all 0.15s ease',
             '&:hover': {
-              bgcolor: isActive ? '#f0fdf4' : '#f8fafc',
-              color: isActive ? '#16a34a' : '#1e293b',
+              bgcolor: isActive ? 'semanticBg.success' : 'background.default',
+              color: isActive ? 'primary.main' : 'text.primary',
             },
             position: 'relative',
             '&::before': isActive && !collapsed ? {
@@ -108,12 +108,12 @@ const DashboardLayout = ({ children }) => {
               top: '20%',
               height: '60%',
               width: 3,
-              bgcolor: '#16a34a',
+              bgcolor: 'primary.main',
               borderRadius: isRTL ? '0 3px 3px 0' : '3px 0 0 3px',
             } : {},
           }}
         >
-          <ListItemIcon sx={{ minWidth: 0, color: isActive ? '#16a34a' : '#94a3b8', flexShrink: 0, justifyContent: 'center' }}>
+          <ListItemIcon sx={{ minWidth: 0, color: isActive ? 'primary.main' : color || 'text.disabled', flexShrink: 0, justifyContent: 'center' }}>
             {icon}
           </ListItemIcon>
           {!collapsed && (
@@ -130,11 +130,11 @@ const DashboardLayout = ({ children }) => {
     const sidebarContent = (
     <>
       {/* Header */}
-      <Box sx={{ px: collapsed ? 1 : 2.5, py: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Box sx={{ px: collapsed ? 1 : 2.5, py: 2.5, borderBottom: 1, borderColor: 'border.subtle', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{ 
             width: 40, height: 40, borderRadius: 2, 
-            background: 'linear-gradient(135deg, #16a34a, #15803d)', 
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`, 
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
             flexShrink: 0
           }}>
@@ -142,10 +142,10 @@ const DashboardLayout = ({ children }) => {
           </Box>
           {!collapsed && (
             <Box>
-              <Typography variant="subtitle1" fontWeight={800} color="#1e293b" sx={{ lineHeight: 1.2 }}>
+              <Typography variant="subtitle1" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
                 Atlas ERP
               </Typography>
-              <Typography variant="caption" color="#16a34a" fontWeight={600}>
+              <Typography variant="caption" color="primary.main" fontWeight={600}>
                 أطلس سيوة الزراعية
               </Typography>
             </Box>
@@ -160,21 +160,21 @@ const DashboardLayout = ({ children }) => {
       <Box sx={{ flex: 1, p: 1.5, pt: 2, overflowY: 'auto' }}>
         <SectionLabel label={t('sidebar.operations')} />
         <NavItem to="/dashboard"  icon={<DashboardIcon   fontSize="small" />} labelKey="sidebar.dashboard" />
-        {hasAccessCheck('farm')      && <NavItem to="/farm"       icon={<AccountTreeIcon fontSize="small" />} labelKey="sidebar.farm"       color="#16a34a" />}
-        {hasAccessCheck('palm')      && <NavItem to="/palm"       icon={<SpaIcon         fontSize="small" />} labelKey="sidebar.palm"       color="#15803d" />}
-        {hasAccessCheck('olive')     && <NavItem to="/olive"      icon={<ForestIcon      fontSize="small" />} labelKey="sidebar.olive"      color="#65a30d" />}
-        {hasAccessCheck('warehouse') && <NavItem to="/warehouse"  icon={<WarehouseIcon   fontSize="small" />} labelKey="sidebar.warehouse"  color="#f59e0b" />}
-        {hasAccessCheck('equipment') && <NavItem to="/equipment"  icon={<AgricultureIcon fontSize="small" />} labelKey="sidebar.equipment"  color="#6366f1" />}
+        {hasAccessCheck('farm')      && <NavItem to="/farm"       icon={<AccountTreeIcon fontSize="small" />} labelKey="sidebar.farm"       color="primary.main" />}
+        {hasAccessCheck('palm')      && <NavItem to="/palm"       icon={<SpaIcon         fontSize="small" />} labelKey="sidebar.palm"       color="primary.dark" />}
+        {hasAccessCheck('olive')     && <NavItem to="/olive"      icon={<ForestIcon      fontSize="small" />} labelKey="sidebar.olive"      color="success.main" />}
+        {hasAccessCheck('warehouse') && <NavItem to="/warehouse"  icon={<WarehouseIcon   fontSize="small" />} labelKey="sidebar.warehouse"  color="warning.main" />}
+        {hasAccessCheck('equipment') && <NavItem to="/equipment"  icon={<AgricultureIcon fontSize="small" />} labelKey="sidebar.equipment"  color="info.main" />}
 
         <SectionLabel label={t('sidebar.business')} />
-        {hasAccessCheck('reports')    && <NavItem to="/reports"    icon={<DynamicFeedIcon fontSize="small" />} labelKey="sidebar.reports"    color="#3b82f6" />}
-        {hasAccessCheck('production') && <NavItem to="/production" icon={<AutoGraphIcon   fontSize="small" />} labelKey="sidebar.production" color="#8b5cf6" />}
-        {hasAccessCheck('accounting') && <NavItem to="/accounting" icon={<PaymentsIcon    fontSize="small" />} labelKey="sidebar.accounting" color="#f97316" />}
+        {hasAccessCheck('reports')    && <NavItem to="/reports"    icon={<DynamicFeedIcon fontSize="small" />} labelKey="sidebar.reports"    color="info.dark" />}
+        {hasAccessCheck('production') && <NavItem to="/production" icon={<AutoGraphIcon   fontSize="small" />} labelKey="sidebar.production" color="secondary.main" />}
+        {hasAccessCheck('accounting') && <NavItem to="/accounting" icon={<PaymentsIcon    fontSize="small" />} labelKey="sidebar.accounting" color="warning.dark" />}
 
         {user?.role && ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role) && (
           <>
             <SectionLabel label={t('sidebar.security')} />
-            <NavItem to="/admin" icon={<VerifiedUserIcon fontSize="small" />} labelKey="sidebar.admin" color="#38bdf8" />
+            <NavItem to="/admin" icon={<VerifiedUserIcon fontSize="small" />} labelKey="sidebar.admin" color="info.light" />
           </>
         )}
       </Box>
@@ -183,7 +183,8 @@ const DashboardLayout = ({ children }) => {
       <Box
         sx={{
           p: 2,
-          borderTop: '1px solid #f1f5f9',
+          borderTop: 1,
+          borderColor: 'border.subtle',
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
@@ -191,24 +192,24 @@ const DashboardLayout = ({ children }) => {
           flexDirection: collapsed ? 'column' : 'row'
         }}
       >
-        <Avatar sx={{ width: 36, height: 36, bgcolor: '#16a34a', fontSize: 14, flexShrink: 0 }}>
+        <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 14, flexShrink: 0 }}>
           {user?.name?.charAt(0)?.toUpperCase()}
         </Avatar>
         {!collapsed && (
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={700} noWrap>{user?.name}</Typography>
+            <Typography variant="body2" fontWeight={700} color="text.primary" noWrap>{user?.name}</Typography>
             <Typography variant="caption" color="text.secondary" noWrap>{user?.role?.replace('_', ' ')}</Typography>
           </Box>
         )}
         {!collapsed && (
           <Tooltip title={t('sidebar.logout', 'تسجيل الخروج') || 'Logout'}>
-            <IconButton size="small" onClick={logout} sx={{ color: '#94a3b8' }}>
+            <IconButton size="small" onClick={logout} sx={{ color: 'text.disabled' }}>
               <LogoutIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {collapsed && (
-          <IconButton size="small" onClick={logout} sx={{ color: '#ef4444', mt: 1 }}>
+          <IconButton size="small" onClick={logout} sx={{ color: 'error.main', mt: 1 }}>
             <LogoutIcon fontSize="small" />
           </IconButton>
         )}
@@ -217,7 +218,7 @@ const DashboardLayout = ({ children }) => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
       {/* Sidebar (Permanent on Desktop) */}
       <Drawer
         variant={isDesktop ? "permanent" : "temporary"}
@@ -236,8 +237,9 @@ const DashboardLayout = ({ children }) => {
             width: drawerWidth,
             boxSizing: 'border-box',
             border: 'none',
-            borderRight: isDesktop ? '1px solid #f1f5f9' : 'none',
-            backgroundColor: '#ffffff',
+            borderRight: isDesktop ? 1 : 0,
+            borderColor: 'border.subtle',
+            backgroundColor: 'background.paper',
             display: 'flex',
             flexDirection: 'column',
             transition: theme.transitions.create('width', {

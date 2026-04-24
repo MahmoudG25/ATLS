@@ -15,8 +15,8 @@
 /* ── Base ───────────────────────────────────────────────────── */
 body {
   font-family: "Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #f8fafc; /* Tied to theme tokens */
+  color: #0f172a;            /* Tied to theme tokens */
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -29,64 +29,68 @@ html[dir="rtl"] body,
   font-family: "Cairo", "Segoe UI", "Tahoma", "Arial", sans-serif;
 }
 
-/* ── RTL Sidebar Border Flip ────────────────────────────────── */
+/* ── RTL Overrides (Sync with Tokens) ───────────────────────── */
 html[dir="rtl"] .MuiDrawer-paper {
   border-right: none !important;
   border-left: 1px solid #e2e8f0 !important;
 }
 
-/* ── RTL Input Direction ─────────────────────────────────────── */
 html[dir="rtl"] input,
-html[dir="rtl"] textarea {
-  text-align: right;
-}
-
-/* ── RTL List Item Icon Flip ─────────────────────────────────── */
-html[dir="rtl"] .MuiListItemIcon-root {
-  margin-right: 0;
-  margin-left: 8px;
-}
-
-/* ── RTL Table Text ─────────────────────────────────────────── */
+html[dir="rtl"] textarea,
 html[dir="rtl"] .MuiTableCell-root {
   text-align: right;
 }
 
-/* ── Responsive Typography ──────────────────────────────────── */
-@media (max-width: 1024px) {
-  .MuiTypography-h4 { font-size: 1.6rem !important; }
-  .MuiTypography-h5 { font-size: 1.3rem !important; }
-  .MuiTypography-h6 { font-size: 1.15rem !important; }
+html[dir="rtl"] .MuiListItemIcon-root {
+  margin-right: 0;
+  margin-left: 8px; /* 2 * spacing token */
 }
 
-/* ── Mobile Optimizations (< 600px) ─────────────────────────── */
-@media (max-width: 600px) {
-  /* Prevent auto-zoom on iOS */
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-  
-  .MuiTypography-h4 { font-size: 1.4rem !important; }
-  .MuiTypography-h5 { font-size: 1.2rem !important; }
-  
-  /* Touch target improvement */
-  .MuiButton-root {
-    min-height: 48px;
-  }
-  
-  .MuiCardContent-root {
-    padding: 16px !important;
-  }
-
-  /* Hide scrollbars for cleaner mobile look */
-  ::-webkit-scrollbar {
-    display: none;
-  }
+/* ── Custom Scrollbar (Elegant & Thin) ──────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* ── Smooth scrolling ───────────────────────────────────────── */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 12px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* ── Global Motion & Utilities ──────────────────────────────── */
 html {
   scroll-behavior: smooth;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hover-lift {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.active-press {
+  transition: transform 0.2s ease-in-out;
+}
+
+.active-press:active {
+  transform: scale(0.98);
 }
 
 /* ── Utility: Line clamp ────────────────────────────────────── */
@@ -97,3 +101,21 @@ html {
   overflow: hidden;
 }
 
+/* ── Mobile Optimizations (< 600px) ─────────────────────────── */
+@media (max-width: 600px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  .MuiButton-root {
+    min-height: 48px;
+  }
+  
+  .MuiCardContent-root {
+    padding: 16px !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}

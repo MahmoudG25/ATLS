@@ -18,31 +18,33 @@ export default function EmptyState({
         py: 8,
         px: 3,
         textAlign: 'center',
-        bgcolor: '#f8fafc',
-        borderRadius: 6,
-        border: '2px border-dashed #e2e8f0',
+        bgcolor: 'background.default',
+        borderRadius: 4, // equivalent to 16px
+        border: 2,
+        borderStyle: 'dashed',
+        borderColor: 'border.subtle',
         gap: 2,
         maxWidth: 400,
         mx: 'auto'
       }}
     >
       <Box sx={{ 
-        bgcolor: 'white', 
+        bgcolor: 'background.paper', 
         p: 2, 
         borderRadius: '50%', 
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+        boxShadow: (theme) => theme.customTokens.shadows.subtle,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         mb: 1
       }}>
-        <Icon sx={{ fontSize: 48, color: '#94a3b8' }} />
+        <Icon sx={{ fontSize: 48, color: 'text.disabled' }} />
       </Box>
       <Box>
-        <Typography variant="h6" sx={{ fontWeight: 800, color: 'slate.800' }}>
+        <Typography variant="h6" color="text.primary">
           {title}
         </Typography>
-        <Typography variant="body2" sx={{ color: 'slate.500', mt: 0.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {description}
         </Typography>
       </Box>
@@ -50,12 +52,7 @@ export default function EmptyState({
         <Button 
           variant="contained" 
           onClick={onAction}
-          sx={{ 
-            mt: 1, 
-            borderRadius: 2.5, 
-            px: 4,
-            fontWeight: 700
-          }}
+          sx={{ mt: 1 }}
         >
           {actionText}
         </Button>

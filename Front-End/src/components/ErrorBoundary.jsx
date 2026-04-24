@@ -21,17 +21,27 @@ class ErrorBoundary extends React.Component {
       const isProd = import.meta.env.PROD;
       
       return (
-        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh" bgcolor="#f8fafc" p={3}>
-          <WarningAmberIcon sx={{ fontSize: 80, color: '#f59e0b', mb: 2 }} />
-          <Typography variant="h4" fontWeight="bold" color="textPrimary" gutterBottom>
+        <Box 
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center" 
+          justifyContent="center" 
+          height="100vh" 
+          bgcolor="background.default" 
+          p={3}
+        >
+          <WarningAmberIcon sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
+          <Typography variant="h4" color="text.primary" gutterBottom>
             عذراً، حدث خطأ غير متوقع
           </Typography>
-          <Typography variant="body1" color="textSecondary" mb={4} textAlign="center" maxWidth="sm">
+          <Typography variant="body1" color="text.secondary" mb={4} textAlign="center" maxWidth="sm">
              نواجه مشكلة فنية حالياً. المرجو المحاولة مرة أخرى أو العودة للرئيسية.
              {!isProd && this.state.error && (
                <>
                  <br/>
-                 <span style={{color: '#ef4444', fontSize: '12px'}}>{this.state.error.toString()}</span>
+                 <Typography component="span" variant="caption" sx={{ color: 'error.main' }}>
+                   {this.state.error.toString()}
+                 </Typography>
                </>
              )}
           </Typography>
