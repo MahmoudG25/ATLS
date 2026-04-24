@@ -94,9 +94,9 @@ const InventoryLedger = () => {
   const filteredItems = items.filter(item => item.category === CATEGORIES[tabValue]);
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, width: '100%', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+    <div className="p-4 sm:p-8 w-full">
       {/* Header Section */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 4, gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, mb: 4, gap: 2 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ p: 1.5, bgcolor: '#f0fdf4', borderRadius: 2, display: 'flex', color: '#16a34a' }}>
@@ -106,7 +106,7 @@ const InventoryLedger = () => {
           </Typography>
           <Typography variant="body1" sx={{ color: '#64748b', mt: 1, fontWeight: 500 }}>{t('warehouse.subtitle', 'لوحة التحكم الشاملة للمخزون وحركات السحب والإضافة')}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', sm: 'auto' } }}>
+        <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
           <Button 
             fullWidth={isMobile}
             variant="outlined" 
@@ -130,9 +130,9 @@ const InventoryLedger = () => {
 
       {error && <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>}
 
-      <Grid container spacing={3} sx={{ width: '100%', m: 0 }}>
+      <Grid container spacing={4} sx={{ maxWidth: '1600px', mx: 'auto' }}>
         {/* Stock Matrix with Tabs */}
-        <Grid item xs={12} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
+        <Grid item xs={12}>
           <Card sx={{ p: 0, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', overflow: 'hidden' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f8fafc' }}>
               <Tabs value={tabValue} onChange={(e, val) => setTabValue(val)} variant="fullWidth" TabIndicatorProps={{ sx: { height: 3, borderRadius: '3px 3px 0 0', bgcolor: '#16a34a' } }}>
@@ -191,7 +191,7 @@ const InventoryLedger = () => {
         </Grid>
 
         {/* Movements Ledger */}
-        <Grid item xs={12} sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 0, sm: 3 } }}>
+        <Grid item xs={12}>
           <Card sx={{ p: 0, bgcolor: 'white', borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 460 }}>
             <Box sx={{ p: 3, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: '#f8fafc' }}>
               <ReceiptLongOutlinedIcon sx={{ color: '#64748b' }} />
@@ -200,12 +200,12 @@ const InventoryLedger = () => {
             {loading ? <Box sx={{ p: 8, textAlign: 'center' }}><CircularProgress sx={{ color: '#16a34a' }} /></Box> : (
               <Box sx={{ overflowX: 'auto', flexGrow: 1, maxHeight: { xs: 400, lg: '600px' }, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: '3px' } }}>
                 <TableContainer elevation={0}>
-                  <Table stickyHeader size="small">
+                  <Table stickyHeader size="medium">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.75rem', py: 2, bgcolor: 'white' }}>{t('warehouse.col_target', 'الصنف')}</TableCell>
-                        <TableCell sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.75rem', py: 2, bgcolor: 'white' }}>{t('warehouse.movement_user', 'بواسطة')}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.75rem', py: 2, bgcolor: 'white' }}>{t('warehouse.col_qty', 'الكمية')}</TableCell>
+                        <TableCell sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.85rem', py: 2.5, bgcolor: 'white', minWidth: 200 }}>{t('warehouse.col_target', 'الصنف')}</TableCell>
+                        <TableCell sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.85rem', py: 2.5, bgcolor: 'white', minWidth: 150 }}>{t('warehouse.movement_user', 'بواسطة')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.85rem', py: 2.5, bgcolor: 'white', minWidth: 120 }}>{t('warehouse.col_qty', 'الكمية')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -318,7 +318,7 @@ const InventoryLedger = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 export default InventoryLedger;
