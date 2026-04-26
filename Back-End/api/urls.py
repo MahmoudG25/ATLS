@@ -70,7 +70,22 @@ urlpatterns = [
     path('production/yields', production_views.yield_view, name='production_yields'),
 
     # Reports Mappings
-    path('reports/daily', reports_views.reports_view, name='reports_daily'),
+    path('reports/tasks/', reports_views.DailyTaskReportListCreate.as_view(), name='reports_tasks'),
+    path('reports/tasks/<int:pk>/', reports_views.DailyTaskReportDetail.as_view(), name='reports_tasks_detail'),
+    path('reports/tasks/summary/', reports_views.DailyTaskSummaryView.as_view(), name='reports_tasks_summary'),
+    path('reports/tasks/export/', reports_views.DailyTaskExportView.as_view(), name='reports_tasks_export'),
+    path('reports/fertilization/', reports_views.FertilizationListCreate.as_view(), name='reports_fertilization'),
+    path('reports/fertilization/<int:pk>/', reports_views.FertilizationDetail.as_view(), name='reports_fertilization_detail'),
+    path('reports/irrigation/', reports_views.IrrigationListCreate.as_view(), name='reports_irrigation'),
+    path('reports/irrigation/<int:pk>/', reports_views.IrrigationDetail.as_view(), name='reports_irrigation_detail'),
+    path('reports/operations/', reports_views.OperationListView.as_view(), name='reports_operations'),
+    path('reports/options/', reports_views.ReportDropdownOptionListCreate.as_view(), name='reports_options_list'),
+    path('reports/options/<int:pk>/', reports_views.ReportDropdownOptionDetail.as_view(), name='reports_options_detail'),
+
+    path('reports/custom-fields/', reports_views.CustomFieldDefinitionListCreate.as_view(), name='custom_fields_list'),
+    path('reports/custom-fields/<int:pk>/', reports_views.CustomFieldDefinitionDetail.as_view(), name='custom_fields_detail'),
+    path('reports/custom-field-values/', reports_views.CustomFieldValueListCreate.as_view(), name='custom_field_values_list'),
+    path('reports/custom-field-values/<int:pk>/', reports_views.CustomFieldValueDetail.as_view(), name='custom_field_values_detail'),
 
     # Notification Mappings
     path('notifications/', notification_views.notifications_list_view, name='notifications_list'),

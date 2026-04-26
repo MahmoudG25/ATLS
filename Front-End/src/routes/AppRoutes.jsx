@@ -17,7 +17,7 @@ const InventoryLedger= lazy(() => import('../pages/warehouse/InventoryLedger'));
 const FleetManager   = lazy(() => import('../pages/equipment/FleetManager'));
 const FinanceDashboard=lazy(() => import('../pages/accounting/FinanceDashboard'));
 const YieldTracking  = lazy(() => import('../pages/production/YieldTracking'));
-const DailyLogs      = lazy(() => import('../pages/reports/DailyLogs'));
+const ReportsIndex   = lazy(() => import('../pages/reports/ReportsIndex'));
 const AdminControls  = lazy(() => import('../pages/admin/AdminControls'));
 const Dashboard      = lazy(() => import('../pages/dashboard/Dashboard'));
 const PendingApproval= lazy(() => import('../pages/auth/PendingApproval'));
@@ -51,7 +51,7 @@ const AppRoutes = () => (
       <Route path="/olive"      element={<ProtectedRoute requireModule="olive"><DashboardLayout><ErrorBoundary><OliveRecords /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
       <Route path="/warehouse"  element={<ProtectedRoute requireModule="warehouse"><DashboardLayout><ErrorBoundary><InventoryLedger /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
       <Route path="/equipment"  element={<ProtectedRoute requireModule="equipment"><DashboardLayout><ErrorBoundary><FleetManager /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
-      <Route path="/reports"    element={<ProtectedRoute requireModule="reports"><DashboardLayout><ErrorBoundary><DailyLogs /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
+      <Route path="/reports/*"  element={<ProtectedRoute requireModule="reports"><DashboardLayout><ErrorBoundary><ReportsIndex /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
       <Route path="/production" element={<ProtectedRoute requireModule="production"><DashboardLayout><ErrorBoundary><YieldTracking /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
       <Route path="/accounting" element={<ProtectedRoute requireModule="accounting"><DashboardLayout><ErrorBoundary><FinanceDashboard /></ErrorBoundary></DashboardLayout></ProtectedRoute>} />
       
