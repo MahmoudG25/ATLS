@@ -28,6 +28,7 @@ class ReportDropdownOption(models.Model):
         ('unit', 'Unit'),
         ('contractor', 'Contractor'),
         ('enclosure', 'Enclosure'),
+        ('work_location', 'Work Location'),
     ]
 
     name = models.CharField(max_length=100)
@@ -53,7 +54,7 @@ class DailyTaskReport(models.Model):
     report_date     = models.DateField(verbose_name="تاريخ التقرير")
     sector          = models.ForeignKey('farm.Sector', on_delete=models.PROTECT, verbose_name="القطاع")
     variety         = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'variety'}, related_name="reports_variety", verbose_name="الصنف")
-    enclosure       = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'enclosure'}, related_name="reports_enclosure", null=True, blank=True, verbose_name="الحوشة")
+    enclosure       = models.ForeignKey('farm.Plot', on_delete=models.PROTECT, related_name="reports_enclosure", null=True, blank=True, verbose_name="الحوشة")
     work_location   = models.CharField(max_length=100, verbose_name="مكان العمل")
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
     contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")

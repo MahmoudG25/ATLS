@@ -1,306 +1,385 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, Card, Typography, Button, TextField, 
-  Stepper, Step, StepLabel, CircularProgress, Alert, Grid, Autocomplete, IconButton
+import {
+  TextField, Autocomplete, CircularProgress, Alert
 } from '@mui/material';
-import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import { Add as AddIcon, Remove as RemoveIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { reportsApi } from '../../../services/reportsApi';
 import DynamicFieldsRenderer from '../shared/DynamicFieldsRenderer';
-
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import { useAuth } from '../../../app/AuthContext';
+import api from '../../../services/api';
 
+// ── Schema ──────────────────────────────────────────────────────────────────
 const taskSchema = z.object({
-  report_date: z.any(), // dayjs object
+  report_date: z.any(),
   engineer: z.number().min(1, 'المهندس مطلوب'),
   sector: z.number().min(1, 'القطاع مطلوب'),
   variety: z.number().min(1, 'الصنف مطلوب'),
   enclosure: z.number().nullable().optional(),
   work_location: z.string().min(1, 'مكان العمل مطلوب'),
-  
   operation: z.number().min(1, 'العملية الفنية مطلوبة'),
   unit: z.number().min(1, 'الوحدة مطلوبة'),
   company_workers: z.coerce.number().min(0),
   contractor_workers: z.coerce.number().min(0),
   contractor: z.number().nullable().optional(),
-  
   actual_productivity: z.coerce.number().min(0),
-  work_hours: z.coerce.number().min(0.5, 'يجب إدخال نصف ساعة على الأقل'),
+  work_hours: z.coerce.number().min(0.5),
   overtime_hours: z.coerce.number().optional(),
   overtime_productivity: z.coerce.number().optional(),
   notes: z.string().optional(),
-
-  custom_fields: z.record(z.any()).optional()
+  custom_fields: z.record(z.any()).optional(),
 });
 
-const steps = ['البيانات الأساسية', 'تفاصيل العمل', 'الإنتاجية والحقول المخصصة'];
+// ── Design tokens ───────────────────────────────────────────────────────────
+// Retaining MUI input overrides because Autocomplete/DatePicker are still MUI
+const inputSx = {
+  '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
+    height: '40px',
+  },
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: '#f8faf6',
+    borderRadius: '0.5rem', // 8px
+    fontSize: '0.875rem', // 14px
+    '& fieldset': { borderColor: '#bfc9c1' },
+    '&:hover fieldset': { borderColor: '#0f5238' },
+    '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
+    '&.Mui-disabled': { backgroundColor: '#e8ebe8' },
+  },
+};
 
-const StepperInput = ({ value, onChange, label, error, helperText }) => (
-  <Box>
-    <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>{label}</Typography>
-    <Box display="flex" alignItems="center" border="1px solid" borderColor={error ? 'error.main' : 'divider'} borderRadius={1} p={0.5}>
-      <IconButton size="small" onClick={() => onChange(Math.max(0, value - 1))} color="error"><RemoveIcon /></IconButton>
-      <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center', width: 40 }}>{value}</Typography>
-      <IconButton size="small" onClick={() => onChange(value + 1)} color="primary"><AddIcon /></IconButton>
-    </Box>
-    {error && <Typography variant="caption" color="error">{helperText}</Typography>}
-  </Box>
+const dropdownPaper = {
+  paper: { sx: { bgcolor: '#fff', mt: 0.5, borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: '1px solid #bfc9c1' } }
+};
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+const Label = ({ children }) => (
+  <label className="block mb-2 font-medium text-sm text-[#191c1a]">
+    {children}
+  </label>
 );
 
-const DailyTaskForm = () => {
+const Field = ({ label, children }) => (
+  <div className="flex flex-col w-full">
+    <Label>{label}</Label>
+    {children}
+  </div>
+);
+
+// Stepper: Pure Tailwind HTML
+const Stepper = ({ value, onChange, error }) => {
+  const borderClass = error ? 'border-[#ba1a1a]' : 'border-[#bfc9c1]';
+  return (
+    <div className={`flex items-stretch h-[40px] border ${borderClass} rounded-lg bg-[#f8faf6] overflow-hidden focus-within:outline focus-within:outline-[1.5px] focus-within:outline-[#0f5238] focus-within:-outline-offset-1`}>
+      <button type="button" onClick={() => onChange(value + 1)}
+        className={`w-[40px] border-none border-l ${borderClass} bg-transparent cursor-pointer flex items-center justify-center text-[#404943] hover:bg-[#eceeea] transition-colors`}>
+        <AddIcon sx={{ fontSize: 18 }} />
+      </button>
+      <input type="number" value={value} min={0}
+        onChange={e => { const v = parseInt(e.target.value, 10); onChange(isNaN(v) ? 0 : Math.max(0, v)); }}
+        className="flex-1 w-full border-none outline-none bg-transparent text-center font-semibold text-[15px] text-[#191c1a] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+      <button type="button" onClick={() => onChange(Math.max(0, value - 1))}
+        className={`w-[40px] border-none border-r ${borderClass} bg-transparent cursor-pointer flex items-center justify-center text-[#404943] hover:bg-[#eceeea] transition-colors`}>
+        <RemoveIcon sx={{ fontSize: 18 }} />
+      </button>
+    </div>
+  );
+};
+
+// ID-based Autocomplete (for FK fields)
+const AC = ({ options, value, onChange, placeholder, error, helperText, disabled, getLabel }) => (
+  <Autocomplete
+    disabled={disabled}
+    options={options}
+    getOptionLabel={getLabel || (o => o.name || '')}
+    value={options.find(o => o.id === value) || null}
+    onChange={(_, d) => onChange(d?.id ?? null)}
+    slotProps={dropdownPaper}
+    sx={inputSx}
+    noOptionsText="لا توجد خيارات"
+    renderInput={params => (
+      <TextField {...params} fullWidth placeholder={placeholder} size="small" error={error} helperText={helperText} />
+    )}
+  />
+);
+
+// String-based Autocomplete with freeSolo (for CharField work_location)
+const ACFree = ({ options, value, onChange, placeholder, error, helperText }) => (
+  <Autocomplete
+    freeSolo
+    options={options.map(o => o.name)}
+    value={value || ''}
+    onChange={(_, d) => onChange(d || '')}
+    onInputChange={(_, v, reason) => { if (reason === 'input') onChange(v); }}
+    slotProps={dropdownPaper}
+    sx={inputSx}
+    noOptionsText="لا توجد خيارات"
+    renderInput={params => (
+      <TextField {...params} fullWidth placeholder={placeholder} size="small" error={error} helperText={helperText} />
+    )}
+  />
+);
+
+// ── Main Component ──────────────────────────────────────────────────────────
+export default function DailyTaskForm() {
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
+  const { user } = useAuth();
+  const isPrivileged = user && ['MANAGER', 'SUPER_ADMIN', 'ADMIN'].includes(user.role);
   const [submitError, setSubmitError] = useState('');
 
-  // Dropdown options states
+  // Options state
   const [users, setUsers] = useState([]);
   const [sectors, setSectors] = useState([]);
+  const [plots, setPlots] = useState([]);       // الحوش
   const [operations, setOperations] = useState([]);
   const [varieties, setVarieties] = useState([]);
   const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
-  const [enclosures, setEnclosures] = useState([]);
+  const [workLocations, setWorkLocations] = useState([]);
 
-  const { control, handleSubmit, trigger, formState: { errors, isSubmitting } } = useForm({
+  const { control, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      report_date: dayjs(),
-      engineer: null, sector: null, variety: null, enclosure: null, work_location: '',
-      operation: null, unit: null, company_workers: 0, contractor_workers: 0, contractor: null,
-      actual_productivity: 0, work_hours: 8, overtime_hours: 0, overtime_productivity: 0, notes: '',
-      custom_fields: {}
-    }
+      report_date: dayjs(), engineer: user?.id ?? null,
+      sector: null, variety: null, enclosure: null, work_location: '',
+      operation: null, unit: null, company_workers: 0, contractor_workers: 0,
+      contractor: null, actual_productivity: 0, work_hours: 8,
+      overtime_hours: 0, overtime_productivity: 0, notes: '', custom_fields: {},
+    },
   });
 
+  // When engineer user is not privileged, auto-fill
   useEffect(() => {
-    reportsApi.getUsers().then(res => setUsers(res.data.results || res.data)).catch(console.error);
-    reportsApi.getSectors().then(res => setSectors(res.data.results || res.data)).catch(console.error);
-    reportsApi.getOperations().then(res => setOperations(res.data.results || res.data)).catch(console.error);
-    
-    reportsApi.getOptions('variety').then(res => setVarieties(res.data.results || res.data)).catch(console.error);
-    reportsApi.getOptions('unit').then(res => setUnits(res.data.results || res.data)).catch(console.error);
-    reportsApi.getOptions('contractor').then(res => setContractors(res.data.results || res.data)).catch(console.error);
-    reportsApi.getOptions('enclosure').then(res => setEnclosures(res.data.results || res.data)).catch(console.error);
+    if (user && !isPrivileged) setValue('engineer', user.id);
+  }, [user, isPrivileged, setValue]);
+
+  // Fetch all options on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [usersRes, sectorsRes, opsRes, varRes, unitRes, conRes, wlRes] = await Promise.all([
+          api.get('/users'),
+          api.get('/farm/sectors'),
+          api.get('/reports/operations/'),
+          api.get('/reports/options/', { params: { category: 'variety' } }),
+          api.get('/reports/options/', { params: { category: 'unit' } }),
+          api.get('/reports/options/', { params: { category: 'contractor' } }),
+          api.get('/reports/options/', { params: { category: 'work_location' } }),
+        ]);
+
+        const r = res => Array.isArray(res.data) ? res.data : (res.data.results ?? res.data);
+
+        setUsers(r(usersRes));
+
+        const sectorList = r(sectorsRes);
+        setSectors(sectorList);
+
+        const allPlots = sectorList.flatMap(s =>
+          (s.plots || []).map(p => ({ id: p.id, name: `${s.name} / ${p.name}`, sector_id: s.id }))
+        );
+        setPlots(allPlots);
+
+        setOperations(r(opsRes));
+        setVarieties(r(varRes));
+        setUnits(r(unitRes));
+        setContractors(r(conRes));
+        setWorkLocations(r(wlRes));
+      } catch (e) {
+        console.error('Error fetching form options:', e);
+      }
+    })();
   }, []);
-
-  const handleNext = async () => {
-    let fieldsToValidate = [];
-    if (activeStep === 0) fieldsToValidate = ['report_date', 'engineer', 'sector', 'variety', 'work_location'];
-    if (activeStep === 1) fieldsToValidate = ['operation', 'unit', 'company_workers', 'contractor_workers'];
-    
-    const isStepValid = await trigger(fieldsToValidate);
-    if (isStepValid) setActiveStep((prev) => prev + 1);
-  };
-
-  const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const onSubmit = async (data) => {
     setSubmitError('');
     try {
-      const { custom_fields, report_date, ...mainReportData } = data;
-      
+      const { custom_fields, report_date, ...rest } = data;
       const payload = {
-        ...mainReportData,
-        report_date: report_date.format('YYYY-MM-DD')
+        ...rest,
+        report_date: dayjs(report_date).format('YYYY-MM-DD'),
       };
-
-      const res = await reportsApi.createTask(payload);
+      const res = await api.post('/reports/tasks/', payload);
       const reportId = res.data.id;
-
       if (custom_fields && Object.keys(custom_fields).length > 0) {
-        const customValuesPayload = Object.entries(custom_fields).map(([fieldId, value]) => ({
-          field: parseInt(fieldId),
-          value: value.toString(),
-          content_type_model: 'dailytaskreport',
-          object_id: reportId
-        }));
-        await Promise.all(customValuesPayload.map(cv => reportsApi.saveCustomFieldValues(cv)));
+        await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
+          api.post('/reports/custom-field-values/', {
+            field: parseInt(fieldId, 10), value: val.toString(),
+            content_type_model: 'dailytaskreport', object_id: reportId,
+          })
+        ));
       }
-
       navigate('/reports/tasks');
-    } catch (err) {
-      setSubmitError('حدث خطأ أثناء حفظ التقرير. يرجى مراجعة البيانات المدخلة.');
+    } catch (e) {
+      const msg = e?.response?.data ? JSON.stringify(e.response.data) : 'حدث خطأ أثناء حفظ التقرير.';
+      setSubmitError(msg);
     }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box maxWidth="800px" mx="auto">
-        <Typography variant="h5" fontWeight="800" mb={3}>تسجيل تقرير يومي (إدخال ذكي)</Typography>
-        
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-          {steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
-        </Stepper>
+      <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-[#f4f7f4] min-h-screen">
+        <div className="container mx-auto px-4 md:px-6 py-6 md:py-10 max-w-6xl">
 
-        <Card sx={{ p: 4, borderRadius: 4, boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }}>
-          {submitError && <Alert severity="error" sx={{ mb: 3 }}>{submitError}</Alert>}
-          
-          <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-            {/* STEP 1: Identity & Location */}
-            <Box display={activeStep === 0 ? 'block' : 'none'}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+          {submitError && (
+            <Alert severity="error" className="mb-6 rounded-lg whitespace-pre-wrap">
+              {submitError}
+            </Alert>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#bfc9c1] overflow-hidden">
+            <div className="p-6 md:p-10">
+
+              {/* Header */}
+              <div className="mb-8 pb-6 border-b border-[#e1e3df]">
+                <h2 className="font-semibold text-2xl text-[#191c1a]">تسجيل تقرير يومي</h2>
+                <p className="text-[15px] text-[#404943] mt-1.5">يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات.</p>
+              </div>
+
+              {/* Form Grid */}
+              <div className="flex flex-col gap-8">
+
+                {/* ── Row 1: التاريخ | المهندس | العملية | القطاع ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Controller name="report_date" control={control} render={({ field }) => (
-                    <DatePicker label="تاريخ التقرير" value={field.value} onChange={(newValue) => field.onChange(newValue)} slotProps={{ textField: { fullWidth: true, error: !!errors.report_date } }} />
+                    <Field label="التاريخ">
+                      <DatePicker value={field.value} onChange={field.onChange}
+                        slotProps={{ textField: { fullWidth: true, size: 'small', error: !!errors.report_date, sx: inputSx } }} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+
                   <Controller name="engineer" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={users} getOptionLabel={(option) => option.username || option.email || ''}
-                      value={users.find(u => u.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="المهندس" error={!!errors.engineer} helperText={errors.engineer?.message} />}
-                    />
+                    <Field label="المهندس المسؤول">
+                      <AC disabled={!isPrivileged} options={users} value={field.value} onChange={field.onChange}
+                        placeholder="المهندس" error={!!errors.engineer} helperText={errors.engineer?.message}
+                        getLabel={o => o.full_name || o.username || o.name || ''} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="sector" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={sectors} getOptionLabel={(option) => option.name || ''}
-                      value={sectors.find(s => s.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="القطاع" error={!!errors.sector} helperText={errors.sector?.message} />}
-                    />
-                  )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="variety" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={varieties} getOptionLabel={(option) => option.name || ''}
-                      value={varieties.find(v => v.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="الصنف" error={!!errors.variety} helperText={errors.variety?.message} />}
-                    />
-                  )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="enclosure" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={enclosures} getOptionLabel={(option) => option.name || ''}
-                      value={enclosures.find(e => e.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="الحوشة (اختياري)" />}
-                    />
-                  )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  {/* Kept as text since it's highly variable, or can be converted to Autocomplete if requested, but "work_location" was text in schema */}
-                  <Controller name="work_location" control={control} render={({ field }) => (
-                    <TextField {...field} label="مكان العمل الدقيق (نص)" fullWidth error={!!errors.work_location} helperText={errors.work_location?.message} />
-                  )} />
-                </Grid>
-              </Grid>
-            </Box>
 
-            {/* STEP 2: Work Details */}
-            <Box display={activeStep === 1 ? 'block' : 'none'}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
                   <Controller name="operation" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={operations} getOptionLabel={(option) => option.name || ''}
-                      value={operations.find(o => o.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="العملية الفنية" error={!!errors.operation} helperText={errors.operation?.message} />}
-                    />
+                    <Field label="العملية">
+                      <AC options={operations} value={field.value} onChange={field.onChange}
+                        placeholder="اختر العملية" error={!!errors.operation} helperText={errors.operation?.message} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+
+                  <Controller name="sector" control={control} render={({ field }) => (
+                    <Field label="القطاع">
+                      <AC options={sectors} value={field.value} onChange={v => { field.onChange(v); setValue('enclosure', null); }}
+                        placeholder="اختر القطاع" error={!!errors.sector} helperText={errors.sector?.message} />
+                    </Field>
+                  )} />
+                </div>
+
+                {/* ── Row 2: الصنف | الوحدة | موقع العمل | المقاول ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Controller name="variety" control={control} render={({ field }) => (
+                    <Field label="الصنف">
+                      <AC options={varieties} value={field.value} onChange={field.onChange}
+                        placeholder="اختر الصنف" error={!!errors.variety} helperText={errors.variety?.message} />
+                    </Field>
+                  )} />
+
                   <Controller name="unit" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={units} getOptionLabel={(option) => option.name || ''}
-                      value={units.find(u => u.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="الوحدة" error={!!errors.unit} helperText={errors.unit?.message} />}
-                    />
+                    <Field label="الوحدة">
+                      <AC options={units} value={field.value} onChange={field.onChange}
+                        placeholder="اختر الوحدة" error={!!errors.unit} helperText={errors.unit?.message} />
+                    </Field>
                   )} />
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <Controller name="company_workers" control={control} render={({ field }) => (
-                    <StepperInput value={field.value} onChange={field.onChange} label="عمال الشركة" error={!!errors.company_workers} helperText={errors.company_workers?.message} />
+
+                  <Controller name="work_location" control={control} render={({ field }) => (
+                    <Field label="موقع العمل التفصيلي">
+                      <ACFree options={workLocations} value={field.value} onChange={field.onChange}
+                        placeholder="اختر أو اكتب موقع العمل"
+                        error={!!errors.work_location} helperText={errors.work_location?.message} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Controller name="contractor_workers" control={control} render={({ field }) => (
-                    <StepperInput value={field.value} onChange={field.onChange} label="عمال المقاول" error={!!errors.contractor_workers} helperText={errors.contractor_workers?.message} />
-                  )} />
-                </Grid>
-                <Grid item xs={12} sm={4}>
+
                   <Controller name="contractor" control={control} render={({ field }) => (
-                    <Autocomplete
-                      options={contractors} getOptionLabel={(option) => option.name || ''}
-                      value={contractors.find(c => c.id === field.value) || null}
-                      onChange={(_, data) => field.onChange(data ? data.id : null)}
-                      renderInput={(params) => <TextField {...params} label="المقاول" error={!!errors.contractor} helperText={errors.contractor?.message} />}
-                    />
+                    <Field label="المقاول">
+                      <AC options={contractors} value={field.value} onChange={field.onChange}
+                        placeholder="اختر المقاول" error={!!errors.contractor} helperText={errors.contractor?.message} />
+                    </Field>
                   )} />
-                </Grid>
-              </Grid>
-            </Box>
+                </div>
 
-            {/* STEP 3: Productivity & Custom Fields */}
-            <Box display={activeStep === 2 ? 'block' : 'none'}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="actual_productivity" control={control} render={({ field }) => (
-                    <TextField {...field} type="number" label="الإنتاجية الفعلية" fullWidth error={!!errors.actual_productivity} helperText={errors.actual_productivity?.message} />
+                {/* ── Row 3: عمال الشركة | عمال المقاول ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Controller name="company_workers" control={control} render={({ field }) => (
+                    <Field label="عمال الشركة">
+                      <Stepper value={field.value} onChange={field.onChange} error={!!errors.company_workers} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="work_hours" control={control} render={({ field }) => (
-                    <TextField {...field} type="number" label="ساعات العمل" fullWidth error={!!errors.work_hours} helperText={errors.work_hours?.message} />
+
+                  <Controller name="contractor_workers" control={control} render={({ field }) => (
+                    <Field label="عمال المقاول">
+                      <Stepper value={field.value} onChange={field.onChange} error={!!errors.contractor_workers} />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="overtime_hours" control={control} render={({ field }) => (
-                    <TextField {...field} type="number" label="ساعات الإضافي" fullWidth />
+                </div>
+
+                {/* ── Row 4: ساعات العمل | الإنتاج الفعلي | ساعات إضافية | إنتاج إضافي ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { name: 'work_hours', label: 'ساعات العمل', placeholder: '8', step: '0.5' },
+                    { name: 'actual_productivity', label: 'الإنتاج الفعلي', placeholder: '0.00', step: '0.01' },
+                    { name: 'overtime_hours', label: 'ساعات إضافية', placeholder: '0', step: '0.5' },
+                    { name: 'overtime_productivity', label: 'إنتاج إضافي', placeholder: '0.00', step: '0.01' },
+                  ].map(({ name, label, placeholder, step }) => (
+                    <Controller key={name} name={name} control={control} render={({ field }) => (
+                      <Field label={label}>
+                        <TextField {...field} type="number" inputProps={{ min: 0, step }}
+                          placeholder={placeholder} fullWidth size="small"
+                          error={!!errors[name]} helperText={errors[name]?.message} sx={inputSx} />
+                      </Field>
+                    )} />
+                  ))}
+                </div>
+
+                {/* ── Row 5: الحوشة ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Controller name="enclosure" control={control} render={({ field }) => (
+                    <Field label="الحوشة (من هيكل المزرعة)">
+                      <AC
+                        options={plots.filter(p => !watch('sector') || p.sector_id === watch('sector'))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="اختر الحوشة"
+                        error={!!errors.enclosure}
+                        helperText={errors.enclosure?.message}
+                      />
+                    </Field>
                   )} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller name="overtime_productivity" control={control} render={({ field }) => (
-                    <TextField {...field} type="number" label="انتاجية الإضافي" fullWidth />
-                  )} />
-                </Grid>
-                <Grid item xs={12}>
+                </div>
+
+                {/* ── Row 6: ملاحظات ── */}
+                <div className="w-full">
                   <Controller name="notes" control={control} render={({ field }) => (
-                    <TextField {...field} multiline rows={3} label="ملاحظات" fullWidth />
+                    <Field label="ملاحظات / مشاهدات">
+                      <TextField {...field} placeholder="أدخل أي ملاحظات هامة هنا..." fullWidth size="small" multiline rows={4} sx={inputSx} />
+                    </Field>
                   )} />
-                </Grid>
-              </Grid>
+                </div>
 
-              <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
-            </Box>
+                <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* Stepper Controls */}
-            <Box display="flex" justifyContent="space-between" mt={4} pt={2} borderTop="1px solid #e2e8f0">
-              <Button disabled={activeStep === 0} onClick={handleBack} sx={{ fontWeight: 700 }}>
-                رجوع
-              </Button>
-              <Box>
-                {activeStep < steps.length - 1 ? (
-                  <Button variant="contained" onClick={handleNext} sx={{ borderRadius: 2, px: 4, fontWeight: 700 }}>
-                    التالي
-                  </Button>
-                ) : (
-                  <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ borderRadius: 2, px: 4, fontWeight: 700 }}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'حفظ التقرير'}
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          </Box>
-        </Card>
-      </Box>
+        {/* Sticky save button */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#bfc9c1] py-4 px-6 md:px-12 flex justify-end items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <button type="submit" disabled={isSubmitting}
+            className="flex items-center justify-center gap-2 bg-[#0f5238] text-white font-medium text-sm px-8 py-3 rounded-xl transition-all shadow-sm hover:shadow-md hover:bg-[#0b3d2a] disabled:bg-[#a0b8a8] disabled:cursor-not-allowed">
+            {isSubmitting ? <CircularProgress size={18} color="inherit" /> : <SaveIcon fontSize="small" />}
+            {isSubmitting ? 'جاري الحفظ...' : 'حفظ التقرير'}
+          </button>
+        </div>
+      </form>
     </LocalizationProvider>
   );
-};
-
-export default DailyTaskForm;
+}

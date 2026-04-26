@@ -20,8 +20,16 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     sector_name = serializers.CharField(source='sector.name', read_only=True)
     variety_name = serializers.CharField(source='variety.name', read_only=True)
     unit_name = serializers.CharField(source='unit.name', read_only=True)
-    contractor_name = serializers.CharField(source='contractor.name', read_only=True)
-    enclosure_name = serializers.CharField(source='enclosure.name', read_only=True)
+    contractor_name = serializers.SerializerMethodField()
+    enclosure_name = serializers.SerializerMethodField()
+
+    def get_contractor_name(self, obj):
+        return obj.contractor.name if obj.contractor else None
+
+    def get_enclosure_name(self, obj):
+        if obj.enclosure:
+            return f"{obj.enclosure.sector.name} / {obj.enclosure.name}"
+        return None
 
     class Meta:
         model = DailyTaskReport
