@@ -119,7 +119,7 @@ const DashboardLayout = ({ children }) => {
           {!collapsed && (
             <ListItemText
               primary={t(labelKey)}
-              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: "inherit", color: 'inherit', noWrap: true }}
+              slotProps={{ primary: { sx: { fontSize: '0.875rem', fontWeight: 'inherit', color: 'inherit' }, noWrap: true } }}
             />
           )}
         </ListItemButton>

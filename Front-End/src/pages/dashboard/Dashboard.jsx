@@ -15,6 +15,9 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import TrendingUpIcon  from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon  from '@mui/icons-material/TrendingDown';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { reportsApi } from '../../services/reportsApi';
+import { AreaChartCard, BarChartCard, PieChartCard } from '../../components/Charts';
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 
 const ModuleCard = ({ title, description, icon: Icon, color, bgColor, path, count }) => {
   const navigate = useNavigate();
@@ -139,6 +142,7 @@ const Dashboard = () => {
   const [equipCount, setEquipCount] = useState(0);
   const [itemCount, setItemCount]   = useState(0);
   const [loading, setLoading]       = useState(true);
+  const [analytics, setAnalytics]   = useState(null);
 
   const canViewFinance = ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT'].includes(user?.role);
 
@@ -147,10 +151,15 @@ const Dashboard = () => {
       try {
         const promises = [getEquipmentList(), getItems()];
         if (canViewFinance) promises.push(getFinancialSummary());
+        promises.push(reportsApi.getDashboardAnalytics(), reportsApi.getSmartInsights());
         const results = await Promise.all(promises);
         setEquipCount(results[0]?.length ?? 0);
         setItemCount(results[1]?.length ?? 0);
         if (canViewFinance) setFinance(results[2]);
+        setAnalytics({
+          ...(results[canViewFinance ? 3 : 2]?.data || {}),
+          insights: results[canViewFinance ? 4 : 3]?.data || { alerts: [], suggestions: [] },
+        });
       } catch (err) {
         console.error(err);
       } finally {
@@ -241,13 +250,13 @@ const Dashboard = () => {
         />
 
         <StatCard
-          title={t('dashboard.warehouse_items', 'سلع المستودع')}
-          value={itemCount}
-          unit={t('dashboard.type', 'نوع')}
+          title={t('dashboard.warehouse_items', 'الإنتاجية')}
+          value={Number(analytics?.kpi?.avg_productivity || 0).toFixed(2)}
+          unit={t('dashboard.type', 'وحدة/عامل')}
           icon={WarehouseIcon}
           color="info.main"
           bgColor="semanticBg.info"
-          trend={t('dashboard.items_trend', '+2 هذا الشهر')}
+          trend={t('dashboard.items_trend', 'تحليل لحظي')}
           trendUp={true}
         />
       </Box>
@@ -294,39 +303,60 @@ const Dashboard = () => {
         />
       </Box>
 
-      {/* Chart placeholder -> Analytics Coming Soon */}
-      <Card
-        sx={{
-          border: 2,
-          borderStyle: 'dashed',
-          borderColor: 'border.subtle',
-          boxShadow: 'none',
-          bgcolor: 'background.default',
-          mt: 4,
-          textAlign: 'center',
-          p: 6
-        }}
-      >
-        <Box
-          sx={{
-            width: 64, height: 64, borderRadius: 3,
-            bgcolor: 'background.paper', mx: 'auto', mb: 2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: (theme) => theme.customTokens?.shadows?.subtle
-          }}
-        >
-          <BarChartIcon sx={{ color: 'text.disabled', fontSize: 32 }} />
+      <Grid container spacing={3} sx={{ mt: 1 }}>
+        <Grid item xs={12} md={6}>
+          <AreaChartCard
+            title="Operations Over Time"
+            data={(analytics?.operations_over_time || []).map((r) => ({ name: r.day, value: r.total }))}
+            dataKey="value"
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <BarChartCard
+            title="Workers Usage"
+            data={(analytics?.workers_usage || []).map((r) => ({ name: r.operation__name, value: Number(r.company_workers || 0) + Number(r.contractor_workers || 0) }))}
+            dataKey="value"
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <PieChartCard
+            title="Cost Analysis by Operation"
+            data={(analytics?.costs?.per_operation || []).slice(0, 6).map((r) => ({ name: r.report__operation__name || 'N/A', value: Number(r.total_cost || 0) }))}
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ p: 3, height: '100%', border: 1, borderColor: 'border.subtle' }}>
+            <Typography fontWeight={700} mb={2}>Smart Alerts & Suggestions</Typography>
+            {(analytics?.insights?.alerts || []).map((alert, idx) => (
+              <Chip key={idx} label={alert.message} color="warning" sx={{ mr: 1, mb: 1 }} />
+            ))}
+            {(analytics?.insights?.suggestions || []).map((tip, idx) => (
+              <Typography key={idx} variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>• {tip}</Typography>
+            ))}
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Card sx={{ mt: 3, border: 1, borderColor: 'border.subtle' }}>
+        <Box sx={{ p: 2.5, borderBottom: 1, borderColor: 'border.subtle' }}>
+          <Typography fontWeight={700}>Operation Table (Excel Style)</Typography>
         </Box>
-        <Typography variant="h6" color="text.primary" gutterBottom fontWeight={700}>
-          {t('dashboard.analytics_title', 'التحليلات والتقارير المتقدمة')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" maxWidth={400} mx="auto" mb={3}>
-          {t('dashboard.analytics_desc', 'مساحة مخصصة للرسوم البيانية والتحليلات التفصيلية — ستكون متاحة في المرحلة الثانية')}
-        </Typography>
-        <Chip
-          label={t('dashboard.analytics_soon', '🚧 قريباً — المرحلة الثانية')}
-          sx={{ bgcolor: 'semanticBg.warning', color: 'warning.dark', fontWeight: 700 }}
-        />
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Operation</TableCell>
+              <TableCell align="right">Total Cost</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(analytics?.costs?.per_operation || []).map((row, idx) => (
+              <TableRow key={`${row.report__operation__name}-${idx}`}>
+                <TableCell>{row.report__operation__name || '-'}</TableCell>
+                <TableCell align="right">{Number(row.total_cost || 0).toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
     </Box>
   );

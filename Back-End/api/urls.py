@@ -10,6 +10,7 @@ from api.endpoints import equipment_views
 from api.endpoints import accounting_views
 from api.endpoints import production_views
 from api.endpoints import reports_views
+from api.endpoints import upload_views
 from api.endpoints import notification_views
 from api.endpoints import activity_views
 
@@ -75,6 +76,14 @@ urlpatterns = [
     path('reports/tasks/<int:pk>/', reports_views.DailyTaskReportDetail.as_view(), name='reports_tasks_detail'),
     path('reports/tasks/summary/', reports_views.DailyTaskSummaryView.as_view(), name='reports_tasks_summary'),
     path('reports/tasks/export/', reports_views.DailyTaskExportView.as_view(), name='reports_tasks_export'),
+    path('reports/analytics/operations/', reports_views.OperationAnalyticsView.as_view(), name='reports_analytics_operations'),
+    path('reports/analytics/workers/', reports_views.WorkerAnalyticsView.as_view(), name='reports_analytics_workers'),
+    path('analytics/costs/', reports_views.CostAnalyticsView.as_view(), name='analytics_costs'),
+    path('analytics/kpi/', reports_views.KPIAnalyticsView.as_view(), name='analytics_kpi'),
+    path('analytics/productivity/', reports_views.ProductivityAnalyticsView.as_view(), name='analytics_productivity'),
+    path('analytics/comparison/', reports_views.ComparisonAnalyticsView.as_view(), name='analytics_comparison'),
+    path('analytics/dashboard/', reports_views.DashboardAnalyticsView.as_view(), name='analytics_dashboard'),
+    path('analytics/insights/', reports_views.SmartInsightsView.as_view(), name='analytics_insights'),
     path('reports/fertilization/', reports_views.FertilizationListCreate.as_view(), name='reports_fertilization'),
     path('reports/fertilization/<int:pk>/', reports_views.FertilizationDetail.as_view(), name='reports_fertilization_detail'),
     path('reports/irrigation/', reports_views.IrrigationListCreate.as_view(), name='reports_irrigation'),
@@ -87,6 +96,9 @@ urlpatterns = [
     path('reports/custom-fields/<int:pk>/', reports_views.CustomFieldDefinitionDetail.as_view(), name='custom_fields_detail'),
     path('reports/custom-field-values/', reports_views.CustomFieldValueListCreate.as_view(), name='custom_field_values_list'),
     path('reports/custom-field-values/<int:pk>/', reports_views.CustomFieldValueDetail.as_view(), name='custom_field_values_detail'),
+    path('reports/labor/', reports_views.LaborEntryListCreate.as_view(), name='reports_labor_list'),
+    path('reports/attachments/', reports_views.AttachmentListCreate.as_view(), name='reports_attachments_list'),
+    path('uploads/', upload_views.UploadFileView.as_view(), name='upload_file'),
 
     # Notification Mappings
     path('notifications/', notification_views.notifications_list_view, name='notifications_list'),

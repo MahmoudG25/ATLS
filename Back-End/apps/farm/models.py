@@ -1,6 +1,8 @@
 from django.db import models
+from mptt.models import MPTTModel, TreeForeignKey
+from core.tenant import TenantAwareModel
 
-class Farm(models.Model):
+class Farm(TenantAwareModel):
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
 
@@ -76,4 +78,47 @@ class Enclosure(models.Model):
         if self.stage:
             return f"{self.crop.name} - {self.stage.name} - {self.name}"
         return f"{self.crop.name} - {self.name}"
+
+
+class LocationNode(MPTTModel, TenantAwareModel):
+    TYPE_STAGE = "STAGE"
+    TYPE_SECTOR = "SECTOR"
+    TYPE_ENCLOSURE = "ENCLOSURE"
+    TYPE_CHOICES = [
+        (TYPE_STAGE, "Stage"),
+        (TYPE_SECTOR, "Sector"),
+        (TYPE_ENCLOSURE, "Enclosure"),
+    ]
+
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name="location_nodes")
+    parent = TreeForeignKey("self", on_delete=models.CASCADE, related_name="children", null=True, blank=True)
+    name = models.CharField(max_length=120)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "name", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["company", "farm", "parent", "name", "type"], name="uniq_location_node_per_parent"),
+        ]
+        indexes = [
+            models.Index(fields=["company", "type", "is_active"]),
+            models.Index(fields=["farm", "type", "is_active"]),
+            models.Index(fields=["parent", "is_active"]),
+        ]
+
+    class MPTTMeta:
+        parent_attr = "parent"
+        order_insertion_by = ["order", "name"]
+
+    def clean(self):
+        super().clean()
+        self.assert_same_company(self.farm, "farm")
+        if self.parent:
+            self.assert_same_company(self.parent, "parent")
+
+    def __str__(self):
+        return f"{self.farm_id}:{self.type}:{self.name}"
 

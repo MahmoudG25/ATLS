@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  TextField, Autocomplete, CircularProgress, Alert
+  TextField, Autocomplete, CircularProgress, Alert, LinearProgress
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useAuth } from '../../../app/AuthContext';
 import api from '../../../services/api';
+import { reportsApi } from '../../../services/reportsApi';
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 const taskSchema = z.object({
@@ -130,6 +131,8 @@ export default function DailyTaskForm() {
   const { user } = useAuth();
   const isPrivileged = user && ['MANAGER', 'SUPER_ADMIN', 'ADMIN'].includes(user.role);
   const [submitError, setSubmitError] = useState('');
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({});
 
   // Options state
   const [users, setUsers] = useState([]);
@@ -219,6 +222,24 @@ export default function DailyTaskForm() {
       };
       const res = await api.post('/reports/tasks/', payload);
       const reportId = res.data.id;
+      if (pendingFiles.length > 0) {
+        for (const file of pendingFiles) {
+          const uploadRes = await reportsApi.uploadFile(file, (event) => {
+            const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0;
+            setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }));
+          });
+          const fileType = file.type.startsWith('image/')
+            ? 'IMAGE'
+            : file.type.startsWith('video/')
+              ? 'VIDEO'
+              : 'FILE';
+          await reportsApi.createAttachment({
+            report: reportId,
+            file_url: uploadRes.data.file_url,
+            file_type: fileType,
+          });
+        }
+      }
       if (custom_fields && Object.keys(custom_fields).length > 0) {
         await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
           api.post('/reports/custom-field-values/', {
@@ -232,6 +253,13 @@ export default function DailyTaskForm() {
       const msg = e?.response?.data ? JSON.stringify(e.response.data) : 'حدث خطأ أثناء حفظ التقرير.';
       setSubmitError(msg);
     }
+  };
+
+  const onDropFiles = (event) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer?.files || event.target.files || []);
+    if (!files.length) return;
+    setPendingFiles((prev) => [...prev, ...files]);
   };
 
 
@@ -394,6 +422,35 @@ export default function DailyTaskForm() {
                       <TextField {...field} placeholder="أدخل أي ملاحظات هامة هنا..." fullWidth size="small" multiline rows={4} sx={inputSx} />
                     </Field>
                   )} />
+                </div>
+
+                <div className="w-full">
+                  <Field label="المرفقات">
+                    <div
+                      className="border-2 border-dashed border-[#bfc9c1] rounded-xl p-5 bg-[#f8faf6]"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={onDropFiles}
+                    >
+                      <input
+                        type="file"
+                        multiple
+                        onChange={onDropFiles}
+                        className="mb-3 block w-full text-sm"
+                      />
+                      <p className="text-sm text-[#404943]">اسحب الملفات هنا أو اخترها للرفع إلى Cloudinary.</p>
+                      <div className="mt-3 space-y-2">
+                        {pendingFiles.map((file) => (
+                          <div key={`${file.name}-${file.size}`} className="rounded-md border border-[#d7ddd8] p-2 bg-white">
+                            <div className="flex justify-between text-sm">
+                              <span>{file.name}</span>
+                              <span>{uploadProgress[file.name] ?? 0}%</span>
+                            </div>
+                            <LinearProgress variant="determinate" value={uploadProgress[file.name] ?? 0} sx={{ mt: 1 }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Field>
                 </div>
 
                 <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />

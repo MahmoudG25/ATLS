@@ -236,7 +236,13 @@ const CustomFieldsManager = () => {
       )}
 
       {/* Option Modal */}
-      <Dialog open={openOptionModal} onClose={() => setOpenOptionModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog
+        open={openOptionModal}
+        onClose={() => setOpenOptionModal(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
         <DialogTitle sx={{ fontWeight: 700 }}>{editingId ? 'تعديل خيار' : 'إضافة خيار جديد'}</DialogTitle>
         <DialogContent dividers>
           <Box component="form" id="option-form" onSubmit={optionForm.handleSubmit(onOptionSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
@@ -260,7 +266,13 @@ const CustomFieldsManager = () => {
       </Dialog>
 
       {/* Field Modal */}
-      <Dialog open={openFieldModal} onClose={() => setOpenFieldModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog
+        open={openFieldModal}
+        onClose={() => setOpenFieldModal(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
         <DialogTitle sx={{ fontWeight: 700 }}>{editingId ? 'تعديل حقل' : 'إضافة حقل جديد'}</DialogTitle>
         <DialogContent dividers>
           <Box component="form" id="field-form" onSubmit={fieldForm.handleSubmit(onFieldSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>

@@ -22,7 +22,7 @@ const IrrigationForm = lazy(() => import('./IrrigationReport/IrrigationForm'));
 const CustomFieldsManager = lazy(() => import('./CustomFields/CustomFieldsManager'));
 
 const PageLoader = () => (
-  <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
     <CircularProgress sx={{ color: '#16a34a' }} />
   </Box>
 );

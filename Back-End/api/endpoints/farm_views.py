@@ -26,12 +26,15 @@ def structure_view(request):
     sectors = get_farm_structure(farm_id)
     return Response(SectorSerializer(sectors, many=True).data)
 
-from apps.farm.models import Farm
+from apps.farm.models import Farm, LocationNode
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def hierarchy_view(request):
-    farm = Farm.objects.filter(is_active=True).first()
+    farms_qs = Farm.objects.filter(is_active=True)
+    if getattr(request.user, "company_id", None):
+        farms_qs = farms_qs.filter(company_id=request.user.company_id)
+    farm = farms_qs.first()
     if not farm:
         return Response({}, status=200)
 
@@ -67,9 +70,30 @@ def hierarchy_view(request):
                 'regions': regions_data
             })
 
+    nodes = list(
+        LocationNode.objects.filter(farm=farm, is_active=True)
+        .order_by("tree_id", "lft")
+    )
+    children_map = {}
+    roots = []
+    for node in nodes:
+        if node.parent_id:
+            children_map.setdefault(node.parent_id, []).append(node)
+        else:
+            roots.append(node)
+
+    def to_node_payload(node):
+        return {
+            "id": node.id,
+            "name": node.name,
+            "type": node.type,
+            "children": [to_node_payload(child) for child in children_map.get(node.id, [])],
+        }
+
     return Response({
         'farm': {'id': farm.id, 'name': farm.name},
-        'crops': crops_data
+        'crops': crops_data,
+        'location_nodes': [to_node_payload(node) for node in roots],
     })
 
 

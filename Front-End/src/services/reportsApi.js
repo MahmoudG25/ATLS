@@ -9,6 +9,14 @@ export const reportsApi = {
   deleteTask: (id) => api.delete(`/reports/tasks/${id}/`),
   getTasksSummary: (params) => api.get('/reports/tasks/summary/', { params }),
   exportTasks: (params) => api.get('/reports/tasks/export/', { params, responseType: 'blob' }),
+  getOperationsAnalytics: (params) => api.get('/reports/analytics/operations/', { params }),
+  getWorkersAnalytics: (params) => api.get('/reports/analytics/workers/', { params }),
+  getCostAnalytics: () => api.get('/analytics/costs/'),
+  getKpiAnalytics: () => api.get('/analytics/kpi/'),
+  getProductivityAnalytics: () => api.get('/analytics/productivity/'),
+  getComparisonAnalytics: () => api.get('/analytics/comparison/'),
+  getDashboardAnalytics: () => api.get('/analytics/dashboard/'),
+  getSmartInsights: () => api.get('/analytics/insights/'),
 
   // Fertilization
   getFertilizations: (params) => api.get('/reports/fertilization/', { params }),
@@ -36,6 +44,10 @@ export const reportsApi = {
   // Custom Field Values
   saveCustomFieldValues: (data) => api.post('/reports/custom-field-values/', data),
   getCustomFieldValues: (contentType, objectId) => api.get('/reports/custom-field-values/', { params: { content_type: contentType, object_id: objectId } }),
+  getLaborEntries: (params) => api.get('/reports/labor/', { params }),
+  createLaborEntry: (data) => api.post('/reports/labor/', data),
+  getAttachments: (params) => api.get('/reports/attachments/', { params }),
+  createAttachment: (data) => api.post('/reports/attachments/', data),
 
   // Dropdown Options
   getOptions: (category) => api.get('/reports/options/', { params: { category } }),
@@ -46,4 +58,13 @@ export const reportsApi = {
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
   getSectors: () => api.get('/farm/sectors'),
+  getFarmHierarchy: () => api.get('/farm/hierarchy'),
+  uploadFile: (file, onUploadProgress) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/uploads/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    });
+  },
 };

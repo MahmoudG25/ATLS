@@ -8,15 +8,37 @@ import ReportFilters from '../shared/ReportFilters';
 
 const DailyTaskList = () => {
   const [reports, setReports] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({ operations: [], engineers: [], locations: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    start_date: '', end_date: '', sector: '', engineer_name: ''
+    start_date: '', end_date: '', operation: '', engineer: '', location: ''
   });
 
   useEffect(() => {
     fetchReports();
   }, [filters]);
+
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const [operationsRes, usersRes, hierarchyRes] = await Promise.all([
+          reportsApi.getOperations(),
+          reportsApi.getUsers(),
+          reportsApi.getFarmHierarchy(),
+        ]);
+        const flattenNodes = (nodes = []) => nodes.flatMap((node) => [node, ...flattenNodes(node.children || [])]);
+        setFilterOptions({
+          operations: operationsRes.data.results || operationsRes.data || [],
+          engineers: usersRes.data.results || usersRes.data || [],
+          locations: flattenNodes(hierarchyRes.data.location_nodes || []),
+        });
+      } catch {
+        // Keep report list usable even if filter dictionaries fail.
+      }
+    };
+    loadFilters();
+  }, []);
 
   const fetchReports = async () => {
     try {
@@ -66,7 +88,7 @@ const DailyTaskList = () => {
         </Box>
       </Box>
 
-      <ReportFilters filters={filters} onFilterChange={setFilters} />
+      <ReportFilters filters={filters} onFilterChange={setFilters} options={filterOptions} />
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
@@ -106,13 +128,13 @@ const DailyTaskList = () => {
                 </Box>
 
                 <Box mb={2} flexGrow={1}>
-                  <Typography variant="body1" fontWeight="700" color="text.primary" mb={1}>
+                    <Typography variant="body1" fontWeight="700" color="text.primary" mb={1}>
                     {report.operation_name}
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
                     <ReportBadge type="variety" value={report.variety_name} label={report.variety_name} />
                     <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">
-                      {report.enclosure_name}
+                      {report.location_path || report.enclosure_name}
                     </span>
                     <span className="text-xs font-semibold bg-green-50 px-2 py-1 rounded-md text-green-700">
                       عمالة: {report.company_workers + report.contractor_workers}

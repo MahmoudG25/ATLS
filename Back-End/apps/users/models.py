@@ -2,6 +2,18 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+class Company(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    subscription_plan = models.CharField(max_length=100, default="starter")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
 class CustomUserManager(BaseUserManager):
     """
     Custom user model manager where email is the unique identifiers
@@ -43,6 +55,13 @@ class User(AbstractUser):
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=RoleChoices.choices)
     phones = models.JSONField(default=list, blank=True)
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+    )
     
     # Custom flags
     is_approved = models.BooleanField(default=False)

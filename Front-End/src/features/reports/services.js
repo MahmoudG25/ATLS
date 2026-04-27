@@ -1,10 +1,11 @@
 import api from '../../services/api';
 
-export const getReports = async (engineerId, sectorId) => {
+export const getReports = async (engineerId, locationId) => {
     const params = {};
     if (engineerId) params.engineer = engineerId;
-    if (sectorId) params.sector = sectorId;
-    return (await api.get('reports/daily', { params })).data;
+    if (locationId) params.location = locationId;
+    return (await api.get('/reports/tasks/', { params })).data;
 };
 
-export const createReport = async (data) => (await api.post('reports/daily', data)).data;
+export const createReport = async (data) => (await api.post('/reports/tasks/', data)).data;
+export const getKpi = async () => (await api.get('/analytics/kpi/')).data;
