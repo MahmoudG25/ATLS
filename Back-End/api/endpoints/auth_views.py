@@ -192,6 +192,24 @@ def delete_user_view(request, id):
     except ObjectDoesNotExist:
         return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def engineers_list_view(request):
+    """
+    GET /users/engineers
+    Returns active, approved users eligible to be assigned as engineers
+    on a DailyTaskReport (ENGINEER, MANAGER, OWNER, SUPER_ADMIN roles).
+    Accessible to all authenticated users — used by report creation forms.
+    Scoped to the requester's company (multi-tenant safe).
+    """
+    from apps.users.models import User
+    FIELD_ROLES = ['ENGINEER', 'MANAGER', 'OWNER', 'SUPER_ADMIN']
+    qs = User.objects.filter(is_active=True, is_approved=True, role__in=FIELD_ROLES)
+    if getattr(request.user, 'company_id', None):
+        qs = qs.filter(company_id=request.user.company_id)
+    return Response(UserSerializer(qs.order_by('name'), many=True).data)
+
+
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated, IsSuperAdmin])
 def manage_landing_content_view(request):

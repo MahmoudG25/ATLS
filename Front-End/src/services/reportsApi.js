@@ -58,8 +58,15 @@ export const reportsApi = {
 
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
+  getEngineers: () => api.get('/users/engineers'),
   getSectors: () => api.get('/farm/sectors'),
   getFarmHierarchy: () => api.get('/farm/hierarchy'),
+  // Type-filtered LocationNode queries — use instead of hierarchy for form dropdowns
+  getLocationNodes: (type, parentId = null) => {
+    const params = { type };
+    if (parentId) params.parent = parentId;
+    return api.get('/farm/location-nodes/', { params });
+  },
   uploadFile: (file, onUploadProgress) => {
     const formData = new FormData();
     formData.append('file', file);

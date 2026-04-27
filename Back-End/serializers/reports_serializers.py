@@ -38,6 +38,8 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     attachments_count = serializers.IntegerField(source='attachments.count', read_only=True)
     labor_count = serializers.IntegerField(source='labor_entries.count', read_only=True)
     contractor_name = serializers.SerializerMethodField()
+    # work_location is a legacy field — frontend no longer requires it
+    work_location = serializers.CharField(required=False, default='', allow_blank=True)
 
     def get_contractor_name(self, obj):
         return obj.contractor.name if obj.contractor else None

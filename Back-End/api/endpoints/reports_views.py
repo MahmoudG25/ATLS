@@ -93,10 +93,14 @@ class DailyTaskReportListCreate(generics.ListCreateAPIView):
         return _for_company(qs, self.request)
 
     def perform_create(self, serializer):
-        serializer.save(
-            engineer=self.request.user,
-            company=getattr(self.request, "company", None),
-        )
+        user = self.request.user
+        # Privileged roles can assign reports to any engineer via request body.
+        # All other roles are forced to file under their own identity.
+        PRIVILEGED = {'SUPER_ADMIN', 'OWNER', 'MANAGER', 'ADMIN'}
+        save_kwargs = {'company': getattr(self.request, 'company', None)}
+        if not (hasattr(user, 'role') and user.role in PRIVILEGED):
+            save_kwargs['engineer'] = user
+        serializer.save(**save_kwargs)
 
 class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DailyTaskReportSerializer

@@ -153,3 +153,35 @@ def plot_stats_view(request, id):
         return Response(stats, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def location_nodes_view(request):
+    """
+    GET /farm/location-nodes/?type=STAGE
+    GET /farm/location-nodes/?type=ENCLOSURE&parent=<node_id>
+
+    Returns active LocationNodes filtered by type and optionally parent node.
+    Multi-tenant scoped — only nodes for the requester's company are returned.
+    Used by DailyTaskForm for Stage → Enclosure cascade selection.
+    """
+    node_type = request.query_params.get('type')
+    parent_id = request.query_params.get('parent')
+
+    qs = LocationNode.objects.filter(is_active=True)
+
+    if getattr(request.user, 'company_id', None):
+        qs = qs.filter(company_id=request.user.company_id)
+
+    if node_type:
+        qs = qs.filter(type=node_type)
+
+    if parent_id:
+        qs = qs.filter(parent_id=parent_id)
+
+    data = [
+        {'id': node.id, 'name': node.name, 'type': node.type}
+        for node in qs.order_by('order', 'name')
+    ]
+    return Response(data)

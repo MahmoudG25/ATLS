@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  TextField, Autocomplete, CircularProgress, Alert, LinearProgress
+  TextField, Autocomplete, Alert, LinearProgress
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -17,39 +17,37 @@ import api from '../../../services/api';
 import { reportsApi } from '../../../services/reportsApi';
 
 // ── Schema ──────────────────────────────────────────────────────────────────
+// `location` = the selected ENCLOSURE LocationNode ID (sent to backend)
+// `stage_id` = UI-only state for filtering enclosures (not in form schema)
 const taskSchema = z.object({
-  report_date: z.any(),
-  engineer: z.number().min(1, 'المهندس مطلوب'),
-  crop: z.number().min(1, 'المحصول مطلوب'),
-  stage: z.number().nullable().optional(),
-  variety: z.number().min(1, 'الصنف مطلوب'),
-  enclosure: z.number().min(1, 'الحوشة مطلوبة'),
-  work_location: z.string().min(1, 'مكان العمل مطلوب'),
-  operation: z.number().min(1, 'العملية الفنية مطلوبة'),
-  unit: z.number().min(1, 'الوحدة مطلوبة'),
-  company_workers: z.coerce.number().min(0),
-  contractor_workers: z.coerce.number().min(0),
-  contractor: z.number().nullable().optional(),
-  actual_productivity: z.coerce.number().min(0),
-  work_hours: z.coerce.number().min(0.5),
-  overtime_hours: z.coerce.number().optional(),
-  overtime_productivity: z.coerce.number().optional(),
-  notes: z.string().optional(),
-  custom_fields: z.record(z.any()).optional(),
+  report_date:          z.any(),
+  engineer:             z.number({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب'),
+  location:             z.number({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة'),
+  operation:            z.number({ required_error: 'العملية مطلوبة' }).min(1, 'العملية مطلوبة'),
+  variety:              z.number({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب'),
+  unit:                 z.number({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة'),
+  contractor:           z.number().nullable().optional(),
+  company_workers:      z.coerce.number().min(0),
+  contractor_workers:   z.coerce.number().min(0),
+  actual_productivity:  z.coerce.number().min(0),
+  work_hours:           z.coerce.number().min(0.5, 'يجب أن تكون ساعات العمل 0.5 على الأقل'),
+  overtime_hours:       z.coerce.number().min(0).optional(),
+  overtime_productivity:z.coerce.number().min(0).optional(),
+  notes:                z.string().optional(),
+  custom_fields:        z.record(z.any()).optional(),
 });
 
+// ── Styles ───────────────────────────────────────────────────────────────────
 const inputSx = {
-  '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
-    height: '40px',
-  },
+  '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': { height: '40px' },
   '& .MuiOutlinedInput-root': {
     backgroundColor: '#f8faf6',
-    borderRadius: '0.5rem', // 8px
-    fontSize: '0.875rem', // 14px
-    '& fieldset': { borderColor: '#bfc9c1' },
-    '&:hover fieldset': { borderColor: '#0f5238' },
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    '& fieldset':             { borderColor: '#bfc9c1' },
+    '&:hover fieldset':       { borderColor: '#0f5238' },
     '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
-    '&.Mui-disabled': { backgroundColor: '#e8ebe8' },
+    '&.Mui-disabled':         { backgroundColor: '#e8ebe8' },
   },
 };
 
@@ -57,11 +55,9 @@ const dropdownPaper = {
   paper: { sx: { bgcolor: '#fff', mt: 0.5, borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: '1px solid #bfc9c1' } }
 };
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 const Label = ({ children }) => (
-  <label className="block mb-2 font-medium text-sm text-[#191c1a]">
-    {children}
-  </label>
+  <label className="block mb-2 font-medium text-sm text-[#191c1a]">{children}</label>
 );
 
 const Field = ({ label, children }) => (
@@ -71,7 +67,7 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-// Stepper: Pure Tailwind HTML
+/** +/- stepper for integer counts */
 const Stepper = ({ value, onChange, error }) => {
   const borderClass = error ? 'border-[#ba1a1a]' : 'border-[#bfc9c1]';
   return (
@@ -91,7 +87,7 @@ const Stepper = ({ value, onChange, error }) => {
   );
 };
 
-// ID-based Autocomplete (for FK fields)
+/** FK Autocomplete — value is the integer ID */
 const AC = ({ options, value, onChange, placeholder, error, helperText, disabled, getLabel }) => (
   <Autocomplete
     disabled={disabled}
@@ -108,138 +104,136 @@ const AC = ({ options, value, onChange, placeholder, error, helperText, disabled
   />
 );
 
-// String-based Autocomplete with freeSolo (for CharField work_location)
-const ACFree = ({ options, value, onChange, placeholder, error, helperText }) => (
-  <Autocomplete
-    freeSolo
-    options={options.map(o => o.name)}
-    value={value || ''}
-    onChange={(_, d) => onChange(d || '')}
-    onInputChange={(_, v, reason) => { if (reason === 'input') onChange(v); }}
-    slotProps={dropdownPaper}
-    sx={inputSx}
-    noOptionsText="لا توجد خيارات"
-    renderInput={params => (
-      <TextField {...params} fullWidth placeholder={placeholder} size="small" error={error} helperText={helperText} />
-    )}
-  />
-);
-
-// ── Main Component ──────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function DailyTaskForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isPrivileged = user && ['MANAGER', 'SUPER_ADMIN', 'ADMIN'].includes(user.role);
+
+  // Privileged roles can assign reports to any engineer
+  const PRIVILEGED = ['MANAGER', 'SUPER_ADMIN', 'ADMIN', 'OWNER'];
+  const isPrivileged = user && PRIVILEGED.includes(user.role);
+
   const [submitError, setSubmitError] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
 
-  // Options state
-  const [users, setUsers] = useState([]);
-  const [crops, setCrops] = useState([]);
-  const [operations, setOperations] = useState([]);
-  const [varieties, setVarieties] = useState([]);
-  const [units, setUnits] = useState([]);
+  // ── Dropdown state ──────────────────────────────────────────────────────────
+  const [engineers, setEngineers]     = useState([]);
+  const [stages, setStages]           = useState([]);       // LocationNode type=STAGE
+  const [enclosures, setEnclosures]   = useState([]);       // LocationNode type=ENCLOSURE, filtered by stage
+  const [operations, setOperations]   = useState([]);
+  const [varieties, setVarieties]     = useState([]);
+  const [units, setUnits]             = useState([]);
   const [contractors, setContractors] = useState([]);
-  const [workLocations, setWorkLocations] = useState([]);
+  const [enclosuresLoading, setEnclosuresLoading] = useState(false);
 
+  // UI-only stage selection (not sent to backend — we send `location`)
+  const [selectedStageId, setSelectedStageId] = useState(null);
+
+  // ── Form setup ──────────────────────────────────────────────────────────────
   const { control, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      report_date: dayjs(), engineer: user?.id ?? null,
-      crop: null, stage: null, variety: null, enclosure: null, work_location: '',
-      operation: null, unit: null, company_workers: 0, contractor_workers: 0,
-      contractor: null, actual_productivity: 0, work_hours: 8,
-      overtime_hours: 0, overtime_productivity: 0, notes: '', custom_fields: {},
+      report_date:           dayjs(),
+      engineer:              user?.id ?? null,
+      location:              null,
+      operation:             null,
+      variety:               null,
+      unit:                  null,
+      contractor:            null,
+      company_workers:       0,
+      contractor_workers:    0,
+      actual_productivity:   0,
+      work_hours:            8,
+      overtime_hours:        0,
+      overtime_productivity: 0,
+      notes:                 '',
+      custom_fields:         {},
     },
   });
 
-  const selectedCropId = watch('crop');
-  const selectedStageId = watch('stage');
-
-  const selectedCrop = crops.find(c => c.id === selectedCropId);
-  const stages = selectedCrop?.stages || [];
-  const selectedStage = stages.find(s => s.id === selectedStageId);
-  const enclosures = selectedCrop?.type === 'palm'
-    ? (selectedStage?.enclosures || [])
-    : (selectedCrop?.regions || []);
-
-  // Reset dependents
-  useEffect(() => {
-    if (selectedCropId) {
-      setValue('stage', null);
-      setValue('enclosure', null);
-    }
-  }, [selectedCropId, setValue]);
-
-  useEffect(() => {
-    if (selectedStageId) {
-      setValue('enclosure', null);
-    }
-  }, [selectedStageId, setValue]);
-
-  // When engineer user is not privileged, auto-fill
+  // Auto-fill engineer for non-privileged users
   useEffect(() => {
     if (user && !isPrivileged) setValue('engineer', user.id);
   }, [user, isPrivileged, setValue]);
 
-  // Fetch all options on mount
+  // ── Initial data fetch ──────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [usersRes, hierarchyRes, opsRes, varRes, unitRes, conRes, wlRes] = await Promise.all([
-          api.get('/users'),
-          api.get('/farm/hierarchy'),
+        const [engRes, stagesRes, opsRes, varRes, unitRes, conRes] = await Promise.allSettled([
+          reportsApi.getEngineers(),
+          reportsApi.getLocationNodes('STAGE'),
           api.get('/reports/operations/'),
           api.get('/reports/options/', { params: { category: 'variety' } }),
           api.get('/reports/options/', { params: { category: 'unit' } }),
           api.get('/reports/options/', { params: { category: 'contractor' } }),
-          api.get('/reports/options/', { params: { category: 'work_location' } }),
         ]);
 
-        const r = res => Array.isArray(res.data) ? res.data : (res.data.results ?? res.data);
+        const r = res => Array.isArray(res.value?.data) ? res.value.data : (res.value?.data?.results ?? []);
 
-        setUsers(r(usersRes));
-        setCrops(hierarchyRes.data.crops || []);
-        setOperations(r(opsRes));
-        setVarieties(r(varRes));
-        setUnits(r(unitRes));
-        setContractors(r(conRes));
-        setWorkLocations(r(wlRes));
+        if (engRes.status === 'fulfilled')   setEngineers(r(engRes));
+        if (stagesRes.status === 'fulfilled') setStages(r(stagesRes));
+        if (opsRes.status === 'fulfilled')   setOperations(r(opsRes));
+        if (varRes.status === 'fulfilled')   setVarieties(r(varRes));
+        if (unitRes.status === 'fulfilled')  setUnits(r(unitRes));
+        if (conRes.status === 'fulfilled')   setContractors(r(conRes));
       } catch (e) {
-        console.error('Error fetching form options:', e);
+        console.error('خطأ في تحميل بيانات النموذج:', e);
       }
     })();
   }, []);
 
+  // ── Dynamic enclosure load when stage is selected ───────────────────────────
+  const handleStageChange = useCallback(async (stageId) => {
+    setSelectedStageId(stageId);
+    setValue('location', null);   // reset enclosure when stage changes
+    setEnclosures([]);
+
+    if (!stageId) return;
+
+    setEnclosuresLoading(true);
+    try {
+      const res = await reportsApi.getLocationNodes('ENCLOSURE', stageId);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+      setEnclosures(data);
+    } catch (e) {
+      console.error('خطأ في تحميل الحوشات:', e);
+    } finally {
+      setEnclosuresLoading(false);
+    }
+  }, [setValue]);
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const onSubmit = async (data) => {
     setSubmitError('');
     try {
       const { custom_fields, report_date, ...rest } = data;
+
+      // Payload: location = LocationNode ID of the selected enclosure
+      // engineer is included only if privileged user (backend validates and stores it)
+      // work_location is NOT sent — serializer defaults it to '' (blank=True)
       const payload = {
         ...rest,
         report_date: dayjs(report_date).format('YYYY-MM-DD'),
       };
+
       const res = await api.post('/reports/tasks/', payload);
       const reportId = res.data.id;
-      if (pendingFiles.length > 0) {
-        for (const file of pendingFiles) {
-          const uploadRes = await reportsApi.uploadFile(file, (event) => {
-            const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0;
-            setUploadProgress((prev) => ({ ...prev, [file.name]: ratio }));
-          });
-          const fileType = file.type.startsWith('image/')
-            ? 'IMAGE'
-            : file.type.startsWith('video/')
-              ? 'VIDEO'
-              : 'FILE';
-          await reportsApi.createAttachment({
-            report: reportId,
-            file_url: uploadRes.data.file_url,
-            file_type: fileType,
-          });
-        }
+
+      // Upload attachments
+      for (const file of pendingFiles) {
+        const uploadRes = await reportsApi.uploadFile(file, (event) => {
+          const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0;
+          setUploadProgress(prev => ({ ...prev, [file.name]: ratio }));
+        });
+        const fileType = file.type.startsWith('image/') ? 'IMAGE'
+                       : file.type.startsWith('video/') ? 'VIDEO'
+                       : 'FILE';
+        await reportsApi.createAttachment({ report: reportId, file_url: uploadRes.data.file_url, file_type: fileType });
       }
+
+      // Custom fields
       if (custom_fields && Object.keys(custom_fields).length > 0) {
         await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
           api.post('/reports/custom-field-values/', {
@@ -248,6 +242,7 @@ export default function DailyTaskForm() {
           })
         ));
       }
+
       navigate('/reports/tasks');
     } catch (e) {
       const msg = e?.response?.data ? JSON.stringify(e.response.data) : 'حدث خطأ أثناء حفظ التقرير.';
@@ -258,20 +253,17 @@ export default function DailyTaskForm() {
   const onDropFiles = (event) => {
     event.preventDefault();
     const files = Array.from(event.dataTransfer?.files || event.target.files || []);
-    if (!files.length) return;
-    setPendingFiles((prev) => [...prev, ...files]);
+    if (files.length) setPendingFiles(prev => [...prev, ...files]);
   };
 
-
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-[#f4f7f4] min-h-screen">
         <div className="container mx-auto px-4 md:px-6 py-6 md:py-10 max-w-6xl">
 
           {submitError && (
-            <Alert severity="error" className="mb-6 rounded-lg whitespace-pre-wrap">
-              {submitError}
-            </Alert>
+            <Alert severity="error" className="mb-6 rounded-lg whitespace-pre-wrap">{submitError}</Alert>
           )}
 
           <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#bfc9c1] overflow-hidden">
@@ -283,98 +275,120 @@ export default function DailyTaskForm() {
                 <p className="text-[15px] text-[#404943] mt-1.5">يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات.</p>
               </div>
 
-              {/* Form Grid */}
               <div className="flex flex-col gap-8">
 
-                {/* ── Row 1: CORE INFO (التاريخ | المهندس | العملية | المحصول) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Controller name="report_date" control={control} render={({ field }) => (
-                    <Field label="التاريخ">
-                      <DatePicker value={field.value} onChange={field.onChange}
-                        slotProps={{ textField: { fullWidth: true, size: 'small', error: !!errors.report_date, sx: inputSx } }} />
-                    </Field>
-                  )} />
+                {/* ── Row 1: التاريخ | المهندس | المرحلة | الحوشة ── */}
+                <div>
+                  <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">معلومات أساسية</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                  <Controller name="engineer" control={control} render={({ field }) => (
-                    <Field label="المهندس المسؤول">
-                      <AC disabled={!isPrivileged} options={users} value={field.value} onChange={field.onChange}
-                        placeholder="المهندس" error={!!errors.engineer} helperText={errors.engineer?.message}
-                        getLabel={o => o.full_name || o.username || o.name || ''} />
-                    </Field>
-                  )} />
-
-                  <Controller name="operation" control={control} render={({ field }) => (
-                    <Field label="العملية">
-                      <AC options={operations} value={field.value} onChange={field.onChange}
-                        placeholder="اختر العملية" error={!!errors.operation} helperText={errors.operation?.message} />
-                    </Field>
-                  )} />
-
-                  <Controller name="crop" control={control} render={({ field }) => (
-                    <Field label="المحصول">
-                      <AC options={crops} value={field.value} onChange={field.onChange}
-                        placeholder="اختر المحصول" error={!!errors.crop} helperText={errors.crop?.message} />
-                    </Field>
-                  )} />
-                </div>
-
-                {/* ── Row 2: LOCATION (المرحلة | الحوشة | موقع العمل التفصيلي) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {selectedCrop?.type === 'palm' && (
-                    <Controller name="stage" control={control} render={({ field }) => (
-                      <Field label="المرحلة">
-                        <AC options={stages} value={field.value} onChange={field.onChange}
-                          placeholder="اختر المرحلة" error={!!errors.stage} helperText={errors.stage?.message} />
+                    {/* التاريخ */}
+                    <Controller name="report_date" control={control} render={({ field }) => (
+                      <Field label="التاريخ">
+                        <DatePicker value={field.value} onChange={field.onChange}
+                          slotProps={{ textField: { fullWidth: true, size: 'small', error: !!errors.report_date, sx: inputSx } }} />
                       </Field>
                     )} />
-                  )}
 
-                  <div className={selectedCrop?.type === 'palm' ? 'col-span-1' : 'col-span-1 sm:col-span-2 lg:col-span-2'}>
-                    <Controller name="enclosure" control={control} render={({ field }) => (
-                      <Field label={selectedCrop?.type === 'olive' ? "المنطقة" : "الحوشة"}>
-                        <AC
-                          disabled={selectedCrop?.type === 'palm' && !selectedStageId}
+                    {/* المهندس المسؤول */}
+                    <Controller name="engineer" control={control} render={({ field }) => (
+                      <Field label="المهندس المسؤول">
+                        {isPrivileged ? (
+                          <AC
+                            options={engineers}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="اختر المهندس"
+                            error={!!errors.engineer}
+                            helperText={errors.engineer?.message}
+                            getLabel={o => o.name || o.email || ''}
+                          />
+                        ) : (
+                          <TextField
+                            value={engineers.find(e => e.id === field.value)?.name || user?.name || ''}
+                            disabled
+                            fullWidth
+                            size="small"
+                            sx={inputSx}
+                            placeholder="المهندس المسؤول"
+                          />
+                        )}
+                      </Field>
+                    )} />
+
+                    {/* المرحلة — UI-only for filtering, not sent to backend */}
+                    <Field label="المرحلة">
+                      <Autocomplete
+                        options={stages}
+                        getOptionLabel={o => o.name || ''}
+                        value={stages.find(s => s.id === selectedStageId) || null}
+                        onChange={(_, d) => handleStageChange(d?.id ?? null)}
+                        slotProps={dropdownPaper}
+                        sx={inputSx}
+                        noOptionsText="لا توجد مراحل"
+                        renderInput={params => (
+                          <TextField {...params} fullWidth placeholder="اختر المرحلة" size="small" />
+                        )}
+                      />
+                    </Field>
+
+                    {/* الحوشة / الموقع — sent to backend as `location` */}
+                    <Controller name="location" control={control} render={({ field }) => (
+                      <Field label="الحوشة / الموقع">
+                        <Autocomplete
+                          disabled={!selectedStageId}
+                          loading={enclosuresLoading}
                           options={enclosures}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder={selectedCrop?.type === 'olive' ? "اختر المنطقة" : "اختر الحوشة"}
-                          error={!!errors.enclosure}
-                          helperText={errors.enclosure?.message}
+                          getOptionLabel={o => o.name || ''}
+                          value={enclosures.find(e => e.id === field.value) || null}
+                          onChange={(_, d) => field.onChange(d?.id ?? null)}
+                          slotProps={dropdownPaper}
+                          sx={inputSx}
+                          noOptionsText={selectedStageId ? 'لا توجد حوشات لهذه المرحلة' : 'اختر المرحلة أولاً'}
+                          renderInput={params => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              placeholder={selectedStageId ? 'اختر الحوشة' : 'اختر المرحلة أولاً'}
+                              size="small"
+                              error={!!errors.location}
+                              helperText={errors.location?.message}
+                            />
+                          )}
                         />
                       </Field>
                     )} />
                   </div>
-
-                  <div className={selectedCrop?.type === 'palm' ? 'col-span-1 sm:col-span-2 lg:col-span-2' : 'col-span-1 sm:col-span-2 lg:col-span-2'}>
-                    <Controller name="work_location" control={control} render={({ field }) => (
-                      <Field label="موقع العمل التفصيلي">
-                        <ACFree options={workLocations} value={field.value} onChange={field.onChange}
-                          placeholder="اختر أو اكتب موقع العمل"
-                          error={!!errors.work_location} helperText={errors.work_location?.message} />
-                      </Field>
-                    )} />
-                  </div>
                 </div>
 
-                {/* ── Row 3: DETAILS (الصنف | الوحدة | المقاول) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Controller name="variety" control={control} render={({ field }) => (
-                    <Field label="الصنف">
-                      <AC options={varieties} value={field.value} onChange={field.onChange}
-                        placeholder="اختر الصنف" error={!!errors.variety} helperText={errors.variety?.message} />
-                    </Field>
-                  )} />
+                {/* ── Row 2: العملية | الصنف | الوحدة | المقاول ── */}
+                <div>
+                  <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">تفاصيل العملية</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                  <Controller name="unit" control={control} render={({ field }) => (
-                    <Field label="الوحدة">
-                      <AC options={units} value={field.value} onChange={field.onChange}
-                        placeholder="اختر الوحدة" error={!!errors.unit} helperText={errors.unit?.message} />
-                    </Field>
-                  )} />
+                    <Controller name="operation" control={control} render={({ field }) => (
+                      <Field label="العملية الفنية">
+                        <AC options={operations} value={field.value} onChange={field.onChange}
+                          placeholder="اختر العملية" error={!!errors.operation} helperText={errors.operation?.message} />
+                      </Field>
+                    )} />
 
-                  <div className="col-span-1 sm:col-span-2 lg:col-span-2">
+                    <Controller name="variety" control={control} render={({ field }) => (
+                      <Field label="الصنف">
+                        <AC options={varieties} value={field.value} onChange={field.onChange}
+                          placeholder="اختر الصنف" error={!!errors.variety} helperText={errors.variety?.message} />
+                      </Field>
+                    )} />
+
+                    <Controller name="unit" control={control} render={({ field }) => (
+                      <Field label="وحدة القياس">
+                        <AC options={units} value={field.value} onChange={field.onChange}
+                          placeholder="اختر الوحدة" error={!!errors.unit} helperText={errors.unit?.message} />
+                      </Field>
+                    )} />
+
                     <Controller name="contractor" control={control} render={({ field }) => (
-                      <Field label="المقاول">
+                      <Field label="المقاول (اختياري)">
                         <AC options={contractors} value={field.value} onChange={field.onChange}
                           placeholder="اختر المقاول" error={!!errors.contractor} helperText={errors.contractor?.message} />
                       </Field>
@@ -382,40 +396,47 @@ export default function DailyTaskForm() {
                   </div>
                 </div>
 
-                {/* ── Row 4: RESOURCES (عمال الشركة | عمال المقاول) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                  <Controller name="company_workers" control={control} render={({ field }) => (
-                    <Field label="عمال الشركة">
-                      <Stepper value={field.value} onChange={field.onChange} error={!!errors.company_workers} />
-                    </Field>
-                  )} />
+                {/* ── Row 3: عمال الشركة | عمال المقاول ── */}
+                <div>
+                  <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">توزيع العمالة</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-                  <Controller name="contractor_workers" control={control} render={({ field }) => (
-                    <Field label="عمال المقاول">
-                      <Stepper value={field.value} onChange={field.onChange} error={!!errors.contractor_workers} />
-                    </Field>
-                  )} />
-                </div>
-
-                {/* ── Row 5: RESULTS (ساعات العمل | الإنتاج الفعلي | ساعات إضافية | إنتاج إضافي) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[
-                    { name: 'work_hours', label: 'ساعات العمل', placeholder: '8', step: '0.5' },
-                    { name: 'actual_productivity', label: 'الإنتاج الفعلي', placeholder: '0.00', step: '0.01' },
-                    { name: 'overtime_hours', label: 'ساعات إضافية', placeholder: '0', step: '0.5' },
-                    { name: 'overtime_productivity', label: 'إنتاج إضافي', placeholder: '0.00', step: '0.01' },
-                  ].map(({ name, label, placeholder, step }) => (
-                    <Controller key={name} name={name} control={control} render={({ field }) => (
-                      <Field label={label}>
-                        <TextField {...field} type="number" inputProps={{ min: 0, step }}
-                          placeholder={placeholder} fullWidth size="small"
-                          error={!!errors[name]} helperText={errors[name]?.message} sx={inputSx} />
+                    <Controller name="company_workers" control={control} render={({ field }) => (
+                      <Field label="عمال الشركة">
+                        <Stepper value={field.value} onChange={field.onChange} error={!!errors.company_workers} />
                       </Field>
                     )} />
-                  ))}
+
+                    <Controller name="contractor_workers" control={control} render={({ field }) => (
+                      <Field label="عمال المقاول">
+                        <Stepper value={field.value} onChange={field.onChange} error={!!errors.contractor_workers} />
+                      </Field>
+                    )} />
+                  </div>
                 </div>
 
-                {/* ── Row 6: NOTES (ملاحظات) ── */}
+                {/* ── Row 4: ساعات العمل | ساعات إضافية | الإنتاجية الفعلية | إنتاجية إضافية ── */}
+                <div>
+                  <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">الإنتاجية والوقت</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                      { name: 'work_hours',            label: 'ساعات العمل',       placeholder: '8',    step: '0.5' },
+                      { name: 'overtime_hours',         label: 'ساعات إضافية',      placeholder: '0',    step: '0.5' },
+                      { name: 'actual_productivity',    label: 'الإنتاجية الفعلية', placeholder: '0.00', step: '0.01' },
+                      { name: 'overtime_productivity',  label: 'إنتاجية إضافية',   placeholder: '0.00', step: '0.01' },
+                    ].map(({ name, label, placeholder, step }) => (
+                      <Controller key={name} name={name} control={control} render={({ field }) => (
+                        <Field label={label}>
+                          <TextField {...field} type="number" inputProps={{ min: 0, step }}
+                            placeholder={placeholder} fullWidth size="small"
+                            error={!!errors[name]} helperText={errors[name]?.message} sx={inputSx} />
+                        </Field>
+                      )} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Row 5: ملاحظات ── */}
                 <div className="w-full">
                   <Controller name="notes" control={control} render={({ field }) => (
                     <Field label="ملاحظات / مشاهدات">
@@ -424,22 +445,18 @@ export default function DailyTaskForm() {
                   )} />
                 </div>
 
+                {/* ── Row 6: مرفقات ── */}
                 <div className="w-full">
                   <Field label="المرفقات">
                     <div
                       className="border-2 border-dashed border-[#bfc9c1] rounded-xl p-5 bg-[#f8faf6]"
-                      onDragOver={(e) => e.preventDefault()}
+                      onDragOver={e => e.preventDefault()}
                       onDrop={onDropFiles}
                     >
-                      <input
-                        type="file"
-                        multiple
-                        onChange={onDropFiles}
-                        className="mb-3 block w-full text-sm"
-                      />
+                      <input type="file" multiple onChange={onDropFiles} className="mb-3 block w-full text-sm" />
                       <p className="text-sm text-[#404943]">اسحب الملفات هنا أو اخترها للرفع إلى Cloudinary.</p>
                       <div className="mt-3 space-y-2">
-                        {pendingFiles.map((file) => (
+                        {pendingFiles.map(file => (
                           <div key={`${file.name}-${file.size}`} className="rounded-md border border-[#d7ddd8] p-2 bg-white">
                             <div className="flex justify-between text-sm">
                               <span>{file.name}</span>
@@ -453,7 +470,9 @@ export default function DailyTaskForm() {
                   </Field>
                 </div>
 
+                {/* Custom fields (admin-defined) */}
                 <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
+
               </div>
             </div>
           </div>

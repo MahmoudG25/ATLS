@@ -25,6 +25,7 @@ urlpatterns = [
     
     # Admin User Managment
     path('users', auth_views.users_collection_view, name='users_collection'),
+    path('users/engineers', auth_views.engineers_list_view, name='users_engineers'),
     path('users/<int:id>/approve', auth_views.approve_user_view, name='approve_user'),
     path('users/<int:id>/deactivate', auth_views.deactivate_user_view, name='deactivate_user'),
     path('users/<int:id>/role', auth_views.update_user_role_view, name='update_user_role'),
@@ -38,6 +39,7 @@ urlpatterns = [
     path('farm/croptypes', farm_views.croptypes_list_view, name='croptypes_list'),
     path('farm/structure', farm_views.structure_view, name='structure'),
     path('farm/hierarchy', farm_views.hierarchy_view, name='hierarchy'),
+    path('farm/location-nodes/', farm_views.location_nodes_view, name='location_nodes'),
     path('farm/sectors', farm_views.create_sector_view, name='create_sector'),
     path('farm/sectors/<int:pk>/', sector_detail_view, name='sector_detail'),
     path('farm/plots', farm_views.create_plot_view, name='create_plot'),
