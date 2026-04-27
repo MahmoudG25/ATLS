@@ -5,64 +5,100 @@ from django.db import migrations, models
 
 
 def migrate_report_dropdown_options(apps, schema_editor):
-    Variety = apps.get_model('reports', 'Variety')
-    Unit = apps.get_model('reports', 'Unit')
-    Contractor = apps.get_model('reports', 'Contractor')
     ReportDropdownOption = apps.get_model('reports', 'ReportDropdownOption')
+    Contractor = apps.get_model('reports', 'Contractor')
+    Operation = apps.get_model('reports', 'Operation')
+    Unit = apps.get_model('reports', 'Unit')
+    Variety = apps.get_model('reports', 'Variety')
     DailyTaskReport = apps.get_model('reports', 'DailyTaskReport')
 
     variety_map = {}
     unit_map = {}
     contractor_map = {}
 
-    for option in ReportDropdownOption.objects.filter(category='variety'):
-        variety_obj, _ = Variety.objects.get_or_create(company=option.company, name=option.name)
-        variety_map[option.pk] = variety_obj.pk
+    # Step 1: Pre-populate models and maps from existing options
+    for option in ReportDropdownOption.objects.all():
+        if not option.company:
+            continue
 
-    for option in ReportDropdownOption.objects.filter(category='unit'):
-        unit_obj, _ = Unit.objects.get_or_create(company=option.company, name=option.name)
-        unit_map[option.pk] = unit_obj.pk
+        # Detect correct field name dynamically: handle 'type' vs 'category' vs 'field_type'
+        option_type = getattr(option, 'field_type', None) or getattr(option, 'category', None)
+        
+        if option_type == 'contractor':
+            obj, _ = Contractor.objects.get_or_create(
+                company=option.company,
+                name=option.name,
+                defaults={'rate_per_hour': 0, 'is_active': True}
+            )
+            contractor_map[option.pk] = obj.pk
 
-    for option in ReportDropdownOption.objects.filter(category='contractor'):
-        contractor_obj, _ = Contractor.objects.get_or_create(
-            company=option.company,
-            name=option.name,
-            defaults={'rate_per_hour': 0, 'is_active': True},
-        )
-        contractor_map[option.pk] = contractor_obj.pk
+        elif option_type == 'operation':
+            Operation.objects.get_or_create(
+                company=option.company,
+                name=option.name,
+                defaults={'is_active': True}
+            )
 
+        elif option_type == 'unit':
+            obj, _ = Unit.objects.get_or_create(
+                company=option.company,
+                name=option.name
+            )
+            unit_map[option.pk] = obj.pk
+
+        elif option_type == 'variety':
+            obj, _ = Variety.objects.get_or_create(
+                company=option.company,
+                name=option.name
+            )
+            variety_map[option.pk] = obj.pk
+
+    # Step 2: Update DailyTaskReport records using the maps
     for report in DailyTaskReport.objects.all():
         updated = False
+        
+        # Update Variety
         if report.variety_id:
             if report.variety_id not in variety_map:
                 option = ReportDropdownOption.objects.filter(pk=report.variety_id).first()
-                if option:
-                    variety_obj, _ = Variety.objects.get_or_create(company=option.company, name=option.name)
-                    variety_map[option.pk] = variety_obj.pk
-            report.variety_new_id = variety_map.get(report.variety_id)
-            updated = True
+                if option and option.company:
+                    obj, _ = Variety.objects.get_or_create(company=option.company, name=option.name)
+                    variety_map[option.pk] = obj.pk
+            
+            new_id = variety_map.get(report.variety_id)
+            if new_id:
+                report.variety_new_id = new_id
+                updated = True
 
+        # Update Contractor
         if report.contractor_id:
             if report.contractor_id not in contractor_map:
                 option = ReportDropdownOption.objects.filter(pk=report.contractor_id).first()
-                if option:
-                    contractor_obj, _ = Contractor.objects.get_or_create(
+                if option and option.company:
+                    obj, _ = Contractor.objects.get_or_create(
                         company=option.company,
                         name=option.name,
                         defaults={'rate_per_hour': 0, 'is_active': True},
                     )
-                    contractor_map[option.pk] = contractor_obj.pk
-            report.contractor_new_id = contractor_map.get(report.contractor_id)
-            updated = True
+                    contractor_map[option.pk] = obj.pk
+            
+            new_id = contractor_map.get(report.contractor_id)
+            if new_id:
+                report.contractor_new_id = new_id
+                updated = True
 
+        # Update Unit
         if report.unit_id:
             if report.unit_id not in unit_map:
                 option = ReportDropdownOption.objects.filter(pk=report.unit_id).first()
-                if option:
-                    unit_obj, _ = Unit.objects.get_or_create(company=option.company, name=option.name)
-                    unit_map[option.pk] = unit_obj.pk
-            report.unit_new_id = unit_map.get(report.unit_id)
-            updated = True
+                if option and option.company:
+                    obj, _ = Unit.objects.get_or_create(company=option.company, name=option.name)
+                    unit_map[option.pk] = obj.pk
+            
+            new_id = unit_map.get(report.unit_id)
+            if new_id:
+                report.unit_new_id = new_id
+                updated = True
 
         if updated:
             report.save(update_fields=['variety_new_id', 'contractor_new_id', 'unit_new_id'])

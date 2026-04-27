@@ -13,6 +13,7 @@ export const reportsApi = {
   getWorkersAnalytics: (params) => api.get('/reports/analytics/workers/', { params }),
   getCostAnalytics: () => api.get('/analytics/costs/'),
   getKpiAnalytics: () => api.get('/analytics/kpi/'),
+  getTrendsAnalytics: () => api.get('/analytics/trends/'),
   getProductivityAnalytics: () => api.get('/analytics/productivity/'),
   getComparisonAnalytics: () => api.get('/analytics/comparison/'),
   getDashboardAnalytics: () => api.get('/analytics/dashboard/'),

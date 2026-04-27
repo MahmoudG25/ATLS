@@ -1,15 +1,18 @@
 from django.contrib import admin
 from .models import Operation, DailyTaskReport, FertilizationReport, IrrigationReport, CustomFieldDefinition, CustomFieldValue
 
+
 @admin.register(CustomFieldDefinition)
 class CustomFieldDefinitionAdmin(admin.ModelAdmin):
     list_display = ('name', 'field_type', 'is_required', 'applies_to', 'created_by')
     list_filter = ('field_type', 'is_required', 'applies_to')
 
+
 @admin.register(CustomFieldValue)
 class CustomFieldValueAdmin(admin.ModelAdmin):
     list_display = ('field', 'value', 'content_type', 'object_id')
     list_filter = ('field', 'content_type')
+
 
 @admin.register(Operation)
 class OperationAdmin(admin.ModelAdmin):
@@ -17,12 +20,40 @@ class OperationAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_filter = ('category',)
 
+
 @admin.register(DailyTaskReport)
 class DailyTaskReportAdmin(admin.ModelAdmin):
-    list_display = ('engineer', 'report_date', 'farm', 'location', 'variety', 'operation', 'actual_productivity')
-    list_filter = ('report_date', 'farm', 'location', 'variety', 'engineer', 'operation')
-    search_fields = ('engineer__username', 'engineer__first_name', 'engineer__last_name', 'notes')
+    list_display = (
+        'engineer',
+        'report_date',
+        'farm_name',
+        'location',
+        'variety',
+        'operation',
+        'actual_productivity'
+    )
+
+    list_filter = (
+        'report_date',
+        'location',
+        'variety',
+        'engineer',
+        'operation'
+    )
+
+    search_fields = (
+        'engineer__username',
+        'engineer__first_name',
+        'engineer__last_name',
+        'notes'
+    )
+
     date_hierarchy = 'report_date'
+
+    def farm_name(self, obj):
+        return obj.location.farm.name if obj.location else "-"
+    farm_name.short_description = "Farm"
+
 
 @admin.register(FertilizationReport)
 class FertilizationReportAdmin(admin.ModelAdmin):
@@ -30,6 +61,7 @@ class FertilizationReportAdmin(admin.ModelAdmin):
     list_filter = ('report_date', 'variety')
     search_fields = ('material_name', 'operator')
     date_hierarchy = 'report_date'
+
 
 @admin.register(IrrigationReport)
 class IrrigationReportAdmin(admin.ModelAdmin):

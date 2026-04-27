@@ -6,8 +6,10 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import ScienceIcon from '@mui/icons-material/Science';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import SettingsIcon from '@mui/icons-material/Settings';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 
 // Lazy loaded sub-pages
+const AnalyticsDashboard = lazy(() => import('./Analytics/AnalyticsDashboard'));
 const DailyTaskList = lazy(() => import('./DailyTaskReport/DailyTaskList'));
 const DailyTaskForm = lazy(() => import('./DailyTaskReport/DailyTaskForm'));
 const DailyTaskCard = lazy(() => import('./DailyTaskReport/DailyTaskCard'));
@@ -33,10 +35,11 @@ const ReportsIndex = () => {
 
   // Determine current tab based on pathname
   const currentTab = () => {
-    if (location.pathname.includes('/reports/tasks')) return 0;
-    if (location.pathname.includes('/reports/fertilization')) return 1;
-    if (location.pathname.includes('/reports/irrigation')) return 2;
-    if (location.pathname.includes('/reports/custom-fields')) return 3;
+    if (location.pathname.includes('/reports/analytics')) return 0;
+    if (location.pathname.includes('/reports/tasks')) return 1;
+    if (location.pathname.includes('/reports/fertilization')) return 2;
+    if (location.pathname.includes('/reports/irrigation')) return 3;
+    if (location.pathname.includes('/reports/custom-fields')) return 4;
     return 0;
   };
 
@@ -63,6 +66,7 @@ const ReportsIndex = () => {
             '& .MuiTabs-indicator': { backgroundColor: '#16a34a', height: 3 }
           }}
         >
+          <Tab icon={<QueryStatsIcon />} iconPosition="start" label={t('reports.tab_analytics', 'التحليلات')} component={Link} to="/reports/analytics" />
           <Tab icon={<AssignmentIcon />} iconPosition="start" label={t('reports.tab_tasks', 'المهام اليومية')} component={Link} to="/reports/tasks" />
           <Tab icon={<ScienceIcon />} iconPosition="start" label={t('reports.tab_fertilization', 'التسميد')} component={Link} to="/reports/fertilization" />
           <Tab icon={<WaterDropIcon />} iconPosition="start" label={t('reports.tab_irrigation', 'الري')} component={Link} to="/reports/irrigation" />
@@ -73,8 +77,9 @@ const ReportsIndex = () => {
       {/* Sub-Routes */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<Navigate to="tasks" replace />} />
+          <Route path="/" element={<Navigate to="analytics" replace />} />
           
+          <Route path="analytics" element={<AnalyticsDashboard />} />
           <Route path="tasks" element={<DailyTaskList />} />
           <Route path="tasks/new" element={<DailyTaskForm />} />
           <Route path="tasks/summary" element={<DailyTaskSummary />} />
