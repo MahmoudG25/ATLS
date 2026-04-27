@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Sum, Count, Avg, IntegerField
+from django.db.models import Sum, Count, Avg, IntegerField, F, OuterRef, Subquery, ExpressionWrapper, FloatField, Case, When, Value
 from django.db.models.functions import Coalesce
 from apps.reports.models import (
     Operation, DailyTaskReport, FertilizationReport, IrrigationReport,
@@ -455,3 +455,133 @@ class OperationLocationMatrixView(APIView):
         data = operation_location_matrix(company, start_date=start_date, end_date=end_date)
         serializer = OperationLocationMatrixSerializer(data)
         return Response(serializer.data)
+
+
+class CostAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = getattr(request, "company", None)
+
+        labor_sum_subquery = LaborEntry.objects.filter(
+            report=OuterRef('pk')
+        ).values('report').annotate(
+            total=Sum(ExpressionWrapper(F('hours') * F('worker_rate'), output_field=FloatField()))
+        ).values('total')
+
+        qs = _for_company(DailyTaskReport.objects.all(), request).annotate(
+            report_cost=Coalesce(
+                F('manual_cost'),
+                Subquery(labor_sum_subquery),
+                0.0,
+                output_field=FloatField()
+            )
+        ).filter(location__type="ENCLOSURE")
+
+        total_cost = qs.aggregate(total=Sum('report_cost'))['total'] or 0.0
+
+        cost_per_operation = list(
+            qs.values('operation__name').annotate(
+                agg_cost=Sum('report_cost')
+            ).values(
+                operation=F('operation__name'),
+                total_cost=F('agg_cost')
+            ).order_by('-total_cost')
+        )
+
+        cost_per_location = list(
+            qs.values('location__id', 'location__name').annotate(
+                agg_cost=Sum('report_cost')
+            ).values(
+                location=F('location__name'),
+                total_cost=F('agg_cost')
+            ).order_by('-total_cost')
+        )
+
+        return Response({
+            "total_cost": float(total_cost),
+            "cost_per_operation": cost_per_operation,
+            "cost_per_location": cost_per_location
+        })
+
+
+class TrendsAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        labor_sum_subquery = LaborEntry.objects.filter(
+            report=OuterRef('pk')
+        ).values('report').annotate(
+            total=Sum(ExpressionWrapper(F('hours') * F('worker_rate'), output_field=FloatField()))
+        ).values('total')
+
+        qs = _for_company(DailyTaskReport.objects.all(), request).annotate(
+            report_cost=Coalesce(
+                F('manual_cost'),
+                Subquery(labor_sum_subquery),
+                0.0,
+                output_field=FloatField()
+            )
+        ).filter(location__type="ENCLOSURE")
+
+        trends = list(
+            qs.values('report_date').annotate(
+                total_reports=Count('id'),
+                total_workers=Sum('company_workers') + Sum('contractor_workers'),
+                total_hours=Sum('work_hours'),
+                total_cost=Sum('report_cost')
+            ).order_by('report_date')
+        )
+
+        return Response({
+            "trends": trends
+        })
+
+
+class InsightsAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = _for_company(DailyTaskReport.objects.all(), request).filter(location__type="ENCLOSURE")
+
+        # Productivity: Output per worker (handling division by zero)
+        productivity = qs.values('operation__name').annotate(
+            total_workers=Coalesce(Sum('company_workers'), 0) + Coalesce(Sum('contractor_workers'), 0),
+            total_output=Coalesce(Sum('actual_productivity'), 0.0)
+        ).annotate(
+            productivity=Case(
+                When(total_workers__gt=0, then=F('total_output') / F('total_workers')),
+                default=Value(0.0),
+                output_field=FloatField()
+            )
+        )
+
+        best_productivity = productivity.order_by('-productivity').first()
+        worst_productivity = productivity.order_by('productivity').first()
+
+        # Cost: Using manual_cost or subquery with ExpressionWrapper
+        cost_data = qs.annotate(
+            report_cost=Coalesce(
+                F('manual_cost'),
+                Subquery(
+                    LaborEntry.objects.filter(report=OuterRef('pk'))
+                    .values('report')
+                    .annotate(total=Sum(ExpressionWrapper(F('hours') * F('worker_rate'), output_field=FloatField())))
+                    .values('total')
+                ),
+                0.0,
+                output_field=FloatField()
+            )
+        )
+
+        cost_per_operation = cost_data.values('operation__name').annotate(
+            total_cost=Sum('report_cost')
+        )
+
+        highest_cost_operation = cost_per_operation.order_by('-total_cost').first()
+
+        return Response({
+            "best_productivity": best_productivity,
+            "worst_productivity": worst_productivity,
+            "highest_cost_operation": highest_cost_operation
+        })

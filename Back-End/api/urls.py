@@ -10,6 +10,7 @@ from api.endpoints import equipment_views
 from api.endpoints import accounting_views
 from api.endpoints import production_views
 from api.endpoints import reports_views
+from api.endpoints.reports_views import CostAnalyticsView, TrendsAnalyticsView, InsightsAnalyticsView
 from api.endpoints import upload_views
 from api.endpoints import notification_views
 from api.endpoints import activity_views
@@ -78,7 +79,8 @@ urlpatterns = [
     path('reports/tasks/export/', reports_views.DailyTaskExportView.as_view(), name='reports_tasks_export'),
     path('reports/analytics/operations/', reports_views.OperationAnalyticsView.as_view(), name='reports_analytics_operations'),
     path('reports/analytics/workers/', reports_views.WorkerAnalyticsView.as_view(), name='reports_analytics_workers'),
-    path('analytics/costs/', reports_views.CostAnalyticsView.as_view(), name='analytics_costs'),
+    path('analytics/costs/', CostAnalyticsView.as_view()),
+    path('analytics/trends/', TrendsAnalyticsView.as_view()),
     path('analytics/kpi/', reports_views.KPIAnalyticsView.as_view(), name='analytics_kpi'),
     path('analytics/productivity/', reports_views.ProductivityAnalyticsView.as_view(), name='analytics_productivity'),
     path('analytics/operations-summary/', reports_views.OperationsSummaryView.as_view(), name='analytics_operations_summary'),
@@ -86,7 +88,7 @@ urlpatterns = [
     path('analytics/operation-location-matrix/', reports_views.OperationLocationMatrixView.as_view(), name='analytics_operation_location_matrix'),
     path('analytics/comparison/', reports_views.ComparisonAnalyticsView.as_view(), name='analytics_comparison'),
     path('analytics/dashboard/', reports_views.DashboardAnalyticsView.as_view(), name='analytics_dashboard'),
-    path('analytics/insights/', reports_views.SmartInsightsView.as_view(), name='analytics_insights'),
+    path('analytics/insights/', InsightsAnalyticsView.as_view()),
     path('reports/fertilization/', reports_views.FertilizationListCreate.as_view(), name='reports_fertilization'),
     path('reports/fertilization/<int:pk>/', reports_views.FertilizationDetail.as_view(), name='reports_fertilization_detail'),
     path('reports/irrigation/', reports_views.IrrigationListCreate.as_view(), name='reports_irrigation'),
