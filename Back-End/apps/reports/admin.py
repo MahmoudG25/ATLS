@@ -19,8 +19,8 @@ class OperationAdmin(admin.ModelAdmin):
 
 @admin.register(DailyTaskReport)
 class DailyTaskReportAdmin(admin.ModelAdmin):
-    list_display = ('engineer', 'report_date', 'crop', 'stage', 'variety', 'operation', 'actual_productivity')
-    list_filter = ('report_date', 'crop', 'stage', 'variety', 'engineer', 'operation')
+    list_display = ('engineer', 'report_date', 'farm', 'location', 'variety', 'operation', 'actual_productivity')
+    list_filter = ('report_date', 'farm', 'location', 'variety', 'engineer', 'operation')
     search_fields = ('engineer__username', 'engineer__first_name', 'engineer__last_name', 'notes')
     date_hierarchy = 'report_date'
 

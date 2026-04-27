@@ -41,7 +41,7 @@ class DailyTaskFilter(django_filters.FilterSet):
     
     class Meta:
         model = DailyTaskReport
-        fields = ['engineer', 'report_date', 'crop', 'stage', 'operation', 'location', 'farm']
+        fields = ['engineer', 'report_date', 'operation', 'location']
 
 
 def _for_company(queryset, request):
@@ -72,9 +72,9 @@ class DailyTaskReportListCreate(generics.ListCreateAPIView):
         qs = DailyTaskReport.objects.select_related(
             "engineer",
             "operation",
-            "crop",
-            "stage",
-            "enclosure",
+            "variety",
+            "unit",
+            "contractor",
             "location",
             "location__parent",
         ).prefetch_related("attachments", "labor_entries")

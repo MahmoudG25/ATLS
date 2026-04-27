@@ -29,6 +29,34 @@ class Operation(TenantAwareModel):
     def __str__(self):
         return self.name
 
+class Variety(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    company = models.ForeignKey("users.Company", on_delete=models.CASCADE, related_name="varieties")
+
+    class Meta:
+        verbose_name = "Variety"
+        verbose_name_plural = "Varieties"
+        unique_together = ("company", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Unit(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    company = models.ForeignKey("users.Company", on_delete=models.CASCADE, related_name="units")
+
+    class Meta:
+        verbose_name = "Unit"
+        verbose_name_plural = "Units"
+        unique_together = ("company", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class ReportDropdownOption(models.Model):
     CATEGORY_CHOICES = [
         ('variety', 'Variety'),
@@ -49,6 +77,7 @@ class ReportDropdownOption(models.Model):
     def __str__(self):
         return f"{self.category} - {self.name}"
 
+
 class DailyTaskReport(TenantAwareModel):
     """تقرير المهام اليومي"""
 
@@ -60,18 +89,14 @@ class DailyTaskReport(TenantAwareModel):
                           verbose_name="المهندس"
                       )
     report_date     = models.DateField(verbose_name="تاريخ التقرير")
-    farm            = models.ForeignKey("farm.Farm", on_delete=models.PROTECT, related_name="daily_task_reports", null=True, blank=True)
-    location        = models.ForeignKey("farm.LocationNode", on_delete=models.PROTECT, related_name="daily_task_reports", null=True, blank=True)
-    crop            = models.ForeignKey('farm.Crop', on_delete=models.PROTECT, verbose_name="المحصول", null=True, blank=True)
-    stage           = models.ForeignKey('farm.Stage', on_delete=models.PROTECT, null=True, blank=True, verbose_name="المرحلة")
-    enclosure       = models.ForeignKey('farm.Enclosure', on_delete=models.PROTECT, related_name="reports_enclosure", verbose_name="الحوشة", null=True, blank=True)
-    variety         = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'variety'}, related_name="reports_variety", verbose_name="الصنف")
+    location        = models.ForeignKey("farm.LocationNode", on_delete=models.PROTECT, related_name="daily_task_reports")
+    variety         = models.ForeignKey("reports.Variety", on_delete=models.PROTECT, related_name="daily_task_reports", verbose_name="الصنف")
     work_location   = models.CharField(max_length=100, verbose_name="مكان العمل")
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
     contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
-    contractor      = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'contractor'}, related_name="reports_contractor", null=True, blank=True, verbose_name="كود المقاول")
+    contractor      = models.ForeignKey("reports.Contractor", on_delete=models.PROTECT, null=True, blank=True, related_name="daily_task_reports", verbose_name="كود المقاول")
     operation       = models.ForeignKey(Operation, on_delete=models.PROTECT, verbose_name="العملية الفنية")
-    unit            = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'unit'}, related_name="reports_unit", verbose_name="الوحدة")
+    unit            = models.ForeignKey("reports.Unit", on_delete=models.PROTECT, related_name="daily_task_reports", verbose_name="الوحدة")
     actual_productivity  = models.FloatField(null=True, blank=True, verbose_name="الانتاجية الفعلية")
     work_hours      = models.FloatField(verbose_name="ساعات العمل")
     overtime_hours  = models.FloatField(null=True, blank=True, verbose_name="ساعات الإضافي")
@@ -88,11 +113,15 @@ class DailyTaskReport(TenantAwareModel):
             models.Index(fields=['company', 'operation', 'report_date']),
             models.Index(fields=['report_date']),
             models.Index(fields=['engineer', 'report_date']),
-            models.Index(fields=['crop', 'report_date']),
         ]
 
     def __str__(self):
         return f"{self.engineer} | {self.report_date} | {self.operation}"
+
+    @property
+    def farm(self):
+        """Derived from location. LocationNode always has a farm."""
+        return self.location.farm if self.location else None
 
     @property
     def total_cost(self):
@@ -100,10 +129,17 @@ class DailyTaskReport(TenantAwareModel):
 
     def clean(self):
         super().clean()
-        if self.location and self.location.farm.company_id != self.company_id:
+        if not self.location:
+            raise ValidationError({"location": "Location is required."})
+        self.assert_same_company(self.location, "location")
+        if self.location.farm.company_id != self.company_id:
             raise ValidationError({"location": "Invalid tenant relation"})
-        if self.farm and self.farm.company_id != self.company_id:
-            raise ValidationError({"farm": "Invalid tenant relation"})
+        if self.variety and self.variety.company_id != self.company_id:
+            raise ValidationError({"variety": "Invalid tenant relation"})
+        if self.contractor and self.contractor.company_id != self.company_id:
+            raise ValidationError({"contractor": "Invalid tenant relation"})
+        if self.unit and self.unit.company_id != self.company_id:
+            raise ValidationError({"unit": "Invalid tenant relation"})
         if self.operation and self.operation.company_id != self.company_id:
             raise ValidationError({"operation": "Invalid tenant relation"})
 

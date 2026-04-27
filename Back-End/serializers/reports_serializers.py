@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.reports.models import (
-    Operation, DailyTaskReport, FertilizationReport, IrrigationReport,
+    Operation, Variety, Unit, Contractor, DailyTaskReport, FertilizationReport, IrrigationReport,
     CustomFieldDefinition, CustomFieldValue, ReportDropdownOption, LaborEntry, Attachment
 )
 
@@ -8,6 +8,18 @@ class OperationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Operation
         fields = '__all__'
+
+class VarietySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Variety
+        fields = '__all__'
+        read_only_fields = ['company']
+
+class UnitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Unit
+        fields = '__all__'
+        read_only_fields = ['company']
 
 class ReportDropdownOptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,8 +30,6 @@ class ReportDropdownOptionSerializer(serializers.ModelSerializer):
 class DailyTaskReportSerializer(serializers.ModelSerializer):
     engineer_name = serializers.CharField(source='engineer.name', read_only=True)
     operation_name = serializers.CharField(source='operation.name', read_only=True)
-    crop_name = serializers.CharField(source='crop.name', read_only=True)
-    stage_name = serializers.CharField(source='stage.name', read_only=True)
     variety_name = serializers.CharField(source='variety.name', read_only=True)
     unit_name = serializers.CharField(source='unit.name', read_only=True)
     location_name = serializers.CharField(source='location.name', read_only=True)
@@ -28,17 +38,9 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     attachments_count = serializers.IntegerField(source='attachments.count', read_only=True)
     labor_count = serializers.IntegerField(source='labor_entries.count', read_only=True)
     contractor_name = serializers.SerializerMethodField()
-    enclosure_name = serializers.SerializerMethodField()
 
     def get_contractor_name(self, obj):
         return obj.contractor.name if obj.contractor else None
-
-    def get_enclosure_name(self, obj):
-        if obj.enclosure:
-            if obj.enclosure.stage:
-                return f"{obj.enclosure.crop.name} / {obj.enclosure.stage.name} / {obj.enclosure.name}"
-            return f"{obj.enclosure.crop.name} / {obj.enclosure.name}"
-        return None
 
     def get_location_path(self, obj):
         node = obj.location
@@ -57,39 +59,26 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get("request")
         company = getattr(request, "company", None) if request else None
-        crop = data.get('crop')
-        stage = data.get('stage')
-        enclosure = data.get('enclosure')
+        variety = data.get('variety')
+        contractor = data.get('contractor')
+        unit = data.get('unit')
         location = data.get('location')
-        farm = data.get('farm')
         operation = data.get('operation')
 
         if company:
-            if farm and farm.company_id != company.id:
-                raise serializers.ValidationError({"farm": "Invalid tenant relation"})
             if location and location.company_id != company.id:
                 raise serializers.ValidationError({"location": "Invalid tenant relation"})
             if operation and operation.company_id != company.id:
                 raise serializers.ValidationError({"operation": "Invalid tenant relation"})
+            if variety and variety.company_id != company.id:
+                raise serializers.ValidationError({"variety": "Invalid tenant relation"})
+            if contractor and contractor.company_id != company.id:
+                raise serializers.ValidationError({"contractor": "Invalid tenant relation"})
+            if unit and unit.company_id != company.id:
+                raise serializers.ValidationError({"unit": "Invalid tenant relation"})
 
-        if not crop:
-            raise serializers.ValidationError({"crop": "المحصول مطلوب."})
-        
-        if not enclosure:
-            raise serializers.ValidationError({"enclosure": "الحوشة / المنطقة مطلوبة."})
-
-        if crop.type == 'palm':
-            if not stage:
-                raise serializers.ValidationError({"stage": "المرحلة مطلوبة لنخيل."})
-            # Ensure enclosure belongs to the stage
-            if enclosure.stage != stage:
-                raise serializers.ValidationError({"enclosure": "الحوشة المختارة لا تنتمي للمرحلة المحددة."})
-        elif crop.type == 'olive':
-            if stage:
-                raise serializers.ValidationError({"stage": "الزيتون لا يحتوي على مراحل."})
-            # Ensure enclosure belongs to the crop
-            if enclosure.crop != crop:
-                raise serializers.ValidationError({"enclosure": "المنطقة المختارة لا تنتمي لمحصول الزيتون."})
+        if not location:
+            raise serializers.ValidationError({"location": "Location is required."})
 
         return data
 

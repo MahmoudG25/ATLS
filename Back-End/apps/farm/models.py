@@ -16,6 +16,7 @@ class CropType(models.Model):
         return self.name
 
 class Sector(models.Model):
+    """DEPRECATED: replaced by LocationNode tree structure"""
     name = models.CharField(max_length=255)
     farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name="sectors")
     crop_type = models.ForeignKey(CropType, on_delete=models.PROTECT)
@@ -25,6 +26,7 @@ class Sector(models.Model):
         return f"{self.name} ({self.crop_type.name})"
 
 class Plot(models.Model):
+    """DEPRECATED: replaced by LocationNode tree structure"""
     name = models.CharField(max_length=255)
     sector = models.ForeignKey(Sector, on_delete=models.CASCADE, related_name="plots")
     is_general = models.BooleanField(default=False, help_text="True if sector does not have specific plots.")
@@ -36,6 +38,7 @@ class Plot(models.Model):
 # --- New Hierarchical Models ---
 
 class Crop(models.Model):
+    """DEPRECATED: replaced by LocationNode tree structure"""
     CROP_TYPE_CHOICES = [
         ('palm', 'نخيل'),
         ('olive', 'زيتون'),
@@ -53,6 +56,7 @@ class Crop(models.Model):
         return self.name
 
 class Stage(models.Model):
+    """DEPRECATED: replaced by LocationNode tree structure"""
     crop = models.ForeignKey(Crop, on_delete=models.CASCADE, related_name="stages")
     name = models.CharField(max_length=100, verbose_name="المرحلة")
     order = models.IntegerField(default=0, verbose_name="الترتيب")
@@ -65,6 +69,7 @@ class Stage(models.Model):
         return f"{self.crop.name} - {self.name}"
 
 class Enclosure(models.Model):
+    """DEPRECATED: replaced by LocationNode tree structure"""
     crop = models.ForeignKey(Crop, on_delete=models.CASCADE, related_name="enclosures", verbose_name="المحصول")
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="enclosures", null=True, blank=True, verbose_name="المرحلة")
     name = models.CharField(max_length=100, verbose_name="الحوشة / المنطقة")
