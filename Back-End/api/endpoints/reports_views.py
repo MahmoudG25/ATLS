@@ -18,17 +18,29 @@ from serializers.reports_serializers import (
     ReportDropdownOptionSerializer,
     LaborEntrySerializer,
     AttachmentSerializer,
+    # Analytics Serializers
+    KPIDashboardSerializer,
+    ProductivityAnalyticsSerializer,
+    OperationsSummarySerializer,
+    WorkersByLocationSerializer,
+    OperationLocationMatrixSerializer,
 )
 from apps.reports.permissions import IsManagerOrReadOnly
 from apps.reports.services import (
     comparison_analytics,
     cost_analytics,
     dashboard_bundle,
-    productivity_analytics,
     smart_alerts,
     smart_suggestions,
 )
-from apps.reports.selectors import kpi_metrics
+from apps.reports.selectors import (
+    kpi_metrics,
+    kpi_dashboard,
+    productivity_analytics,
+    operations_summary,
+    workers_by_location,
+    operation_location_matrix,
+)
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
 
@@ -286,17 +298,56 @@ class CostAnalyticsView(APIView):
 
 
 class KPIAnalyticsView(APIView):
+    """
+    GET /analytics/kpi
+    
+    Comprehensive KPI dashboard with:
+    - Total workers (company + contractor)
+    - Total operations
+    - Average productivity per operation
+    - Workers per location
+    
+    Query params:
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(kpi_metrics(getattr(request, "company", None)))
+        company = getattr(request, "company", None)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        data = kpi_dashboard(company, start_date=start_date, end_date=end_date)
+        serializer = KPIDashboardSerializer(data)
+        return Response(serializer.data)
 
 
 class ProductivityAnalyticsView(APIView):
+    """
+    GET /analytics/productivity
+    
+    Productivity aggregation with grouping by:
+    - operation
+    - location (LocationNode)
+    - date
+    
+    Includes min/max/avg/total productivity metrics.
+    
+    Query params:
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(productivity_analytics(getattr(request, "company", None)))
+        company = getattr(request, "company", None)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        data = productivity_analytics(company, start_date=start_date, end_date=end_date)
+        serializer = ProductivityAnalyticsSerializer(data)
+        return Response(serializer.data)
 
 
 class ComparisonAnalyticsView(APIView):
@@ -322,3 +373,85 @@ class SmartInsightsView(APIView):
             "alerts": smart_alerts(company),
             "suggestions": smart_suggestions(company),
         })
+
+
+# ============================================================================
+# ADVANCED ANALYTICS ENDPOINTS
+# ============================================================================
+
+class OperationsSummaryView(APIView):
+    """
+    GET /analytics/operations-summary
+    
+    Operations summary with detailed breakdown:
+    - Workers per operation (company + contractor split)
+    - Work hours per operation
+    - Reports count per operation
+    - Location breakdown
+    - Engineer count
+    
+    Query params:
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = getattr(request, "company", None)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        data = operations_summary(company, start_date=start_date, end_date=end_date)
+        serializer = OperationsSummarySerializer(data)
+        return Response(serializer.data)
+
+
+class WorkersByLocationView(APIView):
+    """
+    GET /analytics/workers-by-location
+    
+    Worker distribution grouped by LocationNode:
+    - Total workers per location
+    - Company vs contractor split
+    - Reports count
+    - Engineers and operations per location
+    
+    Query params:
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = getattr(request, "company", None)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        data = workers_by_location(company, start_date=start_date, end_date=end_date)
+        serializer = WorkersByLocationSerializer(data)
+        return Response(serializer.data)
+
+
+class OperationLocationMatrixView(APIView):
+    """
+    GET /analytics/operation-location-matrix
+    
+    Cross-tabulation of operations vs locations:
+    - Worker counts at operation x location intersection
+    - Company vs contractor breakdown
+    - Reports count
+    
+    Query params:
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = getattr(request, "company", None)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        data = operation_location_matrix(company, start_date=start_date, end_date=end_date)
+        serializer = OperationLocationMatrixSerializer(data)
+        return Response(serializer.data)

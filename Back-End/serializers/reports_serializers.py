@@ -127,3 +127,116 @@ class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = "__all__"
+
+
+# ============================================================================
+# ANALYTICS SERIALIZERS
+# ============================================================================
+
+class KPIDashboardSerializer(serializers.Serializer):
+    """KPI Dashboard metrics serializer"""
+    class PeriodSerializer(serializers.Serializer):
+        start_date = serializers.DateField(allow_null=True)
+        end_date = serializers.DateField(allow_null=True)
+    
+    class SummarySerializer(serializers.Serializer):
+        total_reports = serializers.IntegerField()
+        total_workers = serializers.IntegerField()
+        company_workers = serializers.IntegerField()
+        contractor_workers = serializers.IntegerField()
+        avg_workers_per_report = serializers.FloatField()
+    
+    class OperationsSerializer(serializers.Serializer):
+        total_unique_operations = serializers.IntegerField()
+        total_operation_records = serializers.IntegerField()
+        avg_productivity = serializers.FloatField()
+    
+    period = PeriodSerializer()
+    summary = SummarySerializer()
+    operations = OperationsSerializer()
+
+
+class ProductivityMetricSerializer(serializers.Serializer):
+    """Individual productivity metric"""
+    operation__id = serializers.IntegerField(required=False, allow_null=True)
+    operation__name = serializers.CharField(required=False, allow_null=True)
+    location__id = serializers.IntegerField(required=False, allow_null=True)
+    location__name = serializers.CharField(required=False, allow_null=True)
+    location__type = serializers.CharField(required=False, allow_null=True)
+    location__farm__id = serializers.IntegerField(required=False, allow_null=True)
+    location__farm__name = serializers.CharField(required=False, allow_null=True)
+    report_date = serializers.DateField(required=False, allow_null=True)
+    total_productivity = serializers.IntegerField()
+    avg_productivity = serializers.FloatField()
+    count_reports = serializers.IntegerField()
+    min_productivity = serializers.IntegerField(required=False, allow_null=True)
+    max_productivity = serializers.IntegerField(required=False, allow_null=True)
+
+
+class ProductivityAnalyticsSerializer(serializers.Serializer):
+    """Productivity analytics grouped by operation, location, and date"""
+    by_operation = ProductivityMetricSerializer(many=True)
+    by_location = ProductivityMetricSerializer(many=True)
+    by_date = ProductivityMetricSerializer(many=True)
+
+
+class OperationDetailSerializer(serializers.Serializer):
+    """Operation summary detail"""
+    operation__id = serializers.IntegerField()
+    operation__name = serializers.CharField()
+    operation__category = serializers.CharField()
+    total_reports = serializers.IntegerField()
+    total_company_workers = serializers.IntegerField()
+    total_contractor_workers = serializers.IntegerField()
+    total_workers = serializers.IntegerField()
+    total_work_hours = serializers.FloatField()
+    avg_work_hours = serializers.FloatField()
+    total_productivity = serializers.IntegerField()
+    avg_productivity = serializers.FloatField()
+    unique_engineers = serializers.IntegerField()
+    unique_locations = serializers.IntegerField()
+
+
+class OperationsSummarySerializer(serializers.Serializer):
+    """Operations summary"""
+    total_operations = serializers.IntegerField()
+    operations = OperationDetailSerializer(many=True)
+
+
+class LocationWorkerSerializer(serializers.Serializer):
+    """Worker distribution by location"""
+    location__id = serializers.IntegerField()
+    location__name = serializers.CharField()
+    location__type = serializers.CharField()
+    location__farm__id = serializers.IntegerField()
+    location__farm__name = serializers.CharField()
+    total_company_workers = serializers.IntegerField()
+    total_contractor_workers = serializers.IntegerField()
+    total_workers = serializers.IntegerField()
+    total_reports = serializers.IntegerField()
+    unique_engineers = serializers.IntegerField()
+    unique_operations = serializers.IntegerField()
+
+
+class WorkersByLocationSerializer(serializers.Serializer):
+    """Workers by location distribution"""
+    total_locations = serializers.IntegerField()
+    locations = LocationWorkerSerializer(many=True)
+
+
+class OperationLocationMatrixItemSerializer(serializers.Serializer):
+    """Operation-Location cross-tabulation item"""
+    operation__id = serializers.IntegerField()
+    operation__name = serializers.CharField()
+    location__id = serializers.IntegerField()
+    location__name = serializers.CharField()
+    location__type = serializers.CharField()
+    total_workers = serializers.IntegerField()
+    company_workers = serializers.IntegerField()
+    contractor_workers = serializers.IntegerField()
+    total_reports = serializers.IntegerField()
+
+
+class OperationLocationMatrixSerializer(serializers.Serializer):
+    """Operation-Location cross-tabulation"""
+    matrix = OperationLocationMatrixItemSerializer(many=True)
