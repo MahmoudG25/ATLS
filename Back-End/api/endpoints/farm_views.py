@@ -26,6 +26,53 @@ def structure_view(request):
     sectors = get_farm_structure(farm_id)
     return Response(SectorSerializer(sectors, many=True).data)
 
+from apps.farm.models import Farm
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def hierarchy_view(request):
+    farm = Farm.objects.filter(is_active=True).first()
+    if not farm:
+        return Response({}, status=200)
+
+    crops_data = []
+    for crop in farm.crops.filter(is_active=True).order_by('order'):
+        if crop.type == 'palm':
+            stages_data = []
+            for stage in crop.stages.filter(is_active=True).order_by('order'):
+                enclosures_data = [
+                    {'id': enc.id, 'name': enc.name}
+                    for enc in stage.enclosures.filter(is_active=True).order_by('order')
+                ]
+                stages_data.append({
+                    'id': stage.id,
+                    'name': stage.name,
+                    'enclosures': enclosures_data
+                })
+            crops_data.append({
+                'id': crop.id,
+                'name': crop.name,
+                'type': crop.type,
+                'stages': stages_data
+            })
+        else:
+            regions_data = [
+                {'id': enc.id, 'name': enc.name}
+                for enc in crop.enclosures.filter(is_active=True, stage__isnull=True).order_by('order')
+            ]
+            crops_data.append({
+                'id': crop.id,
+                'name': crop.name,
+                'type': crop.type,
+                'regions': regions_data
+            })
+
+    return Response({
+        'farm': {'id': farm.id, 'name': farm.name},
+        'crops': crops_data
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_sector_view(request):

@@ -52,9 +52,10 @@ class DailyTaskReport(models.Model):
                           verbose_name="المهندس"
                       )
     report_date     = models.DateField(verbose_name="تاريخ التقرير")
-    sector          = models.ForeignKey('farm.Sector', on_delete=models.PROTECT, verbose_name="القطاع")
+    crop            = models.ForeignKey('farm.Crop', on_delete=models.PROTECT, verbose_name="المحصول", null=True, blank=True)
+    stage           = models.ForeignKey('farm.Stage', on_delete=models.PROTECT, null=True, blank=True, verbose_name="المرحلة")
+    enclosure       = models.ForeignKey('farm.Enclosure', on_delete=models.PROTECT, related_name="reports_enclosure", verbose_name="الحوشة", null=True, blank=True)
     variety         = models.ForeignKey(ReportDropdownOption, on_delete=models.PROTECT, limit_choices_to={'category': 'variety'}, related_name="reports_variety", verbose_name="الصنف")
-    enclosure       = models.ForeignKey('farm.Plot', on_delete=models.PROTECT, related_name="reports_enclosure", null=True, blank=True, verbose_name="الحوشة")
     work_location   = models.CharField(max_length=100, verbose_name="مكان العمل")
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
     contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
@@ -75,7 +76,7 @@ class DailyTaskReport(models.Model):
         indexes = [
             models.Index(fields=['report_date']),
             models.Index(fields=['engineer', 'report_date']),
-            models.Index(fields=['sector', 'report_date']),
+            models.Index(fields=['crop', 'report_date']),
         ]
 
     def __str__(self):

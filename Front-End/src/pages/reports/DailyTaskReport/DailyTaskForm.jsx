@@ -19,9 +19,10 @@ import api from '../../../services/api';
 const taskSchema = z.object({
   report_date: z.any(),
   engineer: z.number().min(1, 'المهندس مطلوب'),
-  sector: z.number().min(1, 'القطاع مطلوب'),
+  crop: z.number().min(1, 'المحصول مطلوب'),
+  stage: z.number().nullable().optional(),
   variety: z.number().min(1, 'الصنف مطلوب'),
-  enclosure: z.number().nullable().optional(),
+  enclosure: z.number().min(1, 'الحوشة مطلوبة'),
   work_location: z.string().min(1, 'مكان العمل مطلوب'),
   operation: z.number().min(1, 'العملية الفنية مطلوبة'),
   unit: z.number().min(1, 'الوحدة مطلوبة'),
@@ -36,8 +37,6 @@ const taskSchema = z.object({
   custom_fields: z.record(z.any()).optional(),
 });
 
-// ── Design tokens ───────────────────────────────────────────────────────────
-// Retaining MUI input overrides because Autocomplete/DatePicker are still MUI
 const inputSx = {
   '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
     height: '40px',
@@ -134,8 +133,7 @@ export default function DailyTaskForm() {
 
   // Options state
   const [users, setUsers] = useState([]);
-  const [sectors, setSectors] = useState([]);
-  const [plots, setPlots] = useState([]);       // الحوش
+  const [crops, setCrops] = useState([]);
   const [operations, setOperations] = useState([]);
   const [varieties, setVarieties] = useState([]);
   const [units, setUnits] = useState([]);
@@ -146,12 +144,36 @@ export default function DailyTaskForm() {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       report_date: dayjs(), engineer: user?.id ?? null,
-      sector: null, variety: null, enclosure: null, work_location: '',
+      crop: null, stage: null, variety: null, enclosure: null, work_location: '',
       operation: null, unit: null, company_workers: 0, contractor_workers: 0,
       contractor: null, actual_productivity: 0, work_hours: 8,
       overtime_hours: 0, overtime_productivity: 0, notes: '', custom_fields: {},
     },
   });
+
+  const selectedCropId = watch('crop');
+  const selectedStageId = watch('stage');
+
+  const selectedCrop = crops.find(c => c.id === selectedCropId);
+  const stages = selectedCrop?.stages || [];
+  const selectedStage = stages.find(s => s.id === selectedStageId);
+  const enclosures = selectedCrop?.type === 'palm' 
+    ? (selectedStage?.enclosures || [])
+    : (selectedCrop?.regions || []);
+
+  // Reset dependents
+  useEffect(() => {
+    if (selectedCropId) {
+      setValue('stage', null);
+      setValue('enclosure', null);
+    }
+  }, [selectedCropId, setValue]);
+
+  useEffect(() => {
+    if (selectedStageId) {
+      setValue('enclosure', null);
+    }
+  }, [selectedStageId, setValue]);
 
   // When engineer user is not privileged, auto-fill
   useEffect(() => {
@@ -162,9 +184,9 @@ export default function DailyTaskForm() {
   useEffect(() => {
     (async () => {
       try {
-        const [usersRes, sectorsRes, opsRes, varRes, unitRes, conRes, wlRes] = await Promise.all([
+        const [usersRes, hierarchyRes, opsRes, varRes, unitRes, conRes, wlRes] = await Promise.all([
           api.get('/users'),
-          api.get('/farm/sectors'),
+          api.get('/farm/hierarchy'),
           api.get('/reports/operations/'),
           api.get('/reports/options/', { params: { category: 'variety' } }),
           api.get('/reports/options/', { params: { category: 'unit' } }),
@@ -175,15 +197,7 @@ export default function DailyTaskForm() {
         const r = res => Array.isArray(res.data) ? res.data : (res.data.results ?? res.data);
 
         setUsers(r(usersRes));
-
-        const sectorList = r(sectorsRes);
-        setSectors(sectorList);
-
-        const allPlots = sectorList.flatMap(s =>
-          (s.plots || []).map(p => ({ id: p.id, name: `${s.name} / ${p.name}`, sector_id: s.id }))
-        );
-        setPlots(allPlots);
-
+        setCrops(hierarchyRes.data.crops || []);
         setOperations(r(opsRes));
         setVarieties(r(varRes));
         setUnits(r(unitRes));
@@ -220,6 +234,7 @@ export default function DailyTaskForm() {
     }
   };
 
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-[#f4f7f4] min-h-screen">
@@ -243,7 +258,7 @@ export default function DailyTaskForm() {
               {/* Form Grid */}
               <div className="flex flex-col gap-8">
 
-                {/* ── Row 1: التاريخ | المهندس | العملية | القطاع ── */}
+                {/* ── Row 1: CORE INFO (التاريخ | المهندس | العملية | المحصول) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Controller name="report_date" control={control} render={({ field }) => (
                     <Field label="التاريخ">
@@ -267,15 +282,53 @@ export default function DailyTaskForm() {
                     </Field>
                   )} />
 
-                  <Controller name="sector" control={control} render={({ field }) => (
-                    <Field label="القطاع">
-                      <AC options={sectors} value={field.value} onChange={v => { field.onChange(v); setValue('enclosure', null); }}
-                        placeholder="اختر القطاع" error={!!errors.sector} helperText={errors.sector?.message} />
+                  <Controller name="crop" control={control} render={({ field }) => (
+                    <Field label="المحصول">
+                      <AC options={crops} value={field.value} onChange={field.onChange}
+                        placeholder="اختر المحصول" error={!!errors.crop} helperText={errors.crop?.message} />
                     </Field>
                   )} />
                 </div>
 
-                {/* ── Row 2: الصنف | الوحدة | موقع العمل | المقاول ── */}
+                {/* ── Row 2: LOCATION (المرحلة | الحوشة | موقع العمل التفصيلي) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {selectedCrop?.type === 'palm' && (
+                    <Controller name="stage" control={control} render={({ field }) => (
+                      <Field label="المرحلة">
+                        <AC options={stages} value={field.value} onChange={field.onChange}
+                          placeholder="اختر المرحلة" error={!!errors.stage} helperText={errors.stage?.message} />
+                      </Field>
+                    )} />
+                  )}
+
+                  <div className={selectedCrop?.type === 'palm' ? 'col-span-1' : 'col-span-1 sm:col-span-2 lg:col-span-2'}>
+                    <Controller name="enclosure" control={control} render={({ field }) => (
+                      <Field label={selectedCrop?.type === 'olive' ? "المنطقة" : "الحوشة"}>
+                        <AC
+                          disabled={selectedCrop?.type === 'palm' && !selectedStageId}
+                          options={enclosures}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder={selectedCrop?.type === 'olive' ? "اختر المنطقة" : "اختر الحوشة"}
+                          error={!!errors.enclosure}
+                          helperText={errors.enclosure?.message}
+                        />
+                      </Field>
+                    )} />
+                  </div>
+
+                  <div className={selectedCrop?.type === 'palm' ? 'col-span-1 sm:col-span-2 lg:col-span-2' : 'col-span-1 sm:col-span-2 lg:col-span-2'}>
+                    <Controller name="work_location" control={control} render={({ field }) => (
+                      <Field label="موقع العمل التفصيلي">
+                        <ACFree options={workLocations} value={field.value} onChange={field.onChange}
+                          placeholder="اختر أو اكتب موقع العمل"
+                          error={!!errors.work_location} helperText={errors.work_location?.message} />
+                      </Field>
+                    )} />
+                  </div>
+                </div>
+
+                {/* ── Row 3: DETAILS (الصنف | الوحدة | المقاول) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Controller name="variety" control={control} render={({ field }) => (
                     <Field label="الصنف">
@@ -291,24 +344,18 @@ export default function DailyTaskForm() {
                     </Field>
                   )} />
 
-                  <Controller name="work_location" control={control} render={({ field }) => (
-                    <Field label="موقع العمل التفصيلي">
-                      <ACFree options={workLocations} value={field.value} onChange={field.onChange}
-                        placeholder="اختر أو اكتب موقع العمل"
-                        error={!!errors.work_location} helperText={errors.work_location?.message} />
-                    </Field>
-                  )} />
-
-                  <Controller name="contractor" control={control} render={({ field }) => (
-                    <Field label="المقاول">
-                      <AC options={contractors} value={field.value} onChange={field.onChange}
-                        placeholder="اختر المقاول" error={!!errors.contractor} helperText={errors.contractor?.message} />
-                    </Field>
-                  )} />
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-2">
+                    <Controller name="contractor" control={control} render={({ field }) => (
+                      <Field label="المقاول">
+                        <AC options={contractors} value={field.value} onChange={field.onChange}
+                          placeholder="اختر المقاول" error={!!errors.contractor} helperText={errors.contractor?.message} />
+                      </Field>
+                    )} />
+                  </div>
                 </div>
 
-                {/* ── Row 3: عمال الشركة | عمال المقاول ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* ── Row 4: RESOURCES (عمال الشركة | عمال المقاول) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
                   <Controller name="company_workers" control={control} render={({ field }) => (
                     <Field label="عمال الشركة">
                       <Stepper value={field.value} onChange={field.onChange} error={!!errors.company_workers} />
@@ -322,7 +369,7 @@ export default function DailyTaskForm() {
                   )} />
                 </div>
 
-                {/* ── Row 4: ساعات العمل | الإنتاج الفعلي | ساعات إضافية | إنتاج إضافي ── */}
+                {/* ── Row 5: RESULTS (ساعات العمل | الإنتاج الفعلي | ساعات إضافية | إنتاج إضافي) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
                     { name: 'work_hours', label: 'ساعات العمل', placeholder: '8', step: '0.5' },
@@ -340,23 +387,7 @@ export default function DailyTaskForm() {
                   ))}
                 </div>
 
-                {/* ── Row 5: الحوشة ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Controller name="enclosure" control={control} render={({ field }) => (
-                    <Field label="الحوشة (من هيكل المزرعة)">
-                      <AC
-                        options={plots.filter(p => !watch('sector') || p.sector_id === watch('sector'))}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="اختر الحوشة"
-                        error={!!errors.enclosure}
-                        helperText={errors.enclosure?.message}
-                      />
-                    </Field>
-                  )} />
-                </div>
-
-                {/* ── Row 6: ملاحظات ── */}
+                {/* ── Row 6: NOTES (ملاحظات) ── */}
                 <div className="w-full">
                   <Controller name="notes" control={control} render={({ field }) => (
                     <Field label="ملاحظات / مشاهدات">

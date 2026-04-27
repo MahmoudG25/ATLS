@@ -31,12 +31,12 @@ const DailyTaskList = () => {
     }
   };
 
-  const getBorderColor = (sector) => {
+  const getBorderColor = (crop) => {
     const colors = {
-      'A': '#4CAF50', 'B': '#2196F3', 'C': '#FF9800', 'D': '#9C27B0', 
-      'greenhouse': '#00BCD4', 'new_farms': '#E91E63'
+      'نخيل': '#4CAF50', 
+      'زيتون': '#FF9800'
     };
-    return colors[sector] || '#cbd5e1';
+    return colors[crop] || '#cbd5e1';
   };
 
   return (
@@ -84,7 +84,7 @@ const DailyTaskList = () => {
                 sx={{ 
                   p: 3, 
                   borderRadius: 4, 
-                  borderLeft: `6px solid ${getBorderColor(report.sector)}`,
+                  borderLeft: `6px solid ${getBorderColor(report.crop_name)}`,
                   boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                   height: '100%',
                   display: 'flex',
@@ -102,7 +102,7 @@ const DailyTaskList = () => {
                       <CalendarIcon fontSize="small" /> {report.report_date}
                     </Typography>
                   </Box>
-                  <ReportBadge type="sector" value={report.sector} />
+                  <ReportBadge type="crop" value={report.crop_name} />
                 </Box>
 
                 <Box mb={2} flexGrow={1}>
@@ -110,8 +110,11 @@ const DailyTaskList = () => {
                     {report.operation_name}
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                    <ReportBadge type="variety" value={report.variety} label={report.variety} />
+                    <ReportBadge type="variety" value={report.variety_name} label={report.variety_name} />
                     <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">
+                      {report.enclosure_name}
+                    </span>
+                    <span className="text-xs font-semibold bg-green-50 px-2 py-1 rounded-md text-green-700">
                       عمالة: {report.company_workers + report.contractor_workers}
                     </span>
                   </Box>
@@ -122,7 +125,7 @@ const DailyTaskList = () => {
 
                 <Box pt={2} borderTop="1px solid #f1f5f9" display="flex" justifyContent="space-between" alignItems="center">
                   <Typography variant="subtitle2" fontWeight="800" color="primary.main">
-                    انتاجية: {report.actual_productivity} {report.unit}
+                    انتاجية: {report.actual_productivity} {report.unit_name}
                   </Typography>
                   <Button size="small" component={Link} to={`/reports/tasks/${report.id}`} sx={{ fontWeight: 700 }}>التفاصيل</Button>
                 </Box>

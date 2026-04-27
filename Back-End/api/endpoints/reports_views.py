@@ -26,7 +26,7 @@ class DailyTaskFilter(django_filters.FilterSet):
     
     class Meta:
         model = DailyTaskReport
-        fields = ['engineer', 'report_date', 'sector', 'operation']
+        fields = ['engineer', 'report_date', 'crop', 'stage', 'operation']
 
 class OperationListView(generics.ListAPIView):
     queryset = Operation.objects.all()

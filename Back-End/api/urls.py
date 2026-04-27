@@ -35,6 +35,7 @@ urlpatterns = [
     path('farm/farms', farm_views.farms_list_view, name='farms_list'),
     path('farm/croptypes', farm_views.croptypes_list_view, name='croptypes_list'),
     path('farm/structure', farm_views.structure_view, name='structure'),
+    path('farm/hierarchy', farm_views.hierarchy_view, name='hierarchy'),
     path('farm/sectors', farm_views.create_sector_view, name='create_sector'),
     path('farm/sectors/<int:pk>/', sector_detail_view, name='sector_detail'),
     path('farm/plots', farm_views.create_plot_view, name='create_plot'),
