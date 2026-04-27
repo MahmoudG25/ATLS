@@ -201,13 +201,17 @@ def engineers_list_view(request):
     on a DailyTaskReport (ENGINEER, MANAGER, OWNER, SUPER_ADMIN roles).
     Accessible to all authenticated users — used by report creation forms.
     Scoped to the requester's company (multi-tenant safe).
+    Returns minimal payload: id, name, role only.
     """
     from apps.users.models import User
     FIELD_ROLES = ['ENGINEER', 'MANAGER', 'OWNER', 'SUPER_ADMIN']
     qs = User.objects.filter(is_active=True, is_approved=True, role__in=FIELD_ROLES)
     if getattr(request.user, 'company_id', None):
         qs = qs.filter(company_id=request.user.company_id)
-    return Response(UserSerializer(qs.order_by('name'), many=True).data)
+    return Response([
+        {'id': u.id, 'name': u.name, 'role': u.role}
+        for u in qs.order_by('name')
+    ])
 
 
 @api_view(['GET', 'PATCH'])

@@ -165,11 +165,13 @@ def location_nodes_view(request):
     Returns active LocationNodes filtered by type and optionally parent node.
     Multi-tenant scoped — only nodes for the requester's company are returned.
     Used by DailyTaskForm for Stage → Enclosure cascade selection.
+
+    Response includes parent_id + parent_name for hierarchical frontend rendering.
     """
     node_type = request.query_params.get('type')
     parent_id = request.query_params.get('parent')
 
-    qs = LocationNode.objects.filter(is_active=True)
+    qs = LocationNode.objects.filter(is_active=True).select_related('parent')
 
     if getattr(request.user, 'company_id', None):
         qs = qs.filter(company_id=request.user.company_id)
@@ -181,7 +183,13 @@ def location_nodes_view(request):
         qs = qs.filter(parent_id=parent_id)
 
     data = [
-        {'id': node.id, 'name': node.name, 'type': node.type}
+        {
+            'id':          node.id,
+            'name':        node.name,
+            'type':        node.type,
+            'parent_id':   node.parent_id,
+            'parent_name': node.parent.name if node.parent_id else None,
+        }
         for node in qs.order_by('order', 'name')
     ]
     return Response(data)

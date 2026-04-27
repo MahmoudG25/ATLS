@@ -38,8 +38,10 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     attachments_count = serializers.IntegerField(source='attachments.count', read_only=True)
     labor_count = serializers.IntegerField(source='labor_entries.count', read_only=True)
     contractor_name = serializers.SerializerMethodField()
-    # work_location is a legacy field — frontend no longer requires it
-    work_location = serializers.CharField(required=False, default='', allow_blank=True)
+    # work_location is a deprecated legacy field — stored as empty string, hidden from all responses
+    work_location = serializers.CharField(
+        required=False, default='', allow_blank=True, write_only=True
+    )
 
     def get_contractor_name(self, obj):
         return obj.contractor.name if obj.contractor else None
@@ -61,26 +63,36 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get("request")
         company = getattr(request, "company", None) if request else None
-        variety = data.get('variety')
+        location   = data.get('location')
+        operation  = data.get('operation')
+        variety    = data.get('variety')
         contractor = data.get('contractor')
-        unit = data.get('unit')
-        location = data.get('location')
-        operation = data.get('operation')
+        unit       = data.get('unit')
+        engineer   = data.get('engineer')  # User FK instance
+
+        # location is always required
+        if not location:
+            raise serializers.ValidationError({"location": "الموقع مطلوب."})
 
         if company:
-            if location and location.company_id != company.id:
-                raise serializers.ValidationError({"location": "Invalid tenant relation"})
-            if operation and operation.company_id != company.id:
-                raise serializers.ValidationError({"operation": "Invalid tenant relation"})
-            if variety and variety.company_id != company.id:
-                raise serializers.ValidationError({"variety": "Invalid tenant relation"})
-            if contractor and contractor.company_id != company.id:
-                raise serializers.ValidationError({"contractor": "Invalid tenant relation"})
-            if unit and unit.company_id != company.id:
-                raise serializers.ValidationError({"unit": "Invalid tenant relation"})
+            # Validate every FK object belongs to the request's company (tenant isolation)
+            tenant_checks = [
+                (location,   "location",  "الموقع لا ينتمي لهذه الشركة"),
+                (operation,  "operation", "العملية لا تنتمي لهذه الشركة"),
+                (variety,    "variety",   "الصنف لا ينتمي لهذه الشركة"),
+                (unit,       "unit",      "الوحدة لا تنتمي لهذه الشركة"),
+            ]
+            for obj, field_name, msg in tenant_checks:
+                if obj and getattr(obj, 'company_id', None) != company.id:
+                    raise serializers.ValidationError({field_name: msg})
 
-        if not location:
-            raise serializers.ValidationError({"location": "Location is required."})
+            # Contractor is optional but must belong to same company if provided
+            if contractor and getattr(contractor, 'company_id', None) != company.id:
+                raise serializers.ValidationError({"contractor": "المقاول لا ينتمي لهذه الشركة"})
+
+            # Engineer must belong to the same company (prevents cross-company assignment)
+            if engineer and getattr(engineer, 'company_id', None) != company.id:
+                raise serializers.ValidationError({"engineer": "المهندس لا ينتمي لنفس الشركة"})
 
         return data
 
