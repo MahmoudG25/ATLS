@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextField, MenuItem, Button, Paper, Grid, Typography } from '@mui/material';
+import { TextField, MenuItem, Button, Paper, Typography, Box } from '@mui/material';
 import { Clear as ClearIcon } from '@mui/icons-material';
 
 const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
@@ -22,46 +22,63 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
     });
   };
 
+  const fieldSx = {
+    flex: '1 1 160px',
+    minWidth: 0,
+  };
+
+  const inputSx = {
+    '& .MuiOutlinedInput-root': { borderRadius: 1 },
+    width: '100%',
+  };
+
   return (
-    <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 3, border: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
-      <Typography variant="subtitle1" fontWeight={700} mb={2}>فلاتر التقارير</Typography>
-      <Grid container spacing={2.5} alignItems="center">
-        <Grid item xs={12} md={2}>
+    <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
+      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>فلاتر التقارير</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
+
+        {/* تاريخ البدء */}
+        <Box sx={fieldSx}>
+          <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>تاريخ البدء</Typography>
           <TextField
             fullWidth
-            label="تاريخ البدء"
             type="date"
             name="start_date"
             value={filters.start_date || ''}
             onChange={handleChange}
             InputLabelProps={{ shrink: true }}
             size="small"
-            sx={{ bgcolor: 'white', borderRadius: 1 }}
+            sx={inputSx}
           />
-        </Grid>
-        <Grid item xs={12} md={2}>
+        </Box>
+
+        {/* تاريخ الانتهاء */}
+        <Box sx={fieldSx}>
+          <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>تاريخ الانتهاء</Typography>
           <TextField
             fullWidth
-            label="تاريخ الانتهاء"
             type="date"
             name="end_date"
             value={filters.end_date || ''}
             onChange={handleChange}
             InputLabelProps={{ shrink: true }}
             size="small"
-            sx={{ bgcolor: 'white', borderRadius: 1 }}
+            sx={inputSx}
           />
-        </Grid>
-        <Grid item xs={12} md={2}>
+        </Box>
+
+        {/* العملية */}
+        <Box sx={fieldSx}>
+          <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>العملية</Typography>
           <TextField
             select
             fullWidth
-            label="العملية"
             name="operation"
             value={filters.operation || ''}
             onChange={handleChange}
             size="small"
-            sx={{ bgcolor: 'white', borderRadius: 1 }}
+            displayEmpty
+            sx={inputSx}
           >
             <MenuItem value="">الكل</MenuItem>
             {operations.map((option) => (
@@ -70,17 +87,20 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
-        <Grid item xs={12} md={2}>
+        </Box>
+
+        {/* المهندس */}
+        <Box sx={fieldSx}>
+          <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>المهندس</Typography>
           <TextField
             select
             fullWidth
-            label="المهندس"
             name="engineer"
             value={filters.engineer || ''}
             onChange={handleChange}
             size="small"
-            sx={{ bgcolor: 'white', borderRadius: 1 }}
+            displayEmpty
+            sx={inputSx}
           >
             <MenuItem value="">الكل</MenuItem>
             {engineers.map((option) => (
@@ -89,17 +109,20 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
-        <Grid item xs={12} md={2}>
+        </Box>
+
+        {/* الموقع */}
+        <Box sx={fieldSx}>
+          <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>الموقع</Typography>
           <TextField
             select
-            label="الموقع"
+            fullWidth
             name="location"
             value={filters.location || ''}
             onChange={handleChange}
-            fullWidth
             size="small"
-            sx={{ bgcolor: 'white', borderRadius: 1 }}
+            displayEmpty
+            sx={inputSx}
           >
             <MenuItem value="">الكل</MenuItem>
             {locations.map((option) => (
@@ -108,20 +131,23 @@ const ReportFilters = ({ filters, onFilterChange, options = {} }) => {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
-        <Grid item xs={12} md={2} display="flex" gap={1}>
+        </Box>
+
+        {/* زر المسح */}
+        <Box sx={{ flex: '1 1 140px', minWidth: 0, display: 'flex', alignItems: 'flex-end' }}>
           <Button
+            fullWidth
             variant="outlined"
             color="error"
-            fullWidth
             onClick={handleClear}
             startIcon={<ClearIcon />}
-            sx={{ fontWeight: 600 }}
+            sx={{ fontWeight: 600, borderRadius: 1, height: 40 }}
           >
-            مسح
+            مسح الفلاتر
           </Button>
-        </Grid>
-      </Grid>
+        </Box>
+
+      </Box>
     </Paper>
   );
 };

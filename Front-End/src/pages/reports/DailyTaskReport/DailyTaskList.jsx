@@ -55,7 +55,7 @@ const DailyTaskList = () => {
 
   const getBorderColor = (crop) => {
     const colors = {
-      'نخيل': '#4CAF50', 
+      'نخيل': '#4CAF50',
       'زيتون': '#FF9800'
     };
     return colors[crop] || '#cbd5e1';
@@ -64,24 +64,24 @@ const DailyTaskList = () => {
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h5" fontWeight="800" display="flex" alignItems="center" gap={1}>
+        <Typography variant="h5" fontWeight="800" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           📋 تقارير المهام اليومية
         </Typography>
-        <Box display="flex" gap={2}>
-          <Button 
-            component={Link} 
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 2 }}>
+          <Button
+            component={Link}
             to="summary"
-            variant="outlined" 
-            sx={{ borderRadius: 2, fontWeight: 700 }}
+            variant="outlined"
+            sx={{ borderRadius: 1, fontWeight: 700, px: 3 }}
           >
             الملخص
           </Button>
-          <Button 
-            component={Link} 
+          <Button
+            component={Link}
             to="new"
-            variant="contained" 
+            variant="contained"
             startIcon={<AddIcon />}
-            sx={{ borderRadius: 2, fontWeight: 700, bgcolor: '#0f172a', '&:hover': { bgcolor: '#1e293b' } }}
+            sx={{ borderRadius: 1, fontWeight: 700, px: 3, bgcolor: '#0f172a', '&:hover': { bgcolor: '#1e293b' } }}
           >
             تقرير جديد
           </Button>
@@ -90,7 +90,7 @@ const DailyTaskList = () => {
 
       <ReportFilters filters={filters} onFilterChange={setFilters} options={filterOptions} />
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 5 }}>{error}</Alert>}
 
       {loading ? (
         <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
@@ -102,10 +102,10 @@ const DailyTaskList = () => {
         <Grid container spacing={3}>
           {reports.map((report) => (
             <Grid item xs={12} md={6} lg={4} key={report.id}>
-              <Card 
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 4, 
+              <Card
+                sx={{
+                  p: 3,
+                  borderRadius: 2,
                   borderLeft: `6px solid ${getBorderColor(report.crop_name)}`,
                   boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                   height: '100%',
@@ -120,7 +120,7 @@ const DailyTaskList = () => {
                     <Typography variant="h6" fontWeight="800" color="text.primary">
                       {report.engineer_name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" gap={0.5} mt={0.5}>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                       <CalendarIcon fontSize="small" /> {report.report_date}
                     </Typography>
                   </Box>
@@ -128,7 +128,7 @@ const DailyTaskList = () => {
                 </Box>
 
                 <Box mb={2} flexGrow={1}>
-                    <Typography variant="body1" fontWeight="700" color="text.primary" mb={1}>
+                  <Typography variant="body1" fontWeight="700" color="text.primary" mb={1}>
                     {report.operation_name}
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={1} mb={2}>

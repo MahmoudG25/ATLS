@@ -35,7 +35,7 @@ const IrrigationList = () => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h5" fontWeight="800">💧 تقارير الري</Typography>
-        <Button component={Link} to="new" variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 2, fontWeight: 700 }}>
+        <Button component={Link} to="new" variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 1, fontWeight: 700, mt: 2, mb: 2 }}>
           تقرير جديد
         </Button>
       </Box>

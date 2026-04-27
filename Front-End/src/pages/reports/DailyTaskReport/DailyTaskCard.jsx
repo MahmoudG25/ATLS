@@ -50,7 +50,7 @@ const DailyTaskCard = () => {
         العودة للقائمة
       </Button>
 
-      <Card sx={{ p: { xs: 3, md: 5 }, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+      <Card sx={{ p: { xs: 3, md: 5 }, borderRadius: 2, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         {/* Header */}
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2} mb={4}>
           <Box>
@@ -58,10 +58,10 @@ const DailyTaskCard = () => {
               {report.operation_name}
             </Typography>
             <Box display="flex" gap={2} color="text.secondary" flexWrap="wrap">
-              <Typography variant="body1" display="flex" alignItems="center" gap={0.5}>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CalendarIcon fontSize="small" /> {report.report_date}
               </Typography>
-              <Typography variant="body1" display="flex" alignItems="center" gap={0.5}>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <EngineerIcon fontSize="small" /> {report.engineer_name}
               </Typography>
             </Box>
@@ -78,7 +78,7 @@ const DailyTaskCard = () => {
         <Grid container spacing={4}>
           {/* Main Info */}
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" fontWeight="700" mb={3} display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <MapIcon color="action" /> بيانات الموقع والإنتاجية
             </Typography>
             
@@ -108,7 +108,7 @@ const DailyTaskCard = () => {
 
           {/* Workers Info */}
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" fontWeight="700" mb={3} display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6" fontWeight="700" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <PersonIcon color="action" /> بيانات العمالة
             </Typography>
             

@@ -56,8 +56,8 @@ const ReportsIndex = () => {
 
       {/* Navigation Tabs */}
       <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, borderRadius: 3, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-        <Tabs 
-          value={currentTab()} 
+        <Tabs
+          value={currentTab()}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -78,19 +78,19 @@ const ReportsIndex = () => {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Navigate to="analytics" replace />} />
-          
+
           <Route path="analytics" element={<AnalyticsDashboard />} />
           <Route path="tasks" element={<DailyTaskList />} />
           <Route path="tasks/new" element={<DailyTaskForm />} />
           <Route path="tasks/summary" element={<DailyTaskSummary />} />
           <Route path="tasks/:id" element={<DailyTaskCard />} />
-          
+
           <Route path="fertilization" element={<FertilizationList />} />
           <Route path="fertilization/new" element={<FertilizationForm />} />
-          
+
           <Route path="irrigation" element={<IrrigationList />} />
           <Route path="irrigation/new" element={<IrrigationForm />} />
-          
+
           <Route path="custom-fields" element={<CustomFieldsManager />} />
         </Routes>
       </Suspense>

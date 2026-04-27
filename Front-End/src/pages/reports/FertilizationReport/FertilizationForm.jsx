@@ -63,10 +63,10 @@ const FertilizationForm = () => {
   return (
     <Box maxWidth="800px" mx="auto">
       <Typography variant="h5" fontWeight="800" mb={3}>تسجيل تقرير تسميد جديد</Typography>
-      
+
       <Card sx={{ p: 4, borderRadius: 4, boxShadow: '0 4px 20px -5px rgba(0,0,0,0.05)' }}>
         {submitError && <Alert severity="error" sx={{ mb: 3 }}>{submitError}</Alert>}
-        
+
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
@@ -113,9 +113,9 @@ const FertilizationForm = () => {
 
           <DynamicFieldsRenderer modelName="fertilizationreport" control={control} errors={errors} />
 
-          <Box display="flex" justifyContent="flex-end" mt={4} pt={2} borderTop="1px solid #e2e8f0">
-            <Button onClick={() => navigate(-1)} sx={{ mr: 2, fontWeight: 700, color: 'text.secondary' }}>إلغاء</Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ borderRadius: 2, px: 4, fontWeight: 700 }}>
+          <Box display="flex" justifyContent="flex-end" mt={10} pt={2} borderTop="1px solid #e2e8f0">
+            <Button onClick={() => navigate(-1)} sx={{ mr: 2, fontWeight: 700, color: 'text.secondary', mt: 2 }}>إلغاء</Button>
+            <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ borderRadius: 1, px: 4, fontWeight: 700, mt: 2 }}>
               {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'حفظ التقرير'}
             </Button>
           </Box>

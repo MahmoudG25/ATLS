@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, Typography, Button, TextField, MenuItem, 
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, 
+import {
+  Box, Typography, Button, TextField, MenuItem,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   CircularProgress, Chip, Switch, FormControlLabel, Tabs, Tab
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
@@ -44,9 +44,9 @@ const MODEL_CHOICES = [
 const CustomFieldsManager = () => {
   const { t } = useTranslation();
   const { showSnackbar } = useSnackbar();
-  
+
   const [tabIndex, setTabIndex] = useState(0);
-  
+
   const [fields, setFields] = useState([]);
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -155,7 +155,7 @@ const CustomFieldsManager = () => {
   return (
     <Box>
       <Typography variant="h5" fontWeight="800" mb={3}>إعدادات النماذج الديناميكية</Typography>
-      
+
       <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} sx={{ '& .MuiTab-root': { fontWeight: 700 } }}>
           <Tab label="قوائم الخيارات" />
@@ -168,7 +168,7 @@ const CustomFieldsManager = () => {
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6" fontWeight="700">إدارة قوائم الخيارات</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenOptionModal()}>إضافة خيار</Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenOptionModal()} sx={{ borderRadius: 1, fontWeight: 700, mt: 2, mb: 2 }}>إضافة خيار</Button>
           </Box>
           <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 3 }}>
             <Table>
@@ -185,10 +185,10 @@ const CustomFieldsManager = () => {
                   <TableRow key={opt.id} hover>
                     <TableCell fontWeight="500">{opt.name}</TableCell>
                     <TableCell><Chip size="small" label={CATEGORIES_AR[opt.category]} color="primary" variant="outlined" /></TableCell>
-                    <TableCell>{opt.is_active ? <Chip size="small" label="نعم" color="success"/> : <Chip size="small" label="لا" color="error"/>}</TableCell>
+                    <TableCell>{opt.is_active ? <Chip size="small" label="نعم" color="success" /> : <Chip size="small" label="لا" color="error" />}</TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" color="primary" onClick={() => handleOpenOptionModal(opt)}><EditIcon fontSize="small"/></IconButton>
-                      <IconButton size="small" color="error" onClick={() => { setDeleteTarget({ type: 'option', id: opt.id }); setConfirmOpen(true); }}><DeleteIcon fontSize="small"/></IconButton>
+                      <IconButton size="small" color="primary" onClick={() => handleOpenOptionModal(opt)}><EditIcon fontSize="small" /></IconButton>
+                      <IconButton size="small" color="error" onClick={() => { setDeleteTarget({ type: 'option', id: opt.id }); setConfirmOpen(true); }}><DeleteIcon fontSize="small" /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -222,10 +222,10 @@ const CustomFieldsManager = () => {
                     <TableCell fontWeight="500">{field.name}</TableCell>
                     <TableCell><Chip size="small" label={FIELD_TYPES_AR[field.field_type]} color="primary" variant="outlined" /></TableCell>
                     <TableCell>{field.applies_to_model || 'DailyTaskReport'}</TableCell>
-                    <TableCell>{field.is_required ? <Chip size="small" label="نعم" color="error"/> : <Chip size="small" label="لا" color="default"/>}</TableCell>
+                    <TableCell>{field.is_required ? <Chip size="small" label="نعم" color="error" /> : <Chip size="small" label="لا" color="default" />}</TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" color="primary" onClick={() => handleOpenFieldModal(field)}><EditIcon fontSize="small"/></IconButton>
-                      <IconButton size="small" color="error" onClick={() => { setDeleteTarget({ type: 'field', id: field.id }); setConfirmOpen(true); }}><DeleteIcon fontSize="small"/></IconButton>
+                      <IconButton size="small" color="primary" onClick={() => handleOpenFieldModal(field)}><EditIcon fontSize="small" /></IconButton>
+                      <IconButton size="small" color="error" onClick={() => { setDeleteTarget({ type: 'field', id: field.id }); setConfirmOpen(true); }}><DeleteIcon fontSize="small" /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -300,12 +300,12 @@ const CustomFieldsManager = () => {
         </DialogActions>
       </Dialog>
 
-      <ConfirmDialog 
-        open={confirmOpen} 
-        title="تأكيد الحذف" 
-        message="هل أنت متأكد من الحذف؟ سيؤدي ذلك إلى إزالة العنصر نهائياً." 
-        onConfirm={executeDelete} 
-        onCancel={() => setConfirmOpen(false)} 
+      <ConfirmDialog
+        open={confirmOpen}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من الحذف؟ سيؤدي ذلك إلى إزالة العنصر نهائياً."
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmOpen(false)}
       />
     </Box>
   );

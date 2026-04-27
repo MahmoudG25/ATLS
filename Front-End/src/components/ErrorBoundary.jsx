@@ -21,20 +21,20 @@ class ErrorBoundary extends React.Component {
       const isProd = import.meta.env.PROD;
 
       return (
-        <Box
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-          height="100vh"
-          bgcolor="background.default"
-          p={5}
-        >
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          bgcolor: 'background.default',
+          p: 5
+        }}>
           <WarningAmberIcon sx={{ fontSize: 80, color: 'warning.main', mb: 2 }} />
           <Typography variant="h4" color="text.primary" gutterBottom>
             عذراً، حدث خطأ غير متوقع
           </Typography>
-          <Typography variant="body1" color="text.secondary" mb={4} textAlign="center" maxWidth="sm">
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center', maxWidth: 480 }}>
             نواجه مشكلة فنية حالياً. المرجو المحاولة مرة أخرى أو العودة للرئيسية.
             {!isProd && this.state.error && (
               <>
@@ -45,7 +45,7 @@ class ErrorBoundary extends React.Component {
               </>
             )}
           </Typography>
-          <Box display="flex" gap={2}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
             <Button variant="outlined" color="primary" onClick={() => this.setState({ hasError: false, error: null })}>
               إعادة المحاولة
             </Button>

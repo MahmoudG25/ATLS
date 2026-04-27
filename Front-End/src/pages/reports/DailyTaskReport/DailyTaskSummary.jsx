@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, Typography, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { PieChart as PieChartIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { Box, Card, Button, Typography, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { PieChart as PieChartIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
 import { reportsApi } from '../../../services/reportsApi';
 import ReportFilters from '../shared/ReportFilters';
 
 const DailyTaskSummary = () => {
+  const navigate = useNavigate();
   const [summaryData, setSummaryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,10 +33,18 @@ const DailyTaskSummary = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h5" fontWeight="800" display="flex" alignItems="center" gap={1}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h5" fontWeight="800" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PieChartIcon color="primary" /> ملخص المهام اليومية
         </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ borderRadius: 1, fontWeight: 700 }}
+        >
+          رجوع
+        </Button>
       </Box>
 
       <ReportFilters filters={filters} onFilterChange={setFilters} />

@@ -1,55 +1,80 @@
 import React from 'react';
-import { 
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, Typography, Box, Chip, TablePagination, TextField, MenuItem, Grid
+import {
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Card, Typography, Box, Chip, TablePagination, TextField, MenuItem
 } from '@mui/material';
 import dayjs from 'dayjs';
 
 const ReportsTable = ({ data, totalCount, page, rowsPerPage, onPageChange, onRowsPerPageChange, filters, onFilterChange, operations, locations, t }) => {
+  const fieldSx = { flex: '1 1 180px', minWidth: 0 };
+  const inputSx = { '& .MuiOutlinedInput-root': { borderRadius: 1 }, width: '100%' };
+
   return (
-    <Paper sx={{ p: 0, borderRadius: 4, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
-      <Box p={3} borderBottom="1px solid #f1f5f9">
-        <Typography variant="h6" fontWeight="700" mb={2}>{t('reports.list_title', 'قائمة التقارير')}</Typography>
-        
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 4 }}>
+    <Card sx={{ borderRadius: 2, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
+      <Box sx={{ p: 3, borderBottom: '1px solid #f1f5f9' }}>
+        <Typography variant="h6" fontWeight="700" sx={{ mb: 2 }}>
+          {t('reports.list_title', 'قائمة التقارير')}
+        </Typography>
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
+          {/* العملية */}
+          <Box sx={fieldSx}>
+            <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
+              {t('filters.operation', 'العملية')}
+            </Typography>
             <TextField
               fullWidth
-              label={t('filters.operation', 'العملية')}
               select
               size="small"
               value={filters.operation || ''}
               onChange={(e) => onFilterChange('operation', e.target.value)}
+              displayEmpty
+              sx={inputSx}
             >
               <MenuItem value="">{t('filters.all', 'الكل')}</MenuItem>
-              {operations?.map(op => <MenuItem key={op.id} value={op.id}>{op.name}</MenuItem>)}
+              {operations?.map(op => (
+                <MenuItem key={op.id} value={op.id}>{op.name}</MenuItem>
+              ))}
             </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          </Box>
+
+          {/* الموقع */}
+          <Box sx={fieldSx}>
+            <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
+              {t('filters.location', 'الموقع')}
+            </Typography>
             <TextField
               fullWidth
-              label={t('filters.location', 'الموقع')}
               select
               size="small"
               value={filters.location || ''}
               onChange={(e) => onFilterChange('location', e.target.value)}
+              displayEmpty
+              sx={inputSx}
             >
               <MenuItem value="">{t('filters.all', 'الكل')}</MenuItem>
-              {locations?.map(loc => <MenuItem key={loc.id} value={loc.id}>{loc.name}</MenuItem>)}
+              {locations?.map(loc => (
+                <MenuItem key={loc.id} value={loc.id}>{loc.name}</MenuItem>
+              ))}
             </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          </Box>
+
+          {/* التاريخ */}
+          <Box sx={fieldSx}>
+            <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
+              {t('filters.date', 'التاريخ')}
+            </Typography>
             <TextField
               fullWidth
-              label={t('filters.date', 'التاريخ')}
               type="date"
               size="small"
               InputLabelProps={{ shrink: true }}
               value={filters.report_date || ''}
               onChange={(e) => onFilterChange('report_date', e.target.value)}
+              sx={inputSx}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
 
       <TableContainer>
@@ -70,7 +95,11 @@ const ReportsTable = ({ data, totalCount, page, rowsPerPage, onPageChange, onRow
                 <TableCell>#{row.id}</TableCell>
                 <TableCell>{dayjs(row.report_date).format('DD/MM/YYYY')}</TableCell>
                 <TableCell>
-                  <Chip label={row.operation_name} size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0369a1' }} />
+                  <Chip
+                    label={row.operation_name}
+                    size="small"
+                    sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0369a1' }}
+                  />
                 </TableCell>
                 <TableCell>{row.location_name}</TableCell>
                 <TableCell>{row.actual_productivity} {row.unit_name}</TableCell>
@@ -80,7 +109,7 @@ const ReportsTable = ({ data, totalCount, page, rowsPerPage, onPageChange, onRow
           </TableBody>
         </Table>
       </TableContainer>
-      
+
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
@@ -91,7 +120,7 @@ const ReportsTable = ({ data, totalCount, page, rowsPerPage, onPageChange, onRow
         onRowsPerPageChange={onRowsPerPageChange}
         labelRowsPerPage={t('table.rows_per_page', 'صفوف لكل صفحة')}
       />
-    </Paper>
+    </Card>
   );
 };
 

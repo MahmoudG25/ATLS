@@ -160,7 +160,7 @@ export default function DailyTaskForm() {
   const selectedCrop = crops.find(c => c.id === selectedCropId);
   const stages = selectedCrop?.stages || [];
   const selectedStage = stages.find(s => s.id === selectedStageId);
-  const enclosures = selectedCrop?.type === 'palm' 
+  const enclosures = selectedCrop?.type === 'palm'
     ? (selectedStage?.enclosures || [])
     : (selectedCrop?.regions || []);
 

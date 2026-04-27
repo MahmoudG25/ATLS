@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Grid, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import StatCard from './StatCard';
 import { TrendsChart, CostsBarChart, WorkerDistributionChart } from './AnalyticsCharts';
@@ -43,28 +43,38 @@ const AnalyticsDashboard = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [kpi, trends, cost, insights, ops, locs] = await Promise.all([
+      const [kpiRes, trendsRes, costRes, insightsRes, opsRes, locsRes] = await Promise.allSettled([
         reportsApi.getKpiAnalytics(),
         reportsApi.getTrendsAnalytics(),
         reportsApi.getCostAnalytics(),
         reportsApi.getSmartInsights(),
         reportsApi.getOperations(),
-        reportsApi.getSectors() // Using sectors as locations for filter
+        reportsApi.getFarmHierarchy(),
       ]);
 
-      setKpiData(kpi.data);
-      setTrendsData(trends.data.trends || []);
-      setCostData(cost.data);
-      setInsightsData(insights.data);
-      setOperations(ops.data);
-      setLocations(locs.data);
-      
+      if (kpiRes.status === 'fulfilled') setKpiData(kpiRes.value.data);
+      if (trendsRes.status === 'fulfilled') setTrendsData(trendsRes.value.data.trends || []);
+      if (costRes.status === 'fulfilled') setCostData(costRes.value.data);
+      if (insightsRes.status === 'fulfilled') setInsightsData(insightsRes.value.data);
+      if (opsRes.status === 'fulfilled') {
+        const opsData = opsRes.value.data;
+        setOperations(Array.isArray(opsData) ? opsData : (opsData.results ?? []));
+      }
+      if (locsRes.status === 'fulfilled') {
+        const hier = locsRes.value.data;
+        const flatLocs = [];
+        (hier.crops || []).forEach(crop => {
+          (crop.stages || []).forEach(stage => (stage.enclosures || []).forEach(e => flatLocs.push(e)));
+          (crop.regions || []).forEach(r => flatLocs.push(r));
+        });
+        setLocations(flatLocs);
+      }
+
       await fetchReports();
-      
       setError(null);
     } catch (err) {
       console.error('Error fetching analytics data:', err);
-      setError('Failed to load analytics data. Please try again later.');
+      setError('فشل تحميل بيانات التحليلات. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -111,7 +121,7 @@ const AnalyticsDashboard = () => {
 
   if (loading && !kpiData) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress sx={{ color: '#10b981' }} />
       </Box>
     );
@@ -119,79 +129,83 @@ const AnalyticsDashboard = () => {
 
   if (error) {
     return (
-      <Box p={3}>
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
         <Alert severity="error">{error}</Alert>
-      </Box>
+      </Container>
     );
   }
 
-  // Map worker data for pie chart
   const workerDist = [
     { name: t('analytics.company_workers', 'عمال الشركة'), value: kpiData?.total_company_workers || 0 },
     { name: t('analytics.contractor_workers', 'عمال المقاول'), value: kpiData?.total_contractor_workers || 0 }
   ];
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      {/* Top KPI Cards */}
-      <Grid container spacing={3} mb={4}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard 
+    <Box sx={{ width: '100%' }}>
+      <Typography variant="h4" fontWeight="800" sx={{ mb: 3 }} color="primary.main">
+        {t('analytics.dashboard_title', 'لوحة تحليلات التقارير')}
+      </Typography>
+
+      {/* Top KPI Cards — Flexbox for reliable RTL fill */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <Box sx={{ flex: 1 }}>
+          <StatCard
             title={t('analytics.total_reports', 'إجمالي التقارير')}
             value={kpiData?.total_reports || 0}
             icon={AssessmentIcon}
             color="#3b82f6"
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard 
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <StatCard
             title={t('analytics.total_cost', 'إجمالي التكاليف')}
             value={`${costData?.total_cost?.toLocaleString() || 0} EGP`}
             icon={MonetizationOnIcon}
             color="#10b981"
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard 
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <StatCard
             title={t('analytics.avg_productivity', 'متوسط الإنتاجية')}
             value={kpiData?.avg_productivity?.toFixed(2) || 0}
             icon={PrecisionManufacturingIcon}
             color="#f59e0b"
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
-      {/* Charts Section */}
-      <Grid container spacing={3} mb={4}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <TrendsChart 
-            data={trendsData} 
-            title={t('analytics.trends_title', 'اتجاهات التقارير والتكاليف')} 
+      {/* Charts Section — اتجاهات التقارير (2/3) + توزيع العمالة (1/3) */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
+        <Box sx={{ flex: 2 }}>
+          <TrendsChart
+            data={trendsData}
+            title={t('analytics.trends_title', 'اتجاهات التقارير والتكاليف')}
           />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <WorkerDistributionChart 
-            data={workerDist} 
-            title={t('analytics.workers_dist', 'توزيع العمالة')} 
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <WorkerDistributionChart
+            data={workerDist}
+            title={t('analytics.workers_dist', 'توزيع العمالة')}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
-      <Grid container spacing={3} mb={4}>
-        <Grid size={{ xs: 12, lg: 4 }}>
+      {/* التكلفة حسب العملية (2/3) يمين + Insights (1/3) يسار */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
+        <Box sx={{ flex: 2 }}>
+          <CostsBarChart
+            data={costData?.cost_per_operation || []}
+            title={t('analytics.cost_per_op', 'التكلفة حسب العملية')}
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
           <InsightsSection data={insightsData} t={t} />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <CostsBarChart 
-            data={costData?.cost_per_operation || []} 
-            title={t('analytics.cost_per_op', 'التكلفة حسب العملية')} 
-          />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Reports Table */}
-      <Box mb={4}>
-        <ReportsTable 
+      <Box sx={{ mb: 3 }}>
+        <ReportsTable
           data={reportsData}
           totalCount={pagination.totalCount}
           page={pagination.page}
@@ -210,3 +224,4 @@ const AnalyticsDashboard = () => {
 };
 
 export default AnalyticsDashboard;
+
