@@ -2,7 +2,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from serializers.farm_serializers import FarmSerializer, CropTypeSerializer, SectorSerializer, PlotSerializer
+from serializers.farm_serializers import (
+    FarmSerializer, CropTypeSerializer, SectorSerializer, PlotSerializer,
+    LocationNodeCreateSerializer, LocationNodeSerializer,
+)
 from services.farm_service import list_farms, list_crop_types, get_farm_structure, create_sector, create_plot, get_plot_stats, update_sector, delete_sector, update_plot, delete_plot
 from services.activity_service import log_activity
 from permissions.role_permissions import HasModuleAccess
@@ -157,28 +160,96 @@ def plot_stats_view(request, id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def location_tree_view(request):
+    """
+    GET /farm/location-tree/
+
+    Returns the complete LocationNode hierarchy as a nested tree.
+    Each node includes 'has_stages' and 'has_enclosures' flags so the
+    frontend can decide which dropdowns to show dynamically.
+
+    Structure example:
+      SECTOR → STAGE → ENCLOSURE  (3-level)
+      SECTOR → ENCLOSURE          (2-level, no stages)
+    """
+    farm_qs = Farm.objects.filter(is_active=True)
+    if getattr(request.user, 'company_id', None):
+        farm_qs = farm_qs.filter(company_id=request.user.company_id)
+    farm = farm_qs.first()
+    if not farm:
+        return Response({'farm': None, 'tree': []}, status=200)
+
+    nodes = list(
+        LocationNode.objects.filter(farm=farm, is_active=True)
+        .order_by('order', 'name')
+    )
+    children_map = {}
+    roots = []
+    for node in nodes:
+        if node.parent_id:
+            children_map.setdefault(node.parent_id, []).append(node)
+        else:
+            roots.append(node)
+
+    def serialize_node(node):
+        children = children_map.get(node.id, [])
+        return {
+            'id':             node.id,
+            'name':           node.name,
+            'type':           node.type,
+            'parent_id':      node.parent_id,
+            'order':          node.order,
+            # Flags that tell the frontend what child types exist
+            'has_stages':     any(c.type == LocationNode.TYPE_STAGE     for c in children),
+            'has_enclosures': any(c.type == LocationNode.TYPE_ENCLOSURE for c in children),
+            'children':       [serialize_node(child) for child in children],
+        }
+
+    return Response({
+        'farm': {'id': farm.id, 'name': farm.name},
+        'tree': [serialize_node(root) for root in roots],
+    })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def location_nodes_view(request):
     """
-    GET /farm/location-nodes/?type=STAGE
-    GET /farm/location-nodes/?type=ENCLOSURE&parent=<node_id>
+    GET  /farm/location-nodes/?type=STAGE
+    GET  /farm/location-nodes/?type=ENCLOSURE&parent=<node_id>
+    POST /farm/location-nodes/  — create a new LocationNode
 
-    Returns active LocationNodes filtered by type and optionally parent node.
-    Multi-tenant scoped — only nodes for the requester's company are returned.
-    Used by DailyTaskForm for Stage → Enclosure cascade selection.
-
-    Response includes parent_id + parent_name for hierarchical frontend rendering.
+    GET: Returns active LocationNodes filtered by type and optionally parent.
+    POST: Creates a new node with full nesting validation.
     """
+    farm_qs = Farm.objects.filter(is_active=True)
+    if getattr(request.user, 'company_id', None):
+        farm_qs = farm_qs.filter(company_id=request.user.company_id)
+    farm = farm_qs.first()
+
+    # ── POST: create a new node ───────────────────────────────────────────────
+    if request.method == 'POST':
+        if not farm:
+            return Response({'detail': 'لا توجد مزرعة نشطة.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = LocationNodeCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        node = serializer.save(
+            farm=farm,
+            company=getattr(request, 'company', None),
+        )
+        log_activity(request.user, f"Created LocationNode: {node.type}:{node.name}", "Farm")
+        return Response(LocationNodeSerializer(node).data, status=status.HTTP_201_CREATED)
+
+    # ── GET: list filtered nodes ──────────────────────────────────────────────
     node_type = request.query_params.get('type')
     parent_id = request.query_params.get('parent')
 
     qs = LocationNode.objects.filter(is_active=True).select_related('parent')
-
-    if getattr(request.user, 'company_id', None):
-        qs = qs.filter(company_id=request.user.company_id)
+    if farm:
+        qs = qs.filter(farm=farm)
 
     if node_type:
         qs = qs.filter(type=node_type)
-
     if parent_id:
         qs = qs.filter(parent_id=parent_id)
 
@@ -193,3 +264,38 @@ def location_nodes_view(request):
         for node in qs.order_by('order', 'name')
     ]
     return Response(data)
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def location_node_detail_view(request, pk):
+    """
+    PATCH  /farm/location-nodes/<pk>/  — rename or reorder a node
+    DELETE /farm/location-nodes/<pk>/  — soft-delete (is_active=False)
+    """
+    try:
+        node = LocationNode.objects.get(pk=pk)
+    except LocationNode.DoesNotExist:
+        return Response({'detail': 'العنصر غير موجود.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Tenant safety check
+    company = getattr(request, 'company', None)
+    if company and node.company_id != company.id:
+        return Response({'detail': 'غير مصرح.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'PATCH':
+        # Only allow renaming and reordering — parent/type changes are not allowed after creation
+        allowed = {k: v for k, v in request.data.items() if k in ('name', 'order')}
+        serializer = LocationNodeSerializer(node, data=allowed, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        log_activity(request.user, f"Updated LocationNode: {node.pk}", "Farm")
+        return Response(LocationNodeSerializer(node).data)
+
+    elif request.method == 'DELETE':
+        node.is_active = False
+        node.save(update_fields=['is_active'])
+        # Also deactivate all descendants
+        node.get_descendants().update(is_active=False)
+        log_activity(request.user, f"Archived LocationNode: {node.type}:{node.name}", "Farm")
+        return Response(status=status.HTTP_204_NO_CONTENT)

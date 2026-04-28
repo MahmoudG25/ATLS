@@ -56,6 +56,10 @@ export const reportsApi = {
   updateOption: (id, data) => api.put(`/reports/options/${id}/`, data),
   deleteOption: (id) => api.delete(`/reports/options/${id}/`),
 
+  getVarieties: () => api.get('/reports/options/', { params: { category: 'variety' } }),
+  getUnits: () => api.get('/reports/options/', { params: { category: 'unit' } }),
+  getContractors: () => api.get('/reports/options/', { params: { category: 'contractor' } }),
+
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
   getEngineers: () => api.get('/users/engineers'),

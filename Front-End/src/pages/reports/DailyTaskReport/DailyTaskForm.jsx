@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  TextField, Autocomplete, Alert, LinearProgress
+  TextField, Autocomplete, Alert, LinearProgress, CircularProgress
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -119,16 +119,18 @@ export default function DailyTaskForm() {
 
   // ── Dropdown state ──────────────────────────────────────────────────────────
   const [engineers, setEngineers]     = useState([]);
-  const [stages, setStages]           = useState([]);       // LocationNode type=STAGE
-  const [enclosures, setEnclosures]   = useState([]);       // LocationNode type=ENCLOSURE, filtered by stage
+  const [sectors, setSectors]         = useState([]);
+  const [stages, setStages]           = useState([]);
+  const [enclosures, setEnclosures]   = useState([]);
   const [operations, setOperations]   = useState([]);
   const [varieties, setVarieties]     = useState([]);
   const [units, setUnits]             = useState([]);
   const [contractors, setContractors] = useState([]);
   const [enclosuresLoading, setEnclosuresLoading] = useState(false);
 
-  // UI-only stage selection (not sent to backend — we send `location`)
-  const [selectedStageId, setSelectedStageId] = useState(null);
+  const [selectedSectorId, setSelectedSectorId] = useState(null);
+  const [selectedStageId, setSelectedStageId]   = useState(null);
+  const [hasStages, setHasStages]               = useState(false);
 
   // ── Form setup ──────────────────────────────────────────────────────────────
   const { control, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm({
@@ -161,48 +163,74 @@ export default function DailyTaskForm() {
   useEffect(() => {
     (async () => {
       try {
-        const [engRes, stagesRes, opsRes, varRes, unitRes, conRes] = await Promise.allSettled([
+        const [engRes, sectorsRes, opsRes, varRes, unitRes, conRes] = await Promise.allSettled([
           reportsApi.getEngineers(),
-          reportsApi.getLocationNodes('STAGE'),
-          api.get('/reports/operations/'),
-          api.get('/reports/options/', { params: { category: 'variety' } }),
-          api.get('/reports/options/', { params: { category: 'unit' } }),
-          api.get('/reports/options/', { params: { category: 'contractor' } }),
+          reportsApi.getLocationNodes('SECTOR'),
+          reportsApi.getOperations(),
+          reportsApi.getVarieties(),
+          reportsApi.getUnits(),
+          reportsApi.getContractors(),
         ]);
 
-        const r = res => Array.isArray(res.value?.data) ? res.value.data : (res.value?.data?.results ?? []);
+        const r = res => Array.isArray(res.value?.data) ? res.value.data : (res.value?.data?.results ?? res.value ?? []);
 
-        if (engRes.status === 'fulfilled')   setEngineers(r(engRes));
-        if (stagesRes.status === 'fulfilled') setStages(r(stagesRes));
-        if (opsRes.status === 'fulfilled')   setOperations(r(opsRes));
-        if (varRes.status === 'fulfilled')   setVarieties(r(varRes));
-        if (unitRes.status === 'fulfilled')  setUnits(r(unitRes));
-        if (conRes.status === 'fulfilled')   setContractors(r(conRes));
+        if (engRes.status === 'fulfilled')     setEngineers(r(engRes));
+        if (sectorsRes.status === 'fulfilled') setSectors(r(sectorsRes));
+        if (opsRes.status === 'fulfilled')     setOperations(r(opsRes));
+        if (varRes.status === 'fulfilled')     setVarieties(r(varRes));
+        if (unitRes.status === 'fulfilled')    setUnits(r(unitRes));
+        if (conRes.status === 'fulfilled')     setContractors(r(conRes));
       } catch (e) {
         console.error('خطأ في تحميل بيانات النموذج:', e);
       }
     })();
   }, []);
 
-  // ── Dynamic enclosure load when stage is selected ───────────────────────────
-  const handleStageChange = useCallback(async (stageId) => {
-    setSelectedStageId(stageId);
-    setValue('location', null);   // reset enclosure when stage changes
+  // ── Hierarchy Logic ─────────────────────────────────────────────────────────
+  const handleSectorChange = async (sectorId) => {
+    setSelectedSectorId(sectorId);
+    setSelectedStageId(null);
+    setStages([]);
     setEnclosures([]);
+    setHasStages(false);
+    setValue('location', null);
+
+    if (!sectorId) return;
+
+    try {
+      setEnclosuresLoading(true);
+      const children = await reportsApi.getLocationNodes(null, sectorId);
+      const stgs = children.filter(c => c.type === 'STAGE');
+      if (stgs.length > 0) {
+        setStages(stgs);
+        setHasStages(true);
+      } else {
+        setEnclosures(children.filter(c => c.type === 'ENCLOSURE'));
+      }
+    } catch (e) {
+      console.error('خطأ في تحميل فروع القطاع:', e);
+    } finally {
+      setEnclosuresLoading(false);
+    }
+  };
+
+  const handleStageChange = async (stageId) => {
+    setSelectedStageId(stageId);
+    setEnclosures([]);
+    setValue('location', null);
 
     if (!stageId) return;
 
-    setEnclosuresLoading(true);
     try {
-      const res = await reportsApi.getLocationNodes('ENCLOSURE', stageId);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
-      setEnclosures(data);
+      setEnclosuresLoading(true);
+      const encs = await reportsApi.getLocationNodes('ENCLOSURE', stageId);
+      setEnclosures(encs);
     } catch (e) {
       console.error('خطأ في تحميل الحوشات:', e);
     } finally {
       setEnclosuresLoading(false);
     }
-  }, [setValue]);
+  };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const onSubmit = async (data) => {
@@ -277,10 +305,10 @@ export default function DailyTaskForm() {
 
               <div className="flex flex-col gap-8">
 
-                {/* ── Row 1: التاريخ | المهندس | المرحلة | الحوشة ── */}
+                {/* ── Row 1: التاريخ | المهندس | القطاع | (المرحلة) | الحوشة ── */}
                 <div>
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">معلومات أساسية</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${hasStages ? '5' : '4'} gap-6`}>
 
                     {/* التاريخ */}
                     <Controller name="report_date" control={control} render={({ field }) => (
@@ -316,27 +344,45 @@ export default function DailyTaskForm() {
                       </Field>
                     )} />
 
-                    {/* المرحلة — UI-only for filtering, not sent to backend */}
-                    <Field label="المرحلة">
+                    {/* القطاع */}
+                    <Field label="القطاع">
                       <Autocomplete
-                        options={stages}
+                        options={sectors}
                         getOptionLabel={o => o.name || ''}
-                        value={stages.find(s => s.id === selectedStageId) || null}
-                        onChange={(_, d) => handleStageChange(d?.id ?? null)}
+                        value={sectors.find(s => s.id === selectedSectorId) || null}
+                        onChange={(_, d) => handleSectorChange(d?.id ?? null)}
                         slotProps={dropdownPaper}
                         sx={inputSx}
-                        noOptionsText="لا توجد مراحل"
+                        noOptionsText="لا توجد قطاعات"
                         renderInput={params => (
-                          <TextField {...params} fullWidth placeholder="اختر المرحلة" size="small" />
+                          <TextField {...params} fullWidth placeholder="اختر القطاع" size="small" />
                         )}
                       />
                     </Field>
 
-                    {/* الحوشة / الموقع — sent to backend as `location` */}
+                    {/* المرحلة (تظهر فقط إذا كان القطاع يحتوي على مراحل) */}
+                    {hasStages && (
+                      <Field label="المرحلة">
+                        <Autocomplete
+                          options={stages}
+                          getOptionLabel={o => o.name || ''}
+                          value={stages.find(s => s.id === selectedStageId) || null}
+                          onChange={(_, d) => handleStageChange(d?.id ?? null)}
+                          slotProps={dropdownPaper}
+                          sx={inputSx}
+                          noOptionsText="لا توجد مراحل"
+                          renderInput={params => (
+                            <TextField {...params} fullWidth placeholder="اختر المرحلة" size="small" />
+                          )}
+                        />
+                      </Field>
+                    )}
+
+                    {/* الحوشة / الموقع */}
                     <Controller name="location" control={control} render={({ field }) => (
                       <Field label="الحوشة / الموقع">
                         <Autocomplete
-                          disabled={!selectedStageId}
+                          disabled={!selectedSectorId || (hasStages && !selectedStageId)}
                           loading={enclosuresLoading}
                           options={enclosures}
                           getOptionLabel={o => o.name || ''}
@@ -344,12 +390,12 @@ export default function DailyTaskForm() {
                           onChange={(_, d) => field.onChange(d?.id ?? null)}
                           slotProps={dropdownPaper}
                           sx={inputSx}
-                          noOptionsText={selectedStageId ? 'لا توجد حوشات لهذه المرحلة' : 'اختر المرحلة أولاً'}
+                          noOptionsText={selectedSectorId ? 'لا توجد حوشات' : 'اختر القطاع أولاً'}
                           renderInput={params => (
                             <TextField
                               {...params}
                               fullWidth
-                              placeholder={selectedStageId ? 'اختر الحوشة' : 'اختر المرحلة أولاً'}
+                              placeholder={selectedSectorId ? 'اختر الحوشة' : 'اختر القطاع أولاً'}
                               size="small"
                               error={!!errors.location}
                               helperText={errors.location?.message}

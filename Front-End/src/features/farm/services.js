@@ -36,3 +36,26 @@ export const getPlotStats = async (id) => {
     const response = await api.get(`farm/plots/${id}/stats`);
     return response.data;
 };
+
+// ── LocationNode API (New Hierarchy) ─────────────────────────────────────────
+
+export const getLocationTree = async () => {
+    const response = await api.get('farm/location-tree/');
+    return response.data;
+};
+
+export const createLocationNode = async (data) => {
+    const response = await api.post('farm/location-nodes/', data);
+    return response.data;
+};
+
+export const updateLocationNode = async (id, data) => {
+    const response = await api.patch(`farm/location-nodes/${id}/`, data);
+    return response.data;
+};
+
+export const deleteLocationNode = async (id) => {
+    const response = await api.delete(`farm/location-nodes/${id}/`);
+    return response.data;
+};
+

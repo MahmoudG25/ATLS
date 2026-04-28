@@ -1,312 +1,346 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, CircularProgress, Alert, Grid, Card, Drawer, IconButton, Box } from '@mui/material';
-import { getFarms, getCropTypes, getFarmStructure, createSector, createPlot, getPlotStats, updateSector, deleteSector, updatePlot, deletePlot } from '../../features/farm/services';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Button, Dialog, DialogTitle, DialogContent, DialogActions, 
+  TextField, MenuItem, CircularProgress, Alert, Card, 
+  IconButton, Box, Tooltip, Breadcrumbs, Typography
+} from '@mui/material';
+import { 
+  getLocationTree, createLocationNode, updateLocationNode, 
+  deleteLocationNode, getCropTypes 
+} from '../../features/farm/services';
 import { useTranslation } from 'react-i18next';
-import TerrainIcon  from '@mui/icons-material/Terrain';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
-import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
-import CloseIcon from '@mui/icons-material/Close';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import {
+  AccountTreeOutlined as FarmIcon,
+  GridViewOutlined as SectorIcon,
+  LayersOutlined as StageIcon,
+  TerrainOutlined as EnclosureIcon,
+  AddCircleOutlined as AddIcon,
+  EditOutlined as EditIcon,
+  DeleteOutlineOutlined as DeleteIcon,
+  ArrowBackIosNew as ArrowIcon,
+} from '@mui/icons-material';
 import './FarmStructure.css';
 
-const OrgNode = ({ title, subtitle, isRoot, isSector, active, onClick, onEdit, onDelete, badge }) => (
-  <div 
-    onClick={onClick}
-    className={`group relative flex flex-col items-center justify-center px-4 py-3 rounded-lg border cursor-pointer transition-all ${
-      active 
-        ? 'border-green-600 bg-green-50 shadow-sm ring-1 ring-green-600 z-10' 
-        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm z-0'
-    }`}
-    style={{ minWidth: '150px' }}
-    dir="rtl"
-  >
-    {!isRoot && (
-      <div className="absolute top-1 left-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(); }} sx={{ p: 0.5, color: '#64748b', '&:hover': { color: '#0ea5e9' } }}><EditOutlinedIcon sx={{ fontSize: 14 }} /></IconButton>
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(); }} sx={{ p: 0.5, color: '#64748b', '&:hover': { color: '#ef4444' } }}><DeleteOutlineOutlinedIcon sx={{ fontSize: 14 }} /></IconButton>
+const NODE_TYPES = {
+  SECTOR: 'SECTOR',
+  STAGE: 'STAGE',
+  ENCLOSURE: 'ENCLOSURE'
+};
+
+const NodeIcon = ({ type, fontSize = "small" }) => {
+  switch (type) {
+    case NODE_TYPES.SECTOR: return <SectorIcon fontSize={fontSize} />;
+    case NODE_TYPES.STAGE: return <StageIcon fontSize={fontSize} />;
+    case NODE_TYPES.ENCLOSURE: return <EnclosureIcon fontSize={fontSize} />;
+    default: return <FarmIcon fontSize={fontSize} />;
+  }
+};
+
+const TreeItem = ({ node, onAdd, onEdit, onDelete, level = 0 }) => {
+  const { t } = useTranslation();
+  
+  return (
+    <li className="relative">
+      <div className={`flex items-center gap-3 p-3 my-2 rounded-xl border transition-all group ${
+        node.type === NODE_TYPES.SECTOR ? 'bg-slate-50 border-slate-200' : 
+        node.type === NODE_TYPES.STAGE ? 'bg-white border-slate-100' : 'bg-white border-slate-50'
+      } hover:border-green-300 hover:shadow-sm`}>
+        
+        <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+          node.type === NODE_TYPES.SECTOR ? 'bg-green-100 text-green-700' : 
+          node.type === NODE_TYPES.STAGE ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
+        }`}>
+          <NodeIcon type={node.type} />
+        </div>
+
+        <div className="flex-grow">
+          <p className="text-sm font-bold text-slate-800">{node.name}</p>
+          <p className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">
+            {node.type === NODE_TYPES.SECTOR ? t('farm.sector', 'قطاع') : 
+             node.type === NODE_TYPES.STAGE ? t('farm.stage', 'مرحلة') : t('farm.enclosure', 'حوشة')}
+          </p>
+        </div>
+
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {node.type !== NODE_TYPES.ENCLOSURE && (
+            <Tooltip title={t('farm.add_child', 'إضافة عنصر تابع')}>
+              <IconButton size="small" onClick={() => onAdd(node)} sx={{ color: '#16a34a' }}>
+                <AddIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title={t('common.edit', 'تعديل')}>
+            <IconButton size="small" onClick={() => onEdit(node)} sx={{ color: '#64748b' }}>
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('common.delete', 'حذف')}>
+            <IconButton size="small" onClick={() => onDelete(node)} sx={{ color: '#ef4444' }}>
+              <DeleteIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </div>
       </div>
-    )}
-    {badge && <span className="absolute -top-2.5 -right-2 bg-slate-800 text-white text-[0.65rem] px-2 py-0.5 rounded shadow-sm tracking-wide">{badge}</span>}
-    <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-2 mt-1 ${isRoot ? 'bg-slate-800 text-white shadow-sm' : isSector ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
-      {isRoot ? <AccountTreeOutlinedIcon fontSize="small" /> : isSector ? <AutoGraphIcon fontSize="small" /> : <TerrainIcon fontSize="small" />}
-    </div>
-    <p className="font-semibold text-slate-800 text-sm tracking-tight">{title}</p>
-    {subtitle && <p className="text-[0.7rem] font-medium text-slate-500 mt-1">{subtitle}</p>}
-  </div>
-);
+
+      {node.children && node.children.length > 0 && (
+        <ul className="ms-8 border-s-2 border-slate-100 ps-4">
+          {node.children.map(child => (
+            <TreeItem key={child.id} node={child} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} level={level + 1} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+};
 
 const FarmStructure = () => {
-  const { t, i18n } = useTranslation();
-  const [structure, setStructure] = useState([]);
-  const [farms, setFarms]         = useState([]);
-  const [cropTypes, setCropTypes] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
+  const { t } = useTranslation();
+  const [tree, setTree] = useState([]);
+  const [farmInfo, setFarmInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [activePlot, setActivePlot]   = useState(null);
-  const [plotStats, setPlotStats]     = useState(null);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  const [openSectorModal, setOpenSectorModal] = useState(false);
-  const [openPlotModal, setOpenPlotModal]     = useState(false);
-  const [sectorForm, setSectorForm] = useState({ id: null, name: '', farm: '', crop_type: '' });
-  const [plotForm, setPlotForm]     = useState({ id: null, name: '', sector: '', is_general: false });
+  // Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState(NODE_TYPES.SECTOR); // SECTOR, STAGE, ENCLOSURE
+  const [editMode, setEditMode] = useState(false);
+  const [currentNode, setCurrentNode] = useState(null);
+  
+  // Form State
+  const [form, setForm] = useState({
+    name: '',
+    parent: null,
+    parentId: '', // for enclosure selection of Sector -> Stage
+    sectorId: '',
+    stageId: '',
+  });
   const [formLoading, setFormLoading] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [farmsRes, cropsRes, structRes] = await Promise.all([getFarms(), getCropTypes(), getFarmStructure()]);
-      setFarms(farmsRes); setCropTypes(cropsRes); setStructure(structRes);
-    } catch { setError(t('farm.error_fetch')); }
-    finally { setLoading(false); }
-  };
+      const data = await getLocationTree();
+      setTree(data.tree);
+      setFarmInfo(data.farm);
+    } catch (err) {
+      setError(t('farm.error_fetch', 'فشل تحميل هيكل المزرعة'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
-  const fetchPlotDetails = async (plot) => {
-    setActivePlot(plot); setLoadingStats(true);
-    try { setPlotStats(await getPlotStats(plot.id)); }
-    catch { setPlotStats(null); }
-    finally { setLoadingStats(false); }
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const handleSaveSector = async () => {
-    setFormLoading(true);
-    try { 
-      if (sectorForm.id) {
-        await updateSector(sectorForm.id, sectorForm);
-      } else {
-        await createSector(sectorForm); 
+  const handleOpenAdd = (parent = null, type = NODE_TYPES.SECTOR) => {
+    setEditMode(false);
+    setCurrentNode(null);
+    setModalType(type);
+    
+    let initialForm = { name: '', parent: parent?.id || null };
+    
+    if (type === NODE_TYPES.STAGE) {
+      initialForm.sectorId = parent?.id || '';
+    } else if (type === NODE_TYPES.ENCLOSURE) {
+      if (parent?.type === NODE_TYPES.SECTOR) {
+        initialForm.sectorId = parent.id;
+        initialForm.stageId = '';
+      } else if (parent?.type === NODE_TYPES.STAGE) {
+        // Find parent sector
+        const findSector = (nodes, targetId) => {
+          for (let n of nodes) {
+            if (n.children?.some(c => c.id === targetId)) return n.id;
+            const res = findSector(n.children || [], targetId);
+            if (res) return res;
+          }
+          return '';
+        };
+        initialForm.sectorId = findSector(tree, parent.id);
+        initialForm.stageId = parent.id;
       }
-      setOpenSectorModal(false); 
-      fetchData(); 
     }
-    catch (err) { console.error(err); }
-    finally { setFormLoading(false); }
+    
+    setForm(initialForm);
+    setModalOpen(true);
   };
 
-  const handleSavePlot = async () => {
+  const handleOpenEdit = (node) => {
+    setEditMode(true);
+    setCurrentNode(node);
+    setModalType(node.type);
+    setForm({ name: node.name, parent: node.parent_id });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
     setFormLoading(true);
-    try { 
-      if (plotForm.id) {
-        await updatePlot(plotForm.id, plotForm);
+    try {
+      const payload = {
+        name: form.name,
+        type: modalType,
+        parent: modalType === NODE_TYPES.SECTOR ? null : (form.stageId || form.sectorId || form.parent)
+      };
+
+      if (editMode) {
+        await updateLocationNode(currentNode.id, { name: form.name });
       } else {
-        await createPlot(plotForm); 
+        await createLocationNode(payload);
       }
-      setOpenPlotModal(false); 
-      fetchData(); 
-    }
-    catch (err) { console.error(err); }
-    finally { setFormLoading(false); }
-  };
-
-  const handleDeleteSector = async (id) => {
-    if (window.confirm(t('farm.confirm_delete_sector', 'هل أنت متأكد من حذف هذا القطاع؟ سيتم أرشفته.'))) {
-      try { await deleteSector(id); fetchData(); } catch(err) { console.error(err); }
+      setModalOpen(false);
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.parent || err.response?.data?.name || t('common.error_save');
+      alert(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  const handleDeletePlot = async (id) => {
-    if (window.confirm(t('farm.confirm_delete_plot', 'هل أنت متأكد من حذف هذا الحقل؟ سيتم أرشفته.'))) {
-      try { await deletePlot(id); fetchData(); if (activePlot?.id === id) setActivePlot(null); } catch(err) { console.error(err); }
+  const handleDelete = async (node) => {
+    if (window.confirm(t('farm.confirm_delete_node', 'هل أنت متأكد من حذف هذا العنصر؟ سيتم أرشفة جميع العناصر التابعة له.'))) {
+      try {
+        await deleteLocationNode(node.id);
+        fetchData();
+      } catch (err) {
+        alert(t('common.error_delete'));
+      }
     }
   };
 
-  const openEditSector = (sector) => {
-    setSectorForm({ id: sector.id, name: sector.name, farm: sector.farm || (farms.length ? farms[0].id : ''), crop_type: sector.crop_type.id });
-    setOpenSectorModal(true);
-  };
+  // Helper to find sectors for dropdowns
+  const sectors = tree.filter(n => n.type === NODE_TYPES.SECTOR);
+  const stages = form.sectorId ? (tree.find(n => n.id === form.sectorId)?.children?.filter(c => c.type === NODE_TYPES.STAGE) || []) : [];
 
-  const openEditPlot = (plot) => {
-    setPlotForm({ id: plot.id, name: plot.name, sector: plot.sector, is_general: plot.is_general });
-    setOpenPlotModal(true);
-  };
-
-  if (loading) return <div className="p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>;
+  if (loading && !tree.length) return <Box sx={{ p: 8, display: 'flex', justifyContent: 'center' }}><CircularProgress sx={{ color: '#16a34a' }} /></Box>;
 
   return (
-    <div className="p-8 w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <div className="p-8 w-full max-w-6xl mx-auto" dir="rtl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-green-50 rounded-xl text-green-600 flex items-center">
-              <AccountTreeOutlinedIcon fontSize="large" />
-            </div>
-            {t('farm.title', 'هيكل المزرعة')}
+          <Breadcrumbs separator={<ArrowIcon sx={{ fontSize: 10, mx: 0.5, color: '#94a3b8' }} />}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'flex', itemsCenter: 'center', gap: 0.5 }}>
+              <FarmIcon sx={{ fontSize: 14 }} /> {farmInfo?.name || t('farm.farm', 'المزرعة')}
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e293b' }}>
+              {t('farm.structure_title', 'الهيكل التنظيمي')}
+            </Typography>
+          </Breadcrumbs>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight mt-2">
+            {t('farm.manage_hierarchy', 'إدارة الهيكل الهرمي')}
           </h1>
-          <p className="text-slate-500 mt-2 font-medium">{t('farm.subtitle', 'إدارة القطاعات والحقول الجغرافية')}</p>
+          <p className="text-slate-500 font-medium mt-1">{t('farm.hierarchy_desc', 'قم بتنظيم القطاعات، المراحل، والحوشات بشكل ديناميكي')}</p>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
+        
+        <div className="flex gap-3">
           <Button 
-            fullWidth={false}
-            variant="outlined" 
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={() => { setSectorForm({ id: null, name: '', farm: farms[0]?.id || '', crop_type: '' }); setOpenSectorModal(true); }}
-            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, borderColor: '#16a34a', color: '#16a34a', '&:hover': { borderColor: '#15803d', bgcolor: '#f0fdf4' } }}
-          >
-            {t('farm.add_sector', 'إضافة قطاع')}
-          </Button>
-          <Button 
-            fullWidth={false}
             variant="contained" 
-            startIcon={<TerrainIcon />}
-            onClick={() => { setPlotForm({ id: null, name: '', sector: '', is_general: false }); setOpenPlotModal(true); }}
-            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 14px 0 rgba(22, 163, 74, 0.39)' }}
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenAdd(null, NODE_TYPES.SECTOR)}
+            sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 800, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)' }}
           >
-            {t('farm.add_plot', 'إضافة حقل')}
+            {t('farm.add_sector_btn', 'إضافة قطاع جديد')}
           </Button>
         </div>
       </div>
 
-      {error && <Alert severity="error" className="mb-6">{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 4, borderRadius: 3 }}>{error}</Alert>}
 
-      <Card sx={{ p: 4, bgcolor: 'white', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', width: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
-        {structure.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-grow pt-16 pb-8">
-            <AccountTreeOutlinedIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
-            <p className="text-slate-400 font-semibold text-center">{t('farm.no_sectors', 'لا توجد قطاعات مسجلة')}</p>
-          </div>
-        ) : (
-          <div className="org-tree-container flex-grow">
-            <div className="org-tree">
-              <ul>
-                <li>
-                  <OrgNode 
-                    title={t('farm.main_farm', 'المزرعة الرئيسية')} 
-                    isRoot={true} 
-                    active={!activePlot}
-                    onClick={() => setActivePlot(null)}
-                  />
-                  <ul>
-                    {structure.map((sector) => (
-                      <li key={`sec-${sector.id}`}>
-                        <OrgNode 
-                          title={sector.name} 
-                          subtitle={sector.crop_type_name} 
-                          isSector={true} 
-                          onEdit={() => openEditSector(sector)}
-                          onDelete={() => handleDeleteSector(sector.id)}
-                        />
-                        {sector.plots && sector.plots.length > 0 && (
-                          <ul>
-                            {sector.plots.map((plot) => (
-                              <li key={`plot-${plot.id}`}>
-                                <OrgNode 
-                                  title={plot.name} 
-                                  badge={plot.is_general ? t('farm.general_badge', 'عام') : null}
-                                  active={activePlot?.id === plot.id}
-                                  onClick={(e) => { e.stopPropagation(); fetchPlotDetails(plot); }}
-                                  onEdit={() => openEditPlot(plot)}
-                                  onDelete={() => handleDeletePlot(plot.id)}
-                                />
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              </ul>
+      <Card sx={{ borderRadius: 4, border: '1px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', overflow: 'visible' }}>
+        <div className="p-8">
+          {tree.length === 0 ? (
+            <div className="py-20 flex flex-col items-center justify-center text-slate-400">
+              <FarmIcon sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />
+              <p className="font-bold">{t('farm.no_structure', 'لا يوجد هيكل معرف بعد. ابدأ بإضافة أول قطاع.')}</p>
             </div>
-          </div>
-        )}
+          ) : (
+            <ul className="space-y-4">
+              {tree.map(node => (
+                <TreeItem 
+                  key={node.id} 
+                  node={node} 
+                  onAdd={(p) => handleOpenAdd(p, p.type === NODE_TYPES.SECTOR ? NODE_TYPES.STAGE : NODE_TYPES.ENCLOSURE)}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </Card>
 
-      {/* PLOT DETAILS DRAWER */}
-      <Drawer
-        anchor={i18n.language === 'ar' ? 'left' : 'right'}
-        open={!!activePlot}
-        onClose={() => setActivePlot(null)}
-        PaperProps={{ sx: { width: { xs: '100%', sm: 400 }, p: 0, bgcolor: '#f8fafc' } }}
+      {/* Dynamic Modal */}
+      <Dialog 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        maxWidth="xs" 
+        fullWidth 
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
       >
-        {activePlot && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ p: 3, borderBottom: '1px solid #e2e8f0', bgcolor: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <h3 className="text-xl font-bold text-slate-800 mb-1">{activePlot.name}</h3>
-                <p className="text-xs font-semibold tracking-widest text-green-600 uppercase">{t('farm.sector_coordinates', 'إحصائيات الحقل')}</p>
-              </Box>
-              <IconButton onClick={() => setActivePlot(null)} size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', '&:hover': { bgcolor: '#e2e8f0' } }}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Box>
-            
-            <Box sx={{ p: 3, flexGrow: 1, overflowY: 'auto' }}>
-              {loadingStats ? (
-                <div className="flex justify-center p-8"><CircularProgress sx={{ color: '#16a34a' }} /></div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-white p-5 border border-slate-200 rounded-xl flex items-center gap-4 shadow-sm">
-                    <div className="w-12 h-12 rounded-lg bg-green-50 text-green-600 flex items-center justify-center shrink-0 border border-green-100">
-                      <TerrainIcon fontSize="medium" />
-                    </div>
-                    <div>
-                      <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.trees_count', 'عدد الأشجار')}</p>
-                      <p className="text-2xl font-bold text-slate-800">{plotStats?.total_trees || 0} <span className="text-xs font-medium text-slate-500">{t('farm.trunks', 'جذع')}</span></p>
-                    </div>
-                  </div>
-                  <div className="bg-white p-5 border border-slate-200 rounded-xl flex items-center gap-4 shadow-sm">
-                    <div className="w-12 h-12 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center shrink-0 border border-slate-100">
-                      <AutoGraphIcon fontSize="medium" />
-                    </div>
-                    <div>
-                      <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-wider">{t('farm.lifetime_yield', 'الإنتاج التراكمي')}</p>
-                      <p className="text-2xl font-bold text-slate-800">{parseFloat(plotStats?.lifetime_yield || 0).toLocaleString()} <span className="text-xs font-medium text-slate-500">{t('farm.tonnes', 'طن')}</span></p>
-                    </div>
-                  </div>
-                </div>
+        <DialogTitle sx={{ fontWeight: 900, fontSize: '1.25rem', color: '#1e293b' }}>
+          {editMode ? t('farm.edit_node', 'تعديل العنصر') : (
+            modalType === NODE_TYPES.SECTOR ? t('farm.add_sector_title', 'إضافة قطاع') :
+            modalType === NODE_TYPES.STAGE ? t('farm.add_stage_title', 'إضافة مرحلة') : t('farm.add_enclosure_title', 'إضافة حوشة')
+          )}
+        </DialogTitle>
+        
+        <DialogContent className="space-y-6 pt-2">
+          {/* Parent Selection Logic */}
+          {!editMode && modalType !== NODE_TYPES.SECTOR && (
+            <>
+              <TextField
+                select
+                fullWidth
+                label={t('farm.select_sector', 'اختر القطاع')}
+                value={form.sectorId}
+                onChange={(e) => setForm({ ...form, sectorId: e.target.value, stageId: '' })}
+                variant="outlined"
+                InputProps={{ sx: { borderRadius: 3 } }}
+              >
+                {sectors.map(s => <MenuItem key={s.id} value={s.id} sx={{ fontWeight: 600 }}>{s.name}</MenuItem>)}
+              </TextField>
+
+              {modalType === NODE_TYPES.ENCLOSURE && form.sectorId && (tree.find(n => n.id === form.sectorId)?.has_stages) && (
+                <TextField
+                  select
+                  fullWidth
+                  label={t('farm.select_stage_optional', 'اختر المرحلة (اختياري)')}
+                  value={form.stageId}
+                  onChange={(e) => setForm({ ...form, stageId: e.target.value })}
+                  variant="outlined"
+                  InputProps={{ sx: { borderRadius: 3 } }}
+                >
+                  <MenuItem value=""><em>{t('common.none', 'بدون مرحلة')}</em></MenuItem>
+                  {stages.map(st => <MenuItem key={st.id} value={st.id} sx={{ fontWeight: 600 }}>{st.name}</MenuItem>)}
+                </TextField>
               )}
-            </Box>
-          </Box>
-        )}
-      </Drawer>
+            </>
+          )}
 
-      {/* SECTOR MODAL */}
-      <Dialog open={openSectorModal} onClose={() => setOpenSectorModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
-          {sectorForm.id ? t('farm.edit_sector_title', 'تعديل القطاع') : t('farm.add_sector_title', 'إضافة قطاع جديد')}
-        </DialogTitle>
-        <DialogContent className="space-y-5 pt-2">
-          <TextField select fullWidth label={t('farm.select_farm', 'تحديد المزرعة')} value={sectorForm.farm} onChange={(e) => setSectorForm({...sectorForm, farm: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
-            {farms.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontWeight: 600 }}>{f.name}</MenuItem>)}
-          </TextField>
-          <TextField fullWidth label={t('farm.sector_name', 'اسم القطاع')} value={sectorForm.name} onChange={(e) => setSectorForm({...sectorForm, name: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }} />
-          <TextField select fullWidth label={t('farm.crop_type', 'نوع المحصول')} value={sectorForm.crop_type} onChange={(e) => setSectorForm({...sectorForm, crop_type: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
-            {cropTypes.map((c) => <MenuItem key={c.id} value={c.id} sx={{ fontWeight: 600 }}>{c.name}</MenuItem>)}
-          </TextField>
+          <TextField 
+            fullWidth 
+            label={
+              modalType === NODE_TYPES.SECTOR ? t('farm.sector_name', 'اسم القطاع') :
+              modalType === NODE_TYPES.STAGE ? t('farm.stage_name', 'اسم المرحلة') : t('farm.enclosure_name', 'اسم الحوشة')
+            }
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            autoFocus
+            variant="outlined"
+            InputProps={{ sx: { borderRadius: 3 } }}
+          />
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenSectorModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
-          <Button onClick={handleSaveSector} variant="contained" disabled={formLoading || !sectorForm.name || !sectorForm.farm || !sectorForm.crop_type} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
-            {formLoading ? <CircularProgress size={20} /> : t('farm.save_sector', 'حفظ القطاع')}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* PLOT MODAL */}
-      <Dialog open={openPlotModal} onClose={() => setOpenPlotModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
-          {plotForm.id ? t('farm.edit_plot_title', 'تعديل الحقل') : t('farm.add_plot_title', 'إضافة حقل جديد')}
-        </DialogTitle>
-        <DialogContent className="space-y-5 pt-2">
-          <TextField select fullWidth label={t('farm.parent_sector', 'القطاع التابع')} value={plotForm.sector} onChange={(e) => setPlotForm({...plotForm, sector: e.target.value})} className="mt-2" variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
-            {structure.map((s) => <MenuItem key={s.id} value={s.id} sx={{ fontWeight: 600 }}>{s.name} ({s.crop_type_name})</MenuItem>)}
-          </TextField>
-          <TextField fullWidth label={t('farm.plot_name', 'اسم الحقل')} value={plotForm.name} onChange={(e) => setPlotForm({...plotForm, name: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }} />
-          <TextField select fullWidth label={t('farm.plot_type', 'نوع الحقل')} value={plotForm.is_general} onChange={(e) => setPlotForm({...plotForm, is_general: e.target.value})} variant="outlined" InputProps={{ sx: { borderRadius: 2 } }}>
-            <MenuItem value={false} sx={{ fontWeight: 600 }}>{t('farm.plot_specific', 'محصول محدد')}</MenuItem>
-            <MenuItem value={true} sx={{ fontWeight: 600 }}>{t('farm.plot_general', 'مرافق عامة')}</MenuItem>
-          </TextField>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenPlotModal(false)} sx={{ fontWeight: 700 }}>{t('farm.cancel', 'إلغاء')}</Button>
-          <Button onClick={handleSavePlot} variant="contained" disabled={formLoading || !plotForm.name || !plotForm.sector} sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}>
-            {formLoading ? <CircularProgress size={20} /> : t('farm.save_plot', 'حفظ الحقل')}
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button onClick={() => setModalOpen(false)} sx={{ fontWeight: 800, color: '#64748b' }}>{t('common.cancel', 'إلغاء')}</Button>
+          <Button 
+            onClick={handleSave} 
+            variant="contained" 
+            disabled={formLoading || !form.name || (!editMode && modalType !== NODE_TYPES.SECTOR && !form.sectorId)}
+            sx={{ borderRadius: 3, px: 4, fontWeight: 800, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
+          >
+            {formLoading ? <CircularProgress size={20} color="inherit" /> : t('common.save', 'حفظ')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -315,3 +349,4 @@ const FarmStructure = () => {
 };
 
 export default FarmStructure;
+
