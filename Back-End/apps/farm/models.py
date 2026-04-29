@@ -104,7 +104,7 @@ class LocationNode(MPTTModel, TenantAwareModel):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["order", "name", "id"]
+        ordering = ["order", "created_at", "id"]
         constraints = [
             models.UniqueConstraint(fields=["company", "farm", "parent", "name", "type"], name="uniq_location_node_per_parent"),
         ]
@@ -116,13 +116,27 @@ class LocationNode(MPTTModel, TenantAwareModel):
 
     class MPTTMeta:
         parent_attr = "parent"
-        order_insertion_by = ["order", "name"]
+        order_insertion_by = ["order", "created_at"]
 
     def clean(self):
         super().clean()
         self.assert_same_company(self.farm, "farm")
+        
         if self.parent:
             self.assert_same_company(self.parent, "parent")
+            
+            # 1. ENCLOSURE cannot have children
+            if self.parent.type == self.TYPE_ENCLOSURE:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("لا يمكن إضافة عناصر تابعة للحوشة.")
+
+            # 2. Depth Control: Max 3 levels
+            # MPTT level is 0-indexed. Level 0 (Root), 1, 2. 
+            # If parent level is 2, child would be level 3 (4th level), which is forbidden.
+            if self.parent.level >= 2:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("تم الوصول للحد الأقصى لعمق الهيكل (3 مستويات).")
+
 
     def __str__(self):
         return f"{self.farm_id}:{self.type}:{self.name}"

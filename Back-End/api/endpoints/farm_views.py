@@ -213,7 +213,7 @@ def location_tree_view(request):
     )
     apply_filter = request.query_params.get('filtered') == '1'
 
-    nodes = list(LocationNode.objects.filter(farm=farm, is_active=True).order_by('order', 'name'))
+    nodes = list(LocationNode.objects.filter(farm=farm, is_active=True).order_by('order', 'created_at'))
     
     # Build a lookup dictionary
     node_map = {node.id: {
@@ -301,7 +301,7 @@ def location_nodes_view(request):
             'parent_id':   node.parent_id,
             'parent_name': node.parent.name if node.parent_id else None,
         }
-        for node in qs.order_by('order', 'name')
+        for node in qs.order_by('order', 'created_at')
     ]
     return Response(data)
 

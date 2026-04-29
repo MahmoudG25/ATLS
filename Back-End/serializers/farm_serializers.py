@@ -48,10 +48,7 @@ class LocationNodeSerializer(serializers.ModelSerializer):
 class LocationNodeCreateSerializer(serializers.ModelSerializer):
     """
     Write serializer for creating/updating LocationNodes.
-    Enforces nesting rules:
-      • SECTOR  → must have no parent (root level)
-      • STAGE   → parent must be SECTOR
-      • ENCLOSURE → parent must be SECTOR or STAGE (not another ENCLOSURE)
+    Enforces flexible hierarchy and 3-level depth limit.
     """
 
     class Meta:
@@ -59,23 +56,19 @@ class LocationNodeCreateSerializer(serializers.ModelSerializer):
         fields = ['name', 'type', 'parent', 'order']
 
     def validate(self, data):
+        parent = data.get('parent')
         node_type = data.get('type')
-        parent    = data.get('parent')
 
-        if node_type == LocationNode.TYPE_SECTOR:
-            if parent is not None:
-                raise serializers.ValidationError({'parent': 'القطاع يجب أن يكون على مستوى المزرعة ولا يكون تابعاً لأي عنصر.'})
-
-        elif node_type == LocationNode.TYPE_STAGE:
-            # Stage can be at farm root (parent=None) OR under a Sector
-            if parent is not None and parent.type != LocationNode.TYPE_SECTOR:
-                raise serializers.ValidationError({'parent': 'المرحلة يمكن إضافتها فقط تحت قطاع أو مباشرة تحت المزرعة.'})
-
-        elif node_type == LocationNode.TYPE_ENCLOSURE:
-            if parent is None:
-                raise serializers.ValidationError({'parent': 'الحوشة يجب أن تكون تابعة لقطاع أو مرحلة.'})
+        if parent:
+            # 1. ENCLOSURE cannot have children
             if parent.type == LocationNode.TYPE_ENCLOSURE:
-                raise serializers.ValidationError({'parent': 'الحوشة لا يمكن إضافتها تحت حوشة أخرى.'})
+                raise serializers.ValidationError({'parent': 'لا يمكن إضافة عناصر تابعة للحوشة.'})
+
+            # 2. Depth Control: Max 3 levels
+            # parent.level is 0-indexed. If parent.level is 2, child would be level 3 (4th level).
+            if parent.level >= 2:
+                raise serializers.ValidationError({'parent': 'تم الوصول للحد الأقصى لعمق الهيكل (3 مستويات).'})
 
         return data
+
 
