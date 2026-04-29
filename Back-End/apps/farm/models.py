@@ -125,10 +125,18 @@ class LocationNode(MPTTModel, TenantAwareModel):
         if self.parent:
             self.assert_same_company(self.parent, "parent")
             
-            # 1. ENCLOSURE cannot have children
+            # 1. Parent-Child Type Integrity
             if self.parent.type == self.TYPE_ENCLOSURE:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("لا يمكن إضافة عناصر تابعة للحوشة.")
+            
+            if self.parent.type == self.TYPE_STAGE and self.type not in [self.TYPE_STAGE, self.TYPE_ENCLOSURE]:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("المرحلة يمكن أن تحتوي على مراحل أخرى أو حوشات فقط.")
+            
+            if self.parent.type == self.TYPE_SECTOR and self.type not in [self.TYPE_STAGE, self.TYPE_ENCLOSURE]:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("القطاع يمكن أن يحتوي على مراحل أو حوشات فقط.")
 
             # 2. Depth Control: Max 3 levels
             # MPTT level is 0-indexed. Level 0 (Root), 1, 2. 

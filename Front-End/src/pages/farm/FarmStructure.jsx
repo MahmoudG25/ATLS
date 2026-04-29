@@ -22,15 +22,17 @@ import {
   ArrowBackIosNew as ArrowIcon,
   FolderOpenOutlined as EmptyIcon,
 } from '@mui/icons-material';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import './FarmStructure.css';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' };
 
-// Allowed children per node type (Flexible hierarchy)
-const ALLOWED_CHILDREN = {
-  [NT.SECTOR]: [NT.SECTOR, NT.STAGE, NT.ENCLOSURE],
-  [NT.STAGE]: [NT.STAGE, NT.ENCLOSURE],
+// Allowed children per node type (Context-aware hierarchy)
+const UI_ALLOWED_CHILDREN = {
+  [NT.SECTOR]: [NT.STAGE, NT.ENCLOSURE],
+  [NT.STAGE]: [NT.ENCLOSURE],
   [NT.ENCLOSURE]: [],
 };
 
@@ -46,7 +48,7 @@ const NodeIcon = ({ type, level }) => {
 // ─── TreeNode (Recursive) ────────────────────────────────────────────────────
 const TreeNode = ({ node, level = 0, onAdd, onEdit, onDelete, searchQuery }) => {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(level < 1); // Expand Level 0 by default
+  const [expanded, setExpanded] = useState(false); // Collapsed by default
   const children = node.children || [];
   const hasChildren = children.length > 0;
   
@@ -58,6 +60,13 @@ const TreeNode = ({ node, level = 0, onAdd, onEdit, onDelete, searchQuery }) => 
   }, [node, searchQuery]);
 
   const isSelfMatched = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+  // Auto-expand if children match search query
+  useEffect(() => {
+    if (searchQuery && isMatched && !isSelfMatched) {
+      setExpanded(true);
+    }
+  }, [searchQuery, isMatched, isSelfMatched]);
 
   if (!isMatched) return null;
 
@@ -97,7 +106,7 @@ const TreeNode = ({ node, level = 0, onAdd, onEdit, onDelete, searchQuery }) => 
         <div className="tree-node-suffix">
           {hasChildren && <span className="child-count-badge">{children.length}</span>}
           <div className="tree-node-actions">
-            {ALLOWED_CHILDREN[node.type].length > 0 && (
+            {UI_ALLOWED_CHILDREN[node.type].length > 0 && (
               <Tooltip title={t('common.add', 'إضافة')}>
                 <IconButton size="small" onClick={() => onAdd(node)} sx={{ color: '#16a34a' }}>
                   <AddIcon sx={{ fontSize: 16 }} />
@@ -150,6 +159,7 @@ const TreeNode = ({ node, level = 0, onAdd, onEdit, onDelete, searchQuery }) => 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const FarmStructure = () => {
   const { t } = useTranslation();
+  const { showSnackbar } = useSnackbar();
   const [tree, setTree] = useState([]);
   const [farmInfo, setFarmInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,6 +173,10 @@ const FarmStructure = () => {
   const [currentNode, setCurrentNode] = useState(null);
   const [form, setForm] = useState({ name: '', parentId: '', type: NT.SECTOR });
   const [formLoading, setFormLoading] = useState(false);
+
+  // Confirm Dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteNode, setPendingDeleteNode] = useState(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -184,8 +198,8 @@ const FarmStructure = () => {
   const handleOpenAdd = (parent) => {
     setEditMode(false);
     setCurrentNode(parent);
-    // Default to the first allowed child type
-    const defaultType = parent ? ALLOWED_CHILDREN[parent.type][0] : NT.SECTOR;
+    // Default to the first allowed child type from UI rules
+    const defaultType = parent ? UI_ALLOWED_CHILDREN[parent.type][0] : NT.SECTOR;
     setModalType(defaultType);
     setForm({ name: '', parentId: parent ? String(parent.id) : '', type: defaultType });
     setModalOpen(true);
@@ -209,20 +223,35 @@ const FarmStructure = () => {
         await createLocationNode({ name: form.name, type: form.type, parent: parentId });
       }
       setModalOpen(false);
+      showSnackbar(editMode ? t('farm.updated_success', 'تم التعديل بنجاح') : t('farm.created_success', 'تمت الإضافة بنجاح'), 'success');
       fetchData();
     } catch (err) {
       const data = err.response?.data || {};
       const msg = data.parent || data.name || data.detail || t('common.error_save', 'فشل الحفظ');
-      alert(Array.isArray(msg) ? msg[0] : msg);
+      showSnackbar(Array.isArray(msg) ? msg[0] : msg, 'error');
     } finally {
       setFormLoading(false);
     }
   };
 
-  const handleDelete = async (node) => {
-    if (!window.confirm(t('farm.confirm_delete_node', 'هل أنت متأكد؟ سيتم حذف جميع العناصر التابعة.'))) return;
-    try { await deleteLocationNode(node.id); fetchData(); }
-    catch { alert(t('common.error_delete', 'فشل الحذف')); }
+  const handleDeleteClick = (node) => {
+    setPendingDeleteNode(node);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteNode) return;
+    try {
+      await deleteLocationNode(pendingDeleteNode.id);
+      showSnackbar(t('farm.deleted_success', 'تم الحذف بنجاح'), 'success');
+      fetchData();
+    }
+    catch {
+      showSnackbar(t('common.error_delete', 'فشل الحذف'), 'error');
+    } finally {
+      setConfirmOpen(false);
+      setPendingDeleteNode(null);
+    }
   };
 
   if (loading && !tree.length) return (
@@ -293,7 +322,7 @@ const FarmStructure = () => {
                   node={node} 
                   onAdd={handleOpenAdd} 
                   onEdit={handleOpenEdit} 
-                  onDelete={handleDelete} 
+                  onDelete={handleDeleteClick} 
                   searchQuery={searchQuery}
                 />
               ))}
@@ -308,14 +337,14 @@ const FarmStructure = () => {
           {editMode ? t('farm.edit_node', 'تعديل العنصر') : t('farm.add_node', 'إضافة عنصر جديد')}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
-          {!editMode && (
+          {!editMode && UI_ALLOWED_CHILDREN[currentNode?.type || 'ROOT']?.length !== 1 && (
             <TextField
               select fullWidth label={t('farm.node_type', 'نوع العنصر')}
               value={form.type}
               onChange={e => setForm({ ...form, type: e.target.value })}
               InputProps={{ sx: { borderRadius: 2.5 } }}
             >
-              {(currentNode ? ALLOWED_CHILDREN[currentNode.type] : [NT.SECTOR, NT.STAGE]).map(type => (
+              {(currentNode ? UI_ALLOWED_CHILDREN[currentNode.type] : [NT.SECTOR, NT.STAGE]).map(type => (
                 <MenuItem key={type} value={type}>
                   {type === NT.SECTOR ? t('farm.sector', 'قطاع') : type === NT.STAGE ? t('farm.stage', 'مرحلة') : t('farm.enclosure', 'حوشة')}
                 </MenuItem>
@@ -344,6 +373,17 @@ const FarmStructure = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Confirm Dialog ── */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('farm.confirm_delete_title', 'تأكيد الحذف')}
+        message={t('farm.confirm_delete_node', 'هل أنت متأكد؟ سيتم حذف جميع العناصر التابعة.')}
+        confirmText={t('common.delete', 'حذف')}
+        cancelText={t('common.cancel', 'إلغاء')}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 };

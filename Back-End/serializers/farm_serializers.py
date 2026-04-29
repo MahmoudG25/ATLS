@@ -60,9 +60,15 @@ class LocationNodeCreateSerializer(serializers.ModelSerializer):
         node_type = data.get('type')
 
         if parent:
-            # 1. ENCLOSURE cannot have children
+            # 1. Parent-Child Type Integrity
             if parent.type == LocationNode.TYPE_ENCLOSURE:
                 raise serializers.ValidationError({'parent': 'لا يمكن إضافة عناصر تابعة للحوشة.'})
+
+            if parent.type == LocationNode.TYPE_STAGE and node_type not in [LocationNode.TYPE_STAGE, LocationNode.TYPE_ENCLOSURE]:
+                raise serializers.ValidationError({'type': 'المرحلة يمكن أن تحتوي على مراحل أو حوشات فقط.'})
+
+            if parent.type == LocationNode.TYPE_SECTOR and node_type not in [LocationNode.TYPE_STAGE, LocationNode.TYPE_ENCLOSURE]:
+                raise serializers.ValidationError({'type': 'القطاع يمكن أن يحتوي على مراحل أو حوشات فقط.'})
 
             # 2. Depth Control: Max 3 levels
             # parent.level is 0-indexed. If parent.level is 2, child would be level 3 (4th level).
