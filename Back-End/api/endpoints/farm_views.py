@@ -2,9 +2,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from apps.farm.models import Farm, LocationNode, FarmSettings
 from serializers.farm_serializers import (
     FarmSerializer, CropTypeSerializer, SectorSerializer, PlotSerializer,
-    LocationNodeCreateSerializer, LocationNodeSerializer,
+    LocationNodeCreateSerializer, LocationNodeSerializer, FarmSettingsSerializer
 )
 from services.farm_service import list_farms, list_crop_types, get_farm_structure, create_sector, create_plot, get_plot_stats, update_sector, delete_sector, update_plot, delete_plot
 from services.activity_service import log_activity
@@ -158,56 +159,93 @@ def plot_stats_view(request, id):
         return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
-def location_tree_view(request):
+def farm_settings_view(request):
     """
-    GET /farm/location-tree/
-
-    Returns the complete LocationNode hierarchy as a nested tree.
-    Each node includes 'has_stages' and 'has_enclosures' flags so the
-    frontend can decide which dropdowns to show dynamically.
-
-    Structure example:
-      SECTOR → STAGE → ENCLOSURE  (3-level)
-      SECTOR → ENCLOSURE          (2-level, no stages)
+    GET: Retrieve the settings for the active farm.
+    PATCH: Update the settings.
     """
     farm_qs = Farm.objects.filter(is_active=True)
     if getattr(request.user, 'company_id', None):
         farm_qs = farm_qs.filter(company_id=request.user.company_id)
     farm = farm_qs.first()
+
     if not farm:
-        return Response({'farm': None, 'tree': []}, status=200)
+        return Response({'detail': 'No active farm found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    nodes = list(
-        LocationNode.objects.filter(farm=farm, is_active=True)
-        .order_by('order', 'name')
+    # get_or_create to ensure every farm has a settings record
+    # Use farm.company as the tenant
+    settings_obj, _ = FarmSettings.objects.get_or_create(
+        farm=farm, 
+        defaults={'company': farm.company}
     )
-    children_map = {}
-    roots = []
-    for node in nodes:
-        if node.parent_id:
-            children_map.setdefault(node.parent_id, []).append(node)
-        else:
-            roots.append(node)
 
-    def serialize_node(node):
-        children = children_map.get(node.id, [])
-        return {
-            'id':             node.id,
-            'name':           node.name,
-            'type':           node.type,
-            'parent_id':      node.parent_id,
-            'order':          node.order,
-            # Flags that tell the frontend what child types exist
-            'has_stages':     any(c.type == LocationNode.TYPE_STAGE     for c in children),
-            'has_enclosures': any(c.type == LocationNode.TYPE_ENCLOSURE for c in children),
-            'children':       [serialize_node(child) for child in children],
-        }
+    if request.method == 'PATCH':
+        serializer = FarmSettingsSerializer(settings_obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        log_activity(request.user, f"Updated Farm Settings for {farm.name}", "Farm")
+        return Response(serializer.data)
+
+    serializer = FarmSettingsSerializer(settings_obj)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def location_tree_view(request):
+    """
+    Returns a recursive tree of LocationNodes for the active farm.
+    Optionally filters based on FarmSettings if ?filtered=1 is passed.
+    """
+    farm_qs = Farm.objects.filter(is_active=True)
+    if getattr(request.user, 'company_id', None):
+        farm_qs = farm_qs.filter(company_id=request.user.company_id)
+    farm = farm_qs.first()
+
+    if not farm:
+        return Response({'tree': [], 'farm': None})
+
+    settings_obj, _ = FarmSettings.objects.get_or_create(
+        farm=farm, 
+        defaults={'company': farm.company}
+    )
+    apply_filter = request.query_params.get('filtered') == '1'
+
+    nodes = list(LocationNode.objects.filter(farm=farm, is_active=True).order_by('order', 'name'))
+    
+    # Build a lookup dictionary
+    node_map = {node.id: {
+        'id': node.id,
+        'name': node.name,
+        'type': node.type,
+        'parent_id': node.parent_id,
+        'children': []
+    } for node in nodes}
+
+    tree = []
+    for node in nodes:
+        node_data = node_map[node.id]
+        
+        # Filtering logic: Skip disabled node types
+        if apply_filter:
+            if node.type == LocationNode.TYPE_SECTOR and not settings_obj.enable_sector:
+                continue
+            if node.type == LocationNode.TYPE_STAGE and not settings_obj.enable_stage:
+                continue
+            if node.type == LocationNode.TYPE_ENCLOSURE and not settings_obj.enable_enclosure:
+                continue
+
+        if node.parent_id and node.parent_id in node_map:
+            node_map[node.parent_id]['children'].append(node_data)
+        else:
+            tree.append(node_data)
 
     return Response({
-        'farm': {'id': farm.id, 'name': farm.name},
-        'tree': [serialize_node(root) for root in roots],
+        'tree': tree,
+        'farm': FarmSerializer(farm).data,
+        'settings': FarmSettingsSerializer(settings_obj).data
     })
 
 

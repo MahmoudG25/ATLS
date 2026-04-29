@@ -15,10 +15,9 @@ import dayjs from 'dayjs';
 import { useAuth } from '../../../app/AuthContext';
 import api from '../../../services/api';
 import { reportsApi } from '../../../services/reportsApi';
+import LocationSelect from '../../../components/LocationSelect';
 
 // ── Schema ──────────────────────────────────────────────────────────────────
-// `location` = the selected ENCLOSURE LocationNode ID (sent to backend)
-// `stage_id` = UI-only state for filtering enclosures (not in form schema)
 const taskSchema = z.object({
   report_date:          z.any(),
   engineer:             z.number({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب'),
@@ -67,7 +66,6 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-/** +/- stepper for integer counts */
 const Stepper = ({ value, onChange, error }) => {
   const borderClass = error ? 'border-[#ba1a1a]' : 'border-[#bfc9c1]';
   return (
@@ -87,7 +85,6 @@ const Stepper = ({ value, onChange, error }) => {
   );
 };
 
-/** FK Autocomplete — value is the integer ID */
 const AC = ({ options, value, onChange, placeholder, error, helperText, disabled, getLabel }) => (
   <Autocomplete
     disabled={disabled}
@@ -109,7 +106,6 @@ export default function DailyTaskForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Privileged roles can assign reports to any engineer
   const PRIVILEGED = ['MANAGER', 'SUPER_ADMIN', 'ADMIN', 'OWNER'];
   const isPrivileged = user && PRIVILEGED.includes(user.role);
 
@@ -117,22 +113,12 @@ export default function DailyTaskForm() {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
 
-  // ── Dropdown state ──────────────────────────────────────────────────────────
   const [engineers, setEngineers]     = useState([]);
-  const [sectors, setSectors]         = useState([]);
-  const [stages, setStages]           = useState([]);
-  const [enclosures, setEnclosures]   = useState([]);
   const [operations, setOperations]   = useState([]);
   const [varieties, setVarieties]     = useState([]);
   const [units, setUnits]             = useState([]);
   const [contractors, setContractors] = useState([]);
-  const [enclosuresLoading, setEnclosuresLoading] = useState(false);
 
-  const [selectedSectorId, setSelectedSectorId] = useState(null);
-  const [selectedStageId, setSelectedStageId]   = useState(null);
-  const [hasStages, setHasStages]               = useState(false);
-
-  // ── Form setup ──────────────────────────────────────────────────────────────
   const { control, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -154,18 +140,15 @@ export default function DailyTaskForm() {
     },
   });
 
-  // Auto-fill engineer for non-privileged users
   useEffect(() => {
     if (user && !isPrivileged) setValue('engineer', user.id);
   }, [user, isPrivileged, setValue]);
 
-  // ── Initial data fetch ──────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [engRes, sectorsRes, opsRes, varRes, unitRes, conRes] = await Promise.allSettled([
+        const [engRes, opsRes, varRes, unitRes, conRes] = await Promise.allSettled([
           reportsApi.getEngineers(),
-          reportsApi.getLocationNodes('SECTOR'),
           reportsApi.getOperations(),
           reportsApi.getVarieties(),
           reportsApi.getUnits(),
@@ -175,7 +158,6 @@ export default function DailyTaskForm() {
         const r = res => Array.isArray(res.value?.data) ? res.value.data : (res.value?.data?.results ?? res.value ?? []);
 
         if (engRes.status === 'fulfilled')     setEngineers(r(engRes));
-        if (sectorsRes.status === 'fulfilled') setSectors(r(sectorsRes));
         if (opsRes.status === 'fulfilled')     setOperations(r(opsRes));
         if (varRes.status === 'fulfilled')     setVarieties(r(varRes));
         if (unitRes.status === 'fulfilled')    setUnits(r(unitRes));
@@ -186,61 +168,10 @@ export default function DailyTaskForm() {
     })();
   }, []);
 
-  // ── Hierarchy Logic ─────────────────────────────────────────────────────────
-  const handleSectorChange = async (sectorId) => {
-    setSelectedSectorId(sectorId);
-    setSelectedStageId(null);
-    setStages([]);
-    setEnclosures([]);
-    setHasStages(false);
-    setValue('location', null);
-
-    if (!sectorId) return;
-
-    try {
-      setEnclosuresLoading(true);
-      const children = await reportsApi.getLocationNodes(null, sectorId);
-      const stgs = children.filter(c => c.type === 'STAGE');
-      if (stgs.length > 0) {
-        setStages(stgs);
-        setHasStages(true);
-      } else {
-        setEnclosures(children.filter(c => c.type === 'ENCLOSURE'));
-      }
-    } catch (e) {
-      console.error('خطأ في تحميل فروع القطاع:', e);
-    } finally {
-      setEnclosuresLoading(false);
-    }
-  };
-
-  const handleStageChange = async (stageId) => {
-    setSelectedStageId(stageId);
-    setEnclosures([]);
-    setValue('location', null);
-
-    if (!stageId) return;
-
-    try {
-      setEnclosuresLoading(true);
-      const encs = await reportsApi.getLocationNodes('ENCLOSURE', stageId);
-      setEnclosures(encs);
-    } catch (e) {
-      console.error('خطأ في تحميل الحوشات:', e);
-    } finally {
-      setEnclosuresLoading(false);
-    }
-  };
-
-  // ── Submit ──────────────────────────────────────────────────────────────────
   const onSubmit = async (data) => {
     setSubmitError('');
     try {
       const { custom_fields, report_date, ...rest } = data;
-
-      // Payload: location = LocationNode ID of the selected enclosure
-      // engineer is included only if privileged user (backend validates and stores it)
-      // work_location is NOT sent — serializer defaults it to '' (blank=True)
       const payload = {
         ...rest,
         report_date: dayjs(report_date).format('YYYY-MM-DD'),
@@ -249,7 +180,6 @@ export default function DailyTaskForm() {
       const res = await api.post('/reports/tasks/', payload);
       const reportId = res.data.id;
 
-      // Upload attachments
       for (const file of pendingFiles) {
         const uploadRes = await reportsApi.uploadFile(file, (event) => {
           const ratio = event.total ? Math.round((event.loaded * 100) / event.total) : 0;
@@ -261,7 +191,6 @@ export default function DailyTaskForm() {
         await reportsApi.createAttachment({ report: reportId, file_url: uploadRes.data.file_url, file_type: fileType });
       }
 
-      // Custom fields
       if (custom_fields && Object.keys(custom_fields).length > 0) {
         await Promise.all(Object.entries(custom_fields).map(([fieldId, val]) =>
           api.post('/reports/custom-field-values/', {
@@ -284,7 +213,6 @@ export default function DailyTaskForm() {
     if (files.length) setPendingFiles(prev => [...prev, ...files]);
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <form onSubmit={handleSubmit(onSubmit)} className="pb-32 bg-[#f4f7f4] min-h-screen">
@@ -297,7 +225,6 @@ export default function DailyTaskForm() {
           <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#bfc9c1] overflow-hidden">
             <div className="p-6 md:p-10">
 
-              {/* Header */}
               <div className="mb-8 pb-6 border-b border-[#e1e3df]">
                 <h2 className="font-semibold text-2xl text-[#191c1a]">تسجيل تقرير يومي</h2>
                 <p className="text-[15px] text-[#404943] mt-1.5">يرجى إدخال تفاصيل العمل اليومي بدقة لضمان صحة البيانات.</p>
@@ -305,12 +232,10 @@ export default function DailyTaskForm() {
 
               <div className="flex flex-col gap-8">
 
-                {/* ── Row 1: التاريخ | المهندس | القطاع | (المرحلة) | الحوشة ── */}
                 <div>
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">معلومات أساسية</p>
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${hasStages ? '5' : '4'} gap-6`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                    {/* التاريخ */}
                     <Controller name="report_date" control={control} render={({ field }) => (
                       <Field label="التاريخ">
                         <DatePicker value={field.value} onChange={field.onChange}
@@ -318,7 +243,6 @@ export default function DailyTaskForm() {
                       </Field>
                     )} />
 
-                    {/* المهندس المسؤول */}
                     <Controller name="engineer" control={control} render={({ field }) => (
                       <Field label="المهندس المسؤول">
                         {isPrivileged ? (
@@ -344,70 +268,19 @@ export default function DailyTaskForm() {
                       </Field>
                     )} />
 
-                    {/* القطاع */}
-                    <Field label="القطاع">
-                      <Autocomplete
-                        options={sectors}
-                        getOptionLabel={o => o.name || ''}
-                        value={sectors.find(s => s.id === selectedSectorId) || null}
-                        onChange={(_, d) => handleSectorChange(d?.id ?? null)}
-                        slotProps={dropdownPaper}
-                        sx={inputSx}
-                        noOptionsText="لا توجد قطاعات"
-                        renderInput={params => (
-                          <TextField {...params} fullWidth placeholder="اختر القطاع" size="small" />
-                        )}
-                      />
-                    </Field>
-
-                    {/* المرحلة (تظهر فقط إذا كان القطاع يحتوي على مراحل) */}
-                    {hasStages && (
-                      <Field label="المرحلة">
-                        <Autocomplete
-                          options={stages}
-                          getOptionLabel={o => o.name || ''}
-                          value={stages.find(s => s.id === selectedStageId) || null}
-                          onChange={(_, d) => handleStageChange(d?.id ?? null)}
-                          slotProps={dropdownPaper}
-                          sx={inputSx}
-                          noOptionsText="لا توجد مراحل"
-                          renderInput={params => (
-                            <TextField {...params} fullWidth placeholder="اختر المرحلة" size="small" />
-                          )}
-                        />
-                      </Field>
-                    )}
-
-                    {/* الحوشة / الموقع */}
                     <Controller name="location" control={control} render={({ field }) => (
-                      <Field label="الحوشة / الموقع">
-                        <Autocomplete
-                          disabled={!selectedSectorId || (hasStages && !selectedStageId)}
-                          loading={enclosuresLoading}
-                          options={enclosures}
-                          getOptionLabel={o => o.name || ''}
-                          value={enclosures.find(e => e.id === field.value) || null}
-                          onChange={(_, d) => field.onChange(d?.id ?? null)}
-                          slotProps={dropdownPaper}
-                          sx={inputSx}
-                          noOptionsText={selectedSectorId ? 'لا توجد حوشات' : 'اختر القطاع أولاً'}
-                          renderInput={params => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              placeholder={selectedSectorId ? 'اختر الحوشة' : 'اختر القطاع أولاً'}
-                              size="small"
-                              error={!!errors.location}
-                              helperText={errors.location?.message}
-                            />
-                          )}
+                      <Field label="الموقع / الحوشة">
+                        <LocationSelect 
+                          value={field.value} 
+                          onChange={field.onChange}
+                          error={!!errors.location}
+                          helperText={errors.location?.message}
                         />
                       </Field>
                     )} />
                   </div>
                 </div>
 
-                {/* ── Row 2: العملية | الصنف | الوحدة | المقاول ── */}
                 <div>
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">تفاصيل العملية</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -442,7 +315,6 @@ export default function DailyTaskForm() {
                   </div>
                 </div>
 
-                {/* ── Row 3: عمال الشركة | عمال المقاول ── */}
                 <div>
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">توزيع العمالة</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -461,7 +333,6 @@ export default function DailyTaskForm() {
                   </div>
                 </div>
 
-                {/* ── Row 4: ساعات العمل | ساعات إضافية | الإنتاجية الفعلية | إنتاجية إضافية ── */}
                 <div>
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">الإنتاجية والوقت</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -482,7 +353,6 @@ export default function DailyTaskForm() {
                   </div>
                 </div>
 
-                {/* ── Row 5: ملاحظات ── */}
                 <div className="w-full">
                   <Controller name="notes" control={control} render={({ field }) => (
                     <Field label="ملاحظات / مشاهدات">
@@ -491,7 +361,6 @@ export default function DailyTaskForm() {
                   )} />
                 </div>
 
-                {/* ── Row 6: مرفقات ── */}
                 <div className="w-full">
                   <Field label="المرفقات">
                     <div
@@ -516,7 +385,6 @@ export default function DailyTaskForm() {
                   </Field>
                 </div>
 
-                {/* Custom fields (admin-defined) */}
                 <DynamicFieldsRenderer modelName="dailytaskreport" control={control} errors={errors} />
 
               </div>
@@ -524,7 +392,6 @@ export default function DailyTaskForm() {
           </div>
         </div>
 
-        {/* Sticky save button */}
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#bfc9c1] py-4 px-6 md:px-12 flex justify-end items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <button type="submit" disabled={isSubmitting}
             className="flex items-center justify-center gap-2 bg-[#0f5238] text-white font-medium text-sm px-8 py-3 rounded-xl transition-all shadow-sm hover:shadow-md hover:bg-[#0b3d2a] disabled:bg-[#a0b8a8] disabled:cursor-not-allowed">

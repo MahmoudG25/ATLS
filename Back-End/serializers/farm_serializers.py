@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from apps.farm.models import Farm, CropType, Sector, Plot, LocationNode
+from apps.farm.models import Farm, CropType, Sector, Plot, LocationNode, FarmSettings
+
+class FarmSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FarmSettings
+        fields = [
+            'enable_sector', 'enable_stage', 'enable_enclosure',
+            'allow_stage_without_sector', 'allow_enclosure_without_stage'
+        ]
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:

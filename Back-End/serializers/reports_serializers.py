@@ -3,6 +3,28 @@ from apps.reports.models import (
     Operation, Variety, Unit, Contractor, DailyTaskReport, FertilizationReport, IrrigationReport,
     CustomFieldDefinition, CustomFieldValue, ReportDropdownOption, LaborEntry, Attachment
 )
+from apps.farm.models import LocationNode, FarmSettings
+
+
+# ─── Helper: normalize any selected node → ENCLOSURE ────────────────────────
+def _resolve_enclosure(node):
+    """
+    CRITICAL RULE: location must always be stored as an ENCLOSURE node.
+    If the user selected a SECTOR or STAGE, recursively search children
+    for the first active ENCLOSURE. Returns the ENCLOSURE node or None.
+    """
+    if node.type == LocationNode.TYPE_ENCLOSURE:
+        return node
+    # BFS over active children
+    children = list(
+        LocationNode.objects.filter(parent=node, is_active=True).order_by('order', 'name')
+    )
+    for child in children:
+        result = _resolve_enclosure(child)
+        if result:
+            return result
+    return None
+
 
 class OperationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -74,13 +96,21 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
         if not location:
             raise serializers.ValidationError({"location": "الموقع مطلوب."})
 
+        # CRITICAL RULE: Normalize to ENCLOSURE
+        resolved_node = _resolve_enclosure(location)
+        if not resolved_node:
+            raise serializers.ValidationError({"location": f"الموقع المختار ({location.name}) لا يحتوي على أي حوشة فعالة للتقرير عليها."})
+        
+        # Update the data dictionary so it saves the ENCLOSURE ID
+        data['location'] = resolved_node
+
         if company:
-            # Validate every FK object belongs to the request's company (tenant isolation)
+            # Validate tenant isolation for the resolved enclosure and other FKs
             tenant_checks = [
-                (location,   "location",  "الموقع لا ينتمي لهذه الشركة"),
-                (operation,  "operation", "العملية لا تنتمي لهذه الشركة"),
-                (variety,    "variety",   "الصنف لا ينتمي لهذه الشركة"),
-                (unit,       "unit",      "الوحدة لا تنتمي لهذه الشركة"),
+                (data['location'], "location",  "الموقع لا ينتمي لهذه الشركة"),
+                (operation,        "operation", "العملية لا تنتمي لهذه الشركة"),
+                (variety,          "variety",   "الصنف لا ينتمي لهذه الشركة"),
+                (unit,             "unit",      "الوحدة لا ينتمي لهذه الشركة"),
             ]
             for obj, field_name, msg in tenant_checks:
                 if obj and getattr(obj, 'company_id', None) != company.id:

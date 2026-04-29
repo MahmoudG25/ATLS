@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Button, Card, Chip, Alert, CircularProgress, Tabs, Tab, TextField, MenuItem, 
   Select, FormControl, InputLabel, InputAdornment, Dialog, DialogTitle, 
@@ -11,7 +11,10 @@ import { getUsersList, approveUser, deactivateUser, getCMSContent, updateCMSCont
 import { useTranslation } from 'react-i18next';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ViewQuiltIcon    from '@mui/icons-material/ViewQuilt';
+import SettingsIcon     from '@mui/icons-material/Settings';
 import { useAuth } from '../../app/AuthContext';
+import api from '../../services/api';
+import { Switch, FormControlLabel, Divider } from '@mui/material';
 
 const AdminControls = () => {
   const { t } = useTranslation();
@@ -39,7 +42,37 @@ const AdminControls = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
-  useEffect(() => { fetchUsers(); fetchCMS(); }, []);
+  const [farmSettings, setFarmSettings] = useState({
+    enable_sector: true,
+    enable_stage: true,
+    enable_enclosure: true,
+    allow_stage_without_sector: false,
+    allow_enclosure_without_stage: false
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+  useEffect(() => { fetchUsers(); fetchCMS(); fetchFarmSettings(); }, []);
+
+  const fetchFarmSettings = async () => {
+    try {
+      const res = await api.get('farm/settings/');
+      setFarmSettings(res.data);
+    } catch (err) {
+      console.error('Failed fetching farm settings', err);
+    }
+  };
+
+  const handleUpdateSetting = async (key, value) => {
+    const updated = { ...farmSettings, [key]: value };
+    setFarmSettings(updated);
+    try {
+      await api.patch('farm/settings/', { [key]: value });
+    } catch (err) {
+      console.error('Failed updating setting', err);
+      // Rollback on error
+      fetchFarmSettings();
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -115,6 +148,7 @@ const AdminControls = () => {
       <div className="bg-white border-b border-slate-200 mb-8 rounded-t-3xl px-4 shadow-sm border">
         <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)} indicatorColor="primary" textColor="primary" sx={{ '& .MuiTab-root': { fontWeight: 800, py: 3, fontSize: '1rem' } }}>
           <Tab icon={<VerifiedUserIcon />} iconPosition="start" label={t('admin.tab_security')} />
+          <Tab icon={<SettingsIcon />} iconPosition="start" label="إعدادات المزرعة" />
           {currentUser?.role === 'SUPER_ADMIN' && <Tab icon={<ViewQuiltIcon />}    iconPosition="start" label={t('admin.tab_cms')} />}
         </Tabs>
       </div>
@@ -344,8 +378,77 @@ const AdminControls = () => {
         </DialogActions>
       </Dialog>
 
+      {/* ── FARM SETTINGS TAB ──────────────────────────── */}
+      {activeTab === 1 && (
+        <Card sx={{ p: { xs: 4, md: 6 }, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }} elevation={0}>
+          <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
+            <SettingsIcon color="primary" fontSize="large" /> إعدادات هيكل المزرعة
+          </h2>
+          
+          <Box className="space-y-8">
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#1e293b' }}>مستويات المواقع</Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: '#64748b' }}>تحكم في المستويات التي تظهر في نماذج التقارير والتحليلات.</Typography>
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: farmSettings.enable_sector ? '#f0fdf4' : '#f8fafc' }}>
+                    <FormControlLabel
+                      control={<Switch checked={farmSettings.enable_sector} onChange={(e) => handleUpdateSetting('enable_sector', e.target.checked)} color="success" />}
+                      label={<Typography sx={{ fontWeight: 700 }}>تفعيل القطاعات (Sectors)</Typography>}
+                    />
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: farmSettings.enable_stage ? '#f0fdf4' : '#f8fafc' }}>
+                    <FormControlLabel
+                      control={<Switch checked={farmSettings.enable_stage} onChange={(e) => handleUpdateSetting('enable_stage', e.target.checked)} color="success" />}
+                      label={<Typography sx={{ fontWeight: 700 }}>تفعيل المراحل (Stages)</Typography>}
+                    />
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: farmSettings.enable_enclosure ? '#f0fdf4' : '#f8fafc' }}>
+                    <FormControlLabel
+                      control={<Switch checked={farmSettings.enable_enclosure} onChange={(e) => handleUpdateSetting('enable_enclosure', e.target.checked)} color="success" />}
+                      label={<Typography sx={{ fontWeight: 700 }}>تفعيل الحوشات (Enclosures)</Typography>}
+                    />
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#1e293b' }}>قواعد الهيكل المتقدمة</Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: '#64748b' }}>إعدادات متقدمة للتحكم في كيفية ترابط المستويات ببعضها.</Typography>
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Card variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                    <FormControlLabel
+                      control={<Switch checked={farmSettings.allow_stage_without_sector} onChange={(e) => handleUpdateSetting('allow_stage_without_sector', e.target.checked)} />}
+                      label={<Typography sx={{ fontWeight: 700 }}>السماح بمراحل بدون قطاع</Typography>}
+                    />
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Card variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                    <FormControlLabel
+                      control={<Switch checked={farmSettings.allow_enclosure_without_stage} onChange={(e) => handleUpdateSetting('allow_enclosure_without_stage', e.target.checked)} />}
+                      label={<Typography sx={{ fontWeight: 700 }}>السماح بحوشات بدون مرحلة</Typography>}
+                    />
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          </Box>
+        </Card>
+      )}
+
       {/* ── CMS TAB ──────────────────────────────────── */}
-      {activeTab === 1 && currentUser?.role === 'SUPER_ADMIN' && (
+      {activeTab === 2 && currentUser?.role === 'SUPER_ADMIN' && (
         <Card sx={{ p: { xs: 4, md: 6 }, borderRadius: 5, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }} elevation={0}>
           <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3"><ViewQuiltIcon color="primary" fontSize="large" /> {t('admin.cms_title')}</h2>
           <Grid container spacing={6}>

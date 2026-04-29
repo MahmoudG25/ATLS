@@ -127,3 +127,24 @@ class LocationNode(MPTTModel, TenantAwareModel):
     def __str__(self):
         return f"{self.farm_id}:{self.type}:{self.name}"
 
+
+class FarmSettings(TenantAwareModel):
+    """
+    Per-farm display settings for the location hierarchy.
+    Controls which node types are shown in the Location picker.
+    Auto-created with defaults when first accessed via get_or_create.
+    """
+    farm = models.OneToOneField(
+        Farm, on_delete=models.CASCADE, related_name='settings'
+    )
+    enable_sector                 = models.BooleanField(default=True)
+    enable_stage                  = models.BooleanField(default=True)
+    enable_enclosure              = models.BooleanField(default=True)
+    allow_stage_without_sector    = models.BooleanField(default=False)
+    allow_enclosure_without_stage = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Farm Settings"
+
+    def __str__(self):
+        return f"Settings for {self.farm}"

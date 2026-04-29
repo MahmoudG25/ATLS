@@ -40,6 +40,7 @@ urlpatterns = [
     path('farm/structure', farm_views.structure_view, name='structure'),
     path('farm/hierarchy', farm_views.hierarchy_view, name='hierarchy'),
     path('farm/location-tree/', farm_views.location_tree_view, name='location_tree'),
+    path('farm/settings/', farm_views.farm_settings_view, name='farm_settings'),
     path('farm/location-nodes/', farm_views.location_nodes_view, name='location_nodes'),
     path('farm/location-nodes/<int:pk>/', farm_views.location_node_detail_view, name='location_node_detail'),
     path('farm/sectors', farm_views.create_sector_view, name='create_sector'),
