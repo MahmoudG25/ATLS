@@ -1,3 +1,136 @@
+# PHASE 01 — FarmStructure Adaptive UI
+
+## 🎯 الهدف
+تحويل شجرة هيكل المزرعة من شجرة ثابتة الحجم إلى شجرة **ذكية متكيفة** — كلما زاد عدد العناصر، صغر حجم كل عنصر تلقائياً ليتناسبوا في نفس المساحة، مع إضافة Collapse/Expand وSearch.
+
+---
+
+## 📁 الملفات المتأثرة
+
+```
+Front-End/src/pages/farm/FarmStructure.jsx   ← إعادة كتابة كاملة
+Front-End/src/pages/farm/FarmStructure.css   ← استبدال كامل
+```
+
+لا تغيير في Backend — الـ API موجودة وتعمل.
+
+---
+
+## 📐 قواعد التصميم
+
+### الحجم يتحدد بعدد الأشقاء (siblings) في نفس المستوى:
+```
+1–3   عناصر → size: LG  → padding: 12px 16px  | font: 14px | icon: 24px | min-h: 64px
+4–6   عناصر → size: MD  → padding: 8px 12px   | font: 12px | icon: 20px | min-h: 48px
+7–12  عناصر → size: SM  → padding: 6px 8px    | font: 11px | icon: 16px | min-h: 36px
+13+   عناصر → size: XS  → padding: 4px 6px    | font: 10px | icon: 14px | min-h: 28px
+```
+
+### Layout:
+- SECTOR (level 0): كل قطاع في row منفصلة — عرض كامل
+- STAGE (level 1): flex-wrap أفقي داخل القطاع الأب
+- ENCLOSURE (level 2): CSS grid بـ columns ديناميكية:
+  - 1–4   enclosures → `grid-cols-2`
+  - 5–8   enclosures → `grid-cols-3`
+  - 9–12  enclosures → `grid-cols-4`
+  - 13+   enclosures → `grid-cols-5`
+- كل branch يمكن طيّه (Collapse/Expand) بزر سهم
+- الـ Container: `overflow-x: auto` لو الشجرة عريضة
+
+---
+
+## 🔁 الكود الكامل
+
+### 1. استبدل `FarmStructure.css` بالكامل بهذا:
+
+```css
+/* ═══════════════════════════════════════════════
+   FarmStructure.css — Adaptive Tree Styles
+   ═══════════════════════════════════════════════ */
+
+.farm-tree-root {
+  overflow-x: auto;
+  padding: 8px;
+}
+
+/* ── Node Sizes ── */
+.tree-node { display: flex; align-items: center; border-radius: 12px; border: 1px solid; transition: all 0.2s ease; cursor: default; position: relative; }
+
+.tree-node-lg { padding: 12px 16px; min-height: 64px; font-size: 14px; }
+.tree-node-md { padding: 8px 12px;  min-height: 48px; font-size: 12px; }
+.tree-node-sm { padding: 6px 8px;   min-height: 36px; font-size: 11px; }
+.tree-node-xs { padding: 4px 6px;   min-height: 28px; font-size: 10px; }
+
+.tree-node-icon-lg { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tree-node-icon-md { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tree-node-icon-sm { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tree-node-icon-xs { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── Node Type Colors ── */
+.node-sector    { background-color: #f0fdf4; border-color: #bbf7d0; }
+.node-sector:hover { border-color: #16a34a; box-shadow: 0 2px 8px rgba(22,163,74,0.15); }
+.node-sector .tree-node-icon-lg,
+.node-sector .tree-node-icon-md,
+.node-sector .tree-node-icon-sm,
+.node-sector .tree-node-icon-xs { background-color: #dcfce7; color: #15803d; }
+
+.node-stage     { background-color: #eff6ff; border-color: #bfdbfe; }
+.node-stage:hover { border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.15); }
+.node-stage .tree-node-icon-lg,
+.node-stage .tree-node-icon-md,
+.node-stage .tree-node-icon-sm,
+.node-stage .tree-node-icon-xs { background-color: #dbeafe; color: #1d4ed8; }
+
+.node-enclosure { background-color: #fff7ed; border-color: #fed7aa; }
+.node-enclosure:hover { border-color: #f97316; box-shadow: 0 2px 8px rgba(249,115,22,0.15); }
+.node-enclosure .tree-node-icon-lg,
+.node-enclosure .tree-node-icon-md,
+.node-enclosure .tree-node-icon-sm,
+.node-enclosure .tree-node-icon-xs { background-color: #ffedd5; color: #c2410c; }
+
+/* ── Actions (hidden by default, show on hover) ── */
+.tree-node-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s ease; margin-right: auto; }
+.tree-node:hover .tree-node-actions { opacity: 1; }
+
+/* ── Connector Lines ── */
+.tree-children-connector { border-right: 2px dashed #e2e8f0; margin-right: 20px; padding-right: 12px; }
+
+/* ── Count Badge ── */
+.tree-count-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #f1f5f9; color: #64748b; border-radius: 9999px;
+  font-size: 10px; font-weight: 700; padding: 1px 6px; min-width: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Collapse Button ── */
+.tree-collapse-btn {
+  width: 20px; height: 20px; border-radius: 50%; background: #e2e8f0;
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #64748b; transition: all 0.2s; flex-shrink: 0; padding: 0;
+}
+.tree-collapse-btn:hover { background: #cbd5e1; color: #334155; }
+
+/* ── Enclosure Grid ── */
+.enclosure-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.enclosure-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.enclosure-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.enclosure-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+
+/* ── Stage Flex Wrap ── */
+.stages-flex { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.stage-item  { flex: 1 1 280px; min-width: 220px; max-width: 480px; }
+
+/* ── Search Highlight ── */
+.node-highlighted { outline: 2px solid #f59e0b; outline-offset: 2px; }
+.node-dimmed      { opacity: 0.35; }
+```
+
+---
+
+### 2. استبدل `FarmStructure.jsx` بالكامل بهذا:
+
+```jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -451,3 +584,23 @@ const FarmStructure = () => {
 };
 
 export default FarmStructure;
+```
+
+---
+
+## ✅ Checklist للتحقق بعد التنفيذ
+
+- [ ] الشجرة تظهر بشكل صحيح مع بيانات حقيقية
+- [ ] كلما زاد عدد العناصر في مستوى → حجم كل عنصر يصغر
+- [ ] زر Collapse/Expand يخفي/يظهر الأبناء
+- [ ] البحث يبرز العناصر المطابقة ويخفف الأخرى
+- [ ] عند الـ hover → تظهر أزرار الإضافة/التعديل/الحذف
+- [ ] الـ count badge يظهر عدد الأبناء
+- [ ] الـ RTL يعمل صح (الـ connectors على اليمين)
+- [ ] الـ Enclosures تتوزع في grid حسب عددها
+- [ ] الـ Stages تتوزع أفقياً وتتكسر لصف جديد إذا زادوا
+
+## 🚫 لا تغير
+- لا تغيير في Backend API
+- لا تغيير في `features/farm/services.js`
+- لا تغيير في أي ملف آخر

@@ -233,9 +233,11 @@ def location_nodes_view(request):
             return Response({'detail': 'لا توجد مزرعة نشطة.'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = LocationNodeCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        # SUPER_ADMIN has no company FK — fall back to farm.company (already tenant-scoped)
+        company = getattr(request.user, 'company', None) or farm.company
         node = serializer.save(
             farm=farm,
-            company=getattr(request, 'company', None),
+            company=company,
         )
         log_activity(request.user, f"Created LocationNode: {node.type}:{node.name}", "Farm")
         return Response(LocationNodeSerializer(node).data, status=status.HTTP_201_CREATED)
