@@ -91,7 +91,7 @@ class DailyTaskReport(TenantAwareModel):
     report_date     = models.DateField(verbose_name="تاريخ التقرير")
     location        = models.ForeignKey("farm.LocationNode", on_delete=models.PROTECT, related_name="daily_task_reports")
     variety         = models.ForeignKey("reports.Variety", on_delete=models.PROTECT, related_name="daily_task_reports", verbose_name="الصنف")
-    work_location   = models.CharField(max_length=100, verbose_name="مكان العمل")
+    work_location   = models.CharField(max_length=100, blank=True, default='', verbose_name="مكان العمل")
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
     contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
     contractor      = models.ForeignKey("reports.Contractor", on_delete=models.PROTECT, null=True, blank=True, related_name="daily_task_reports", verbose_name="كود المقاول")

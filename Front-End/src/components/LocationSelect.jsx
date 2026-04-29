@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Autocomplete, TextField, CircularProgress, Box, Typography } from '@mui/material';
 import api from '../services/api';
-import { 
+import {
   GridViewOutlined as SectorIcon,
   LayersOutlined as StageIcon,
-  TerrainOutlined as EnclosureIcon 
+  TerrainOutlined as EnclosureIcon
 } from '@mui/icons-material';
 
 /**
@@ -26,7 +26,7 @@ const LocationSelect = ({ value, onChange, error, helperText, disabled, label = 
         const response = await api.get('farm/location-tree/?filtered=1');
         const treeData = response.data.tree || [];
         setTree(treeData);
-        
+
         // Flatten tree for Autocomplete options
         const flattened = [];
         const flatten = (nodes, level = 0) => {
@@ -52,15 +52,16 @@ const LocationSelect = ({ value, onChange, error, helperText, disabled, label = 
     fetchTree();
   }, []);
 
-  const selectedOption = useMemo(() => 
+  const selectedOption = useMemo(() =>
     options.find(o => o.id === value) || null
-  , [options, value]);
+    , [options, value]);
 
   return (
     <Autocomplete
       disabled={disabled || loading}
       options={options}
       getOptionLabel={(option) => option.name || ""}
+      getOptionKey={(option) => option.id}
       value={selectedOption}
       onChange={(_, newValue) => {
         onChange(newValue ? newValue.id : null);
@@ -69,11 +70,11 @@ const LocationSelect = ({ value, onChange, error, helperText, disabled, label = 
       renderOption={(props, option) => {
         const { key, ...optionProps } = props;
         return (
-          <Box 
-            key={key} 
-            component="li" 
-            {...optionProps} 
-            sx={{ 
+          <Box
+            key={key}
+            component="li"
+            {...optionProps}
+            sx={{
               pl: `${option.level * 24 + 16}px !important`,
               display: 'flex',
               alignItems: 'center',
@@ -86,7 +87,7 @@ const LocationSelect = ({ value, onChange, error, helperText, disabled, label = 
             {option.type === 'SECTOR' && <SectorIcon sx={{ fontSize: 18, color: '#16a34a' }} />}
             {option.type === 'STAGE' && <StageIcon sx={{ fontSize: 18, color: '#3b82f6' }} />}
             {option.type === 'ENCLOSURE' && <EnclosureIcon sx={{ fontSize: 18, color: '#f97316' }} />}
-            
+
             <Box>
               <Typography variant="body2" sx={{ fontWeight: option.type === 'SECTOR' ? 700 : 500, color: '#1e293b' }}>
                 {option.name}
@@ -106,21 +107,23 @@ const LocationSelect = ({ value, onChange, error, helperText, disabled, label = 
           error={!!error}
           helperText={helperText}
           size="small"
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                {params.InputProps?.endAdornment}
-              </>
-            ),
-            sx: {
-              backgroundColor: '#f8faf6',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-              '& fieldset': { borderColor: '#bfc9c1' },
-              '&:hover fieldset': { borderColor: '#0f5238' },
-              '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
+          slotProps={{
+            input: {
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps?.endAdornment}
+                </>
+              ),
+              sx: {
+                backgroundColor: '#f8faf6',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                '& fieldset': { borderColor: '#bfc9c1' },
+                '&:hover fieldset': { borderColor: '#0f5238' },
+                '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
+              }
             }
           }}
         />

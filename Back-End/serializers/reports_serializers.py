@@ -81,6 +81,7 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyTaskReport
         fields = '__all__'
+        read_only_fields = ['company']
 
     def validate(self, data):
         request = self.context.get("request")

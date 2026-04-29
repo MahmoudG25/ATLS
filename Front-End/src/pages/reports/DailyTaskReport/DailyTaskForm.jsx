@@ -19,21 +19,21 @@ import LocationSelect from '../../../components/LocationSelect';
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 const taskSchema = z.object({
-  report_date:          z.any(),
-  engineer:             z.number({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب'),
-  location:             z.number({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة'),
-  operation:            z.number({ required_error: 'العملية مطلوبة' }).min(1, 'العملية مطلوبة'),
-  variety:              z.number({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب'),
-  unit:                 z.number({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة'),
-  contractor:           z.number().nullable().optional(),
-  company_workers:      z.coerce.number().min(0),
-  contractor_workers:   z.coerce.number().min(0),
-  actual_productivity:  z.coerce.number().min(0),
-  work_hours:           z.coerce.number().min(0.5, 'يجب أن تكون ساعات العمل 0.5 على الأقل'),
-  overtime_hours:       z.coerce.number().min(0).optional(),
-  overtime_productivity:z.coerce.number().min(0).optional(),
-  notes:                z.string().optional(),
-  custom_fields:        z.record(z.any()).optional(),
+  report_date: z.any(),
+  engineer: z.number({ required_error: 'المهندس مطلوب' }).min(1, 'المهندس مطلوب'),
+  location: z.number({ required_error: 'الحوشة / الموقع مطلوب' }).min(1, 'الحوشة مطلوبة'),
+  operation: z.number({ required_error: 'العملية مطلوبة' }).min(1, 'العملية مطلوبة'),
+  variety: z.number({ required_error: 'الصنف مطلوب' }).min(1, 'الصنف مطلوب'),
+  unit: z.number({ required_error: 'الوحدة مطلوبة' }).min(1, 'الوحدة مطلوبة'),
+  contractor: z.number().nullable().optional(),
+  company_workers: z.coerce.number().min(0),
+  contractor_workers: z.coerce.number().min(0),
+  actual_productivity: z.coerce.number().min(0),
+  work_hours: z.coerce.number().min(0.5, 'يجب أن تكون ساعات العمل 0.5 على الأقل'),
+  overtime_hours: z.coerce.number().min(0).optional(),
+  overtime_productivity: z.coerce.number().min(0).optional(),
+  notes: z.string().optional(),
+  custom_fields: z.record(z.any()).optional(),
 });
 
 // ── Styles ───────────────────────────────────────────────────────────────────
@@ -43,10 +43,10 @@ const inputSx = {
     backgroundColor: '#f8faf6',
     borderRadius: '0.5rem',
     fontSize: '0.875rem',
-    '& fieldset':             { borderColor: '#bfc9c1' },
-    '&:hover fieldset':       { borderColor: '#0f5238' },
+    '& fieldset': { borderColor: '#bfc9c1' },
+    '&:hover fieldset': { borderColor: '#0f5238' },
     '&.Mui-focused fieldset': { borderColor: '#0f5238', borderWidth: '1.5px' },
-    '&.Mui-disabled':         { backgroundColor: '#e8ebe8' },
+    '&.Mui-disabled': { backgroundColor: '#e8ebe8' },
   },
 };
 
@@ -113,30 +113,30 @@ export default function DailyTaskForm() {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
 
-  const [engineers, setEngineers]     = useState([]);
-  const [operations, setOperations]   = useState([]);
-  const [varieties, setVarieties]     = useState([]);
-  const [units, setUnits]             = useState([]);
+  const [engineers, setEngineers] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [varieties, setVarieties] = useState([]);
+  const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
 
   const { control, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      report_date:           dayjs(),
-      engineer:              user?.id ?? null,
-      location:              null,
-      operation:             null,
-      variety:               null,
-      unit:                  null,
-      contractor:            null,
-      company_workers:       0,
-      contractor_workers:    0,
-      actual_productivity:   0,
-      work_hours:            8,
-      overtime_hours:        0,
+      report_date: dayjs(),
+      engineer: user?.id ?? null,
+      location: null,
+      operation: null,
+      variety: null,
+      unit: null,
+      contractor: null,
+      company_workers: 0,
+      contractor_workers: 0,
+      actual_productivity: 0,
+      work_hours: 8,
+      overtime_hours: 0,
       overtime_productivity: 0,
-      notes:                 '',
-      custom_fields:         {},
+      notes: '',
+      custom_fields: {},
     },
   });
 
@@ -157,11 +157,11 @@ export default function DailyTaskForm() {
 
         const r = res => Array.isArray(res.value?.data) ? res.value.data : (res.value?.data?.results ?? res.value ?? []);
 
-        if (engRes.status === 'fulfilled')     setEngineers(r(engRes));
-        if (opsRes.status === 'fulfilled')     setOperations(r(opsRes));
-        if (varRes.status === 'fulfilled')     setVarieties(r(varRes));
-        if (unitRes.status === 'fulfilled')    setUnits(r(unitRes));
-        if (conRes.status === 'fulfilled')     setContractors(r(conRes));
+        if (engRes.status === 'fulfilled') setEngineers(r(engRes));
+        if (opsRes.status === 'fulfilled') setOperations(r(opsRes));
+        if (varRes.status === 'fulfilled') setVarieties(r(varRes));
+        if (unitRes.status === 'fulfilled') setUnits(r(unitRes));
+        if (conRes.status === 'fulfilled') setContractors(r(conRes));
       } catch (e) {
         console.error('خطأ في تحميل بيانات النموذج:', e);
       }
@@ -186,8 +186,8 @@ export default function DailyTaskForm() {
           setUploadProgress(prev => ({ ...prev, [file.name]: ratio }));
         });
         const fileType = file.type.startsWith('image/') ? 'IMAGE'
-                       : file.type.startsWith('video/') ? 'VIDEO'
-                       : 'FILE';
+          : file.type.startsWith('video/') ? 'VIDEO'
+            : 'FILE';
         await reportsApi.createAttachment({ report: reportId, file_url: uploadRes.data.file_url, file_type: fileType });
       }
 
@@ -270,8 +270,8 @@ export default function DailyTaskForm() {
 
                     <Controller name="location" control={control} render={({ field }) => (
                       <Field label="الموقع / الحوشة">
-                        <LocationSelect 
-                          value={field.value} 
+                        <LocationSelect
+                          value={field.value}
                           onChange={field.onChange}
                           error={!!errors.location}
                           helperText={errors.location?.message}
@@ -337,10 +337,10 @@ export default function DailyTaskForm() {
                   <p className="text-xs font-semibold text-[#0f5238] uppercase tracking-wider mb-4">الإنتاجية والوقت</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                      { name: 'work_hours',            label: 'ساعات العمل',       placeholder: '8',    step: '0.5' },
-                      { name: 'overtime_hours',         label: 'ساعات إضافية',      placeholder: '0',    step: '0.5' },
-                      { name: 'actual_productivity',    label: 'الإنتاجية الفعلية', placeholder: '0.00', step: '0.01' },
-                      { name: 'overtime_productivity',  label: 'إنتاجية إضافية',   placeholder: '0.00', step: '0.01' },
+                      { name: 'work_hours', label: 'ساعات العمل', placeholder: '8', step: '0.5' },
+                      { name: 'overtime_hours', label: 'ساعات إضافية', placeholder: '0', step: '0.5' },
+                      { name: 'actual_productivity', label: 'الإنتاجية الفعلية', placeholder: '0.00', step: '0.01' },
+                      { name: 'overtime_productivity', label: 'إنتاجية إضافية', placeholder: '0.00', step: '0.01' },
                     ].map(({ name, label, placeholder, step }) => (
                       <Controller key={name} name={name} control={control} render={({ field }) => (
                         <Field label={label}>
