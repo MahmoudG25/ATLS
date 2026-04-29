@@ -59,8 +59,9 @@ class LocationNodeCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'parent': 'القطاع يجب أن يكون على مستوى المزرعة ولا يكون تابعاً لأي عنصر.'})
 
         elif node_type == LocationNode.TYPE_STAGE:
-            if parent is None or parent.type != LocationNode.TYPE_SECTOR:
-                raise serializers.ValidationError({'parent': 'المرحلة يمكن إضافتها فقط تحت قطاع (SECTOR).'})
+            # Stage can be at farm root (parent=None) OR under a Sector
+            if parent is not None and parent.type != LocationNode.TYPE_SECTOR:
+                raise serializers.ValidationError({'parent': 'المرحلة يمكن إضافتها فقط تحت قطاع أو مباشرة تحت المزرعة.'})
 
         elif node_type == LocationNode.TYPE_ENCLOSURE:
             if parent is None:

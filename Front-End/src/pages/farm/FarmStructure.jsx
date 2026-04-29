@@ -26,28 +26,18 @@ import './FarmStructure.css';
 // ─── Constants ───────────────────────────────────────────────────────────────
 const NT = { SECTOR: 'SECTOR', STAGE: 'STAGE', ENCLOSURE: 'ENCLOSURE' };
 
+// Allowed children per node type
+const ALLOWED_CHILDREN = {
+  [NT.SECTOR]:    [NT.STAGE, NT.ENCLOSURE],
+  [NT.STAGE]:     [NT.ENCLOSURE],
+  [NT.ENCLOSURE]: [],
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+const getSizeClass   = (n) => n <= 3 ? 'lg' : n <= 6 ? 'md' : n <= 12 ? 'sm' : 'xs';
+const getIconSize    = (s) => ({ lg: 22, md: 18, sm: 15, xs: 13 }[s] || 18);
+const getEnclosureGrid = (n) => n <= 4 ? 'enclosure-grid-2' : n <= 8 ? 'enclosure-grid-3' : n <= 12 ? 'enclosure-grid-4' : 'enclosure-grid-5';
 
-/** حساب الـ size class بناءً على عدد الأشقاء */
-const getSizeClass = (count) => {
-  if (count <= 3)  return 'lg';
-  if (count <= 6)  return 'md';
-  if (count <= 12) return 'sm';
-  return 'xs';
-};
-
-/** حساب الـ icon size بناءً على الـ size class */
-const getIconSize = (size) => ({ lg: 22, md: 18, sm: 15, xs: 13 }[size] || 18);
-
-/** حساب grid columns للـ enclosures */
-const getEnclosureGrid = (count) => {
-  if (count <= 4)  return 'enclosure-grid-2';
-  if (count <= 8)  return 'enclosure-grid-3';
-  if (count <= 12) return 'enclosure-grid-4';
-  return 'enclosure-grid-5';
-};
-
-/** هل العنصر أو أحد أبنائه يطابق البحث */
 const nodeMatchesSearch = (node, q) => {
   if (!q) return true;
   const lower = q.toLowerCase();
@@ -55,36 +45,28 @@ const nodeMatchesSearch = (node, q) => {
   return (node.children || []).some(c => nodeMatchesSearch(c, q));
 };
 
+const isHighlighted = (node, q) =>
+  q && node.name.toLowerCase().includes(q.toLowerCase());
+
 // ─── NodeIcon ────────────────────────────────────────────────────────────────
 const NodeIcon = ({ type, size }) => {
-  const px = getIconSize(size);
-  const sx = { fontSize: px };
-  switch (type) {
-    case NT.SECTOR:    return <SectorIcon sx={sx} />;
-    case NT.STAGE:     return <StageIcon sx={sx} />;
-    case NT.ENCLOSURE: return <EnclosureIcon sx={sx} />;
-    default:           return <FarmIcon sx={sx} />;
-  }
+  const sx = { fontSize: getIconSize(size) };
+  if (type === NT.SECTOR)    return <SectorIcon sx={sx} />;
+  if (type === NT.STAGE)     return <StageIcon sx={sx} />;
+  if (type === NT.ENCLOSURE) return <EnclosureIcon sx={sx} />;
+  return <FarmIcon sx={sx} />;
 };
 
-// ─── EnclosureNode (leaf) ────────────────────────────────────────────────────
+// ─── EnclosureNode ────────────────────────────────────────────────────────────
 const EnclosureNode = ({ node, size, onEdit, onDelete, searchQuery }) => {
   const { t } = useTranslation();
   const matched = nodeMatchesSearch(node, searchQuery);
   return (
-    <div
-      className={`tree-node node-enclosure tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${matched && searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase()) ? 'node-highlighted' : ''}`}
-    >
-      <div className={`tree-node-icon-${size}`}>
-        <NodeIcon type={NT.ENCLOSURE} size={size} />
-      </div>
+    <div className={`tree-node node-enclosure tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${isHighlighted(node, searchQuery) ? 'node-highlighted' : ''}`}>
+      <div className={`tree-node-icon-${size}`}><NodeIcon type={NT.ENCLOSURE} size={size} /></div>
       <div style={{ flex: 1, minWidth: 0, margin: '0 6px' }}>
         <p style={{ fontWeight: 700, color: '#1e293b', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{node.name}</p>
-        {size === 'lg' && (
-          <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: 0 }}>
-            {t('farm.enclosure', 'حوشة')}
-          </p>
-        )}
+        {size === 'lg' && <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: 0 }}>{t('farm.enclosure', 'حوشة')}</p>}
       </div>
       <div className="tree-node-actions">
         <Tooltip title={t('common.edit', 'تعديل')}><IconButton size="small" onClick={() => onEdit(node)} sx={{ color: '#64748b', p: '3px' }}><EditIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
@@ -94,20 +76,19 @@ const EnclosureNode = ({ node, size, onEdit, onDelete, searchQuery }) => {
   );
 };
 
-// ─── StageNode ───────────────────────────────────────────────────────────────
+// ─── StageNode ────────────────────────────────────────────────────────────────
 const StageNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery }) => {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const size = getSizeClass(siblingCount);
   const enclosures = (node.children || []).filter(c => c.type === NT.ENCLOSURE);
-  const gridClass = getEnclosureGrid(enclosures.length);
   const encSize = getSizeClass(enclosures.length);
   const matched = nodeMatchesSearch(node, searchQuery);
 
   return (
     <div className="stage-item">
       <div
-        className={`tree-node node-stage tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${matched && searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase()) ? 'node-highlighted' : ''}`}
+        className={`tree-node node-stage tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${isHighlighted(node, searchQuery) ? 'node-highlighted' : ''}`}
         style={{ marginBottom: enclosures.length > 0 && !collapsed ? 6 : 0 }}
       >
         {enclosures.length > 0 && (
@@ -115,16 +96,10 @@ const StageNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery })
             {collapsed ? <CollapseIcon sx={{ fontSize: 12 }} /> : <ExpandIcon sx={{ fontSize: 12 }} />}
           </button>
         )}
-        <div className={`tree-node-icon-${size}`} style={{ margin: '0 6px' }}>
-          <NodeIcon type={NT.STAGE} size={size} />
-        </div>
+        <div className={`tree-node-icon-${size}`} style={{ margin: '0 6px' }}><NodeIcon type={NT.STAGE} size={size} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 700, color: '#1e293b', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{node.name}</p>
-          {size !== 'xs' && (
-            <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: 0 }}>
-              {t('farm.stage', 'مرحلة')}
-            </p>
-          )}
+          {size !== 'xs' && <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: 0 }}>{t('farm.stage', 'مرحلة')}</p>}
         </div>
         {enclosures.length > 0 && <span className="tree-count-badge">{enclosures.length}</span>}
         <div className="tree-node-actions" style={{ marginRight: 0, marginLeft: 4 }}>
@@ -133,9 +108,8 @@ const StageNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery })
           <Tooltip title={t('common.delete', 'حذف')}><IconButton size="small" onClick={() => onDelete(node)} sx={{ color: '#ef4444', p: '3px' }}><DeleteIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
         </div>
       </div>
-
       {!collapsed && enclosures.length > 0 && (
-        <div className={gridClass} style={{ marginTop: 4, paddingRight: 8, borderRight: '2px dashed #e2e8f0' }}>
+        <div className={getEnclosureGrid(enclosures.length)} style={{ marginTop: 4, paddingRight: 8, borderRight: '2px dashed #e2e8f0' }}>
           {enclosures.map(enc => (
             <EnclosureNode key={enc.id} node={enc} size={encSize} onEdit={onEdit} onDelete={onDelete} searchQuery={searchQuery} />
           ))}
@@ -145,7 +119,7 @@ const StageNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery })
   );
 };
 
-// ─── SectorNode ──────────────────────────────────────────────────────────────
+// ─── SectorNode ───────────────────────────────────────────────────────────────
 const SectorNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery }) => {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
@@ -158,63 +132,39 @@ const SectorNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery }
 
   return (
     <li style={{ listStyle: 'none', marginBottom: 12 }}>
-      {/* Sector Header */}
-      <div
-        className={`tree-node node-sector tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${matched && searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase()) ? 'node-highlighted' : ''}`}
-      >
+      <div className={`tree-node node-sector tree-node-${size} ${!matched ? 'node-dimmed' : ''} ${isHighlighted(node, searchQuery) ? 'node-highlighted' : ''}`}>
         {hasChildren && (
           <button className="tree-collapse-btn" onClick={() => setCollapsed(!collapsed)}>
             {collapsed ? <CollapseIcon sx={{ fontSize: 12 }} /> : <ExpandIcon sx={{ fontSize: 12 }} />}
           </button>
         )}
-        <div className={`tree-node-icon-${size}`} style={{ margin: '0 8px' }}>
-          <NodeIcon type={NT.SECTOR} size={size} />
-        </div>
+        <div className={`tree-node-icon-${size}`} style={{ margin: '0 8px' }}><NodeIcon type={NT.SECTOR} size={size} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 800, color: '#1e293b', margin: 0, fontSize: size === 'xs' ? 11 : 14 }}>{node.name}</p>
-          {size !== 'xs' && (
-            <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: 0 }}>
-              {t('farm.sector', 'قطاع')}
-            </p>
-          )}
+          {size !== 'xs' && <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', margin: 0 }}>{t('farm.sector', 'قطاع')}</p>}
         </div>
         {childCount > 0 && <span className="tree-count-badge">{childCount}</span>}
         <div className="tree-node-actions" style={{ marginRight: 0, marginLeft: 4 }}>
-          <Tooltip title={t('farm.add_stage', 'إضافة مرحلة')}><IconButton size="small" onClick={() => onAdd(node, NT.STAGE)} sx={{ color: '#16a34a', p: '3px' }}><AddIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+          {/* Sector can add Stage OR Enclosure directly */}
+          <Tooltip title={t('farm.add_stage', 'إضافة مرحلة')}><IconButton size="small" onClick={() => onAdd(node, NT.STAGE)} sx={{ color: '#3b82f6', p: '3px' }}><AddIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+          <Tooltip title={t('farm.add_enclosure', 'إضافة حوشة مباشرة')}><IconButton size="small" onClick={() => onAdd(node, NT.ENCLOSURE)} sx={{ color: '#f97316', p: '3px' }}><AddIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
           <Tooltip title={t('common.edit', 'تعديل')}><IconButton size="small" onClick={() => onEdit(node)} sx={{ color: '#64748b', p: '3px' }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
           <Tooltip title={t('common.delete', 'حذف')}><IconButton size="small" onClick={() => onDelete(node)} sx={{ color: '#ef4444', p: '3px' }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton></Tooltip>
         </div>
       </div>
 
-      {/* Children */}
       {!collapsed && hasChildren && (
         <div style={{ paddingRight: 24, marginTop: 6, borderRight: '2px solid #dcfce7' }}>
           {stages.length > 0 ? (
             <div className="stages-flex">
               {stages.map(stage => (
-                <StageNode
-                  key={stage.id}
-                  node={stage}
-                  siblingCount={stages.length}
-                  onAdd={onAdd}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  searchQuery={searchQuery}
-                />
+                <StageNode key={stage.id} node={stage} siblingCount={stages.length} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} searchQuery={searchQuery} />
               ))}
             </div>
           ) : (
-            /* Enclosures مباشرة تحت القطاع (بدون مراحل) */
             <div className={getEnclosureGrid(directEnclosures.length)} style={{ marginTop: 6 }}>
               {directEnclosures.map(enc => (
-                <EnclosureNode
-                  key={enc.id}
-                  node={enc}
-                  size={getSizeClass(directEnclosures.length)}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  searchQuery={searchQuery}
-                />
+                <EnclosureNode key={enc.id} node={enc} size={getSizeClass(directEnclosures.length)} onEdit={onEdit} onDelete={onDelete} searchQuery={searchQuery} />
               ))}
             </div>
           )}
@@ -224,24 +174,31 @@ const SectorNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery }
   );
 };
 
+// ─── Root-level Stage (Stage directly under Farm, no Sector parent) ───────────
+const RootStageNode = ({ node, siblingCount, onAdd, onEdit, onDelete, searchQuery }) => (
+  <li style={{ listStyle: 'none', marginBottom: 12 }}>
+    <StageNode node={node} siblingCount={siblingCount} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} searchQuery={searchQuery} />
+  </li>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const FarmStructure = () => {
   const { t } = useTranslation();
-  const [tree, setTree] = useState([]);
+  const [tree, setTree]         = useState([]);
   const [farmInfo, setFarmInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(NT.SECTOR);
-  const [editMode, setEditMode] = useState(false);
+  const [modalOpen, setModalOpen]   = useState(false);
+  const [modalType, setModalType]   = useState(NT.SECTOR);
+  const [editMode, setEditMode]     = useState(false);
   const [currentNode, setCurrentNode] = useState(null);
-  const [form, setForm] = useState({ name: '', sectorId: '', stageId: '' });
+  const [form, setForm]             = useState({ name: '', parentId: '' });
   const [formLoading, setFormLoading] = useState(false);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -257,21 +214,29 @@ const FarmStructure = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const sectors = useMemo(() => tree.filter(n => n.type === NT.SECTOR), [tree]);
-  const stagesOfSelectedSector = useMemo(() => {
-    if (!form.sectorId) return [];
-    return (tree.find(n => n.id === Number(form.sectorId))?.children || []).filter(c => c.type === NT.STAGE);
-  }, [tree, form.sectorId]);
+  // ── Derived ──────────────────────────────────────────────────────────────
+  const sectors     = useMemo(() => tree.filter(n => n.type === NT.SECTOR), [tree]);
+  const rootStages  = useMemo(() => tree.filter(n => n.type === NT.STAGE), [tree]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  /** All valid parent nodes for a given child type */
+  const getValidParents = useCallback((type) => {
+    const result = [];
+    const walk = (nodes) => {
+      for (const n of nodes) {
+        if (ALLOWED_CHILDREN[n.type]?.includes(type)) result.push(n);
+        walk(n.children || []);
+      }
+    };
+    walk(tree);
+    return result;
+  }, [tree]);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleOpenAdd = (parent, type) => {
     setEditMode(false);
     setCurrentNode(null);
     setModalType(type);
-    const sectorId = type === NT.STAGE ? String(parent?.id || '') : (type === NT.ENCLOSURE && parent?.type === NT.SECTOR ? String(parent.id) : '');
-    const stageId  = type === NT.ENCLOSURE && parent?.type === NT.STAGE ? String(parent.id) : '';
-    setForm({ name: '', sectorId, stageId });
+    setForm({ name: '', parentId: parent ? String(parent.id) : '' });
     setModalOpen(true);
   };
 
@@ -279,7 +244,7 @@ const FarmStructure = () => {
     setEditMode(true);
     setCurrentNode(node);
     setModalType(node.type);
-    setForm({ name: node.name, sectorId: '', stageId: '' });
+    setForm({ name: node.name, parentId: '' });
     setModalOpen(true);
   };
 
@@ -289,13 +254,14 @@ const FarmStructure = () => {
       if (editMode) {
         await updateLocationNode(currentNode.id, { name: form.name });
       } else {
-        const parent = modalType === NT.SECTOR ? null : (form.stageId || form.sectorId || null);
-        await createLocationNode({ name: form.name, type: modalType, parent: parent ? Number(parent) : null });
+        const parentId = form.parentId ? Number(form.parentId) : null;
+        await createLocationNode({ name: form.name, type: modalType, parent: parentId });
       }
       setModalOpen(false);
       fetchData();
     } catch (err) {
-      const msg = err.response?.data?.parent || err.response?.data?.name || err.response?.data?.detail || t('common.error_save', 'فشل الحفظ');
+      const data = err.response?.data || {};
+      const msg  = data.parent || data.name || data.detail || t('common.error_save', 'فشل الحفظ');
       alert(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setFormLoading(false);
@@ -308,7 +274,14 @@ const FarmStructure = () => {
     catch { alert(t('common.error_delete', 'فشل الحذف')); }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Modal helpers ─────────────────────────────────────────────────────────
+  const validParents = useMemo(() => getValidParents(modalType), [getValidParents, modalType]);
+
+  // ENCLOSURE requires a parent; STAGE & SECTOR do not
+  const isSaveDisabled = formLoading || !form.name ||
+    (!editMode && modalType === NT.ENCLOSURE && !form.parentId);
+
+  // ── Render ────────────────────────────────────────────────────────────────
   if (loading && !tree.length) return (
     <Box sx={{ p: 8, display: 'flex', justifyContent: 'center' }}>
       <CircularProgress sx={{ color: '#16a34a' }} />
@@ -317,6 +290,7 @@ const FarmStructure = () => {
 
   return (
     <div className="p-6 w-full max-w-6xl mx-auto" dir="rtl">
+
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
@@ -335,22 +309,33 @@ const FarmStructure = () => {
             {t('farm.hierarchy_desc', 'قم بتنظيم القطاعات، المراحل، والحوشات بشكل ديناميكي')}
           </p>
         </div>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenAdd(null, NT.SECTOR)}
-          sx={{ borderRadius: 3, px: 3, py: 1.2, fontWeight: 800, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 12px rgba(22,163,74,0.25)', whiteSpace: 'nowrap' }}
-        >
-          {t('farm.add_sector_btn', 'إضافة قطاع')}
-        </Button>
+
+        {/* Action buttons at farm root level */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenAdd(null, NT.SECTOR)}
+            sx={{ borderRadius: 3, px: 2.5, py: 1.2, fontWeight: 800, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, boxShadow: '0 4px 12px rgba(22,163,74,0.25)', whiteSpace: 'nowrap', fontSize: '0.82rem' }}
+          >
+            {t('farm.add_sector_btn', 'إضافة قطاع')}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenAdd(null, NT.STAGE)}
+            sx={{ borderRadius: 3, px: 2.5, py: 1.2, fontWeight: 800, borderColor: '#3b82f6', color: '#3b82f6', '&:hover': { borderColor: '#1d4ed8', bgcolor: '#eff6ff' }, whiteSpace: 'nowrap', fontSize: '0.82rem' }}
+          >
+            {t('farm.add_stage_btn', 'إضافة مرحلة')}
+          </Button>
+        </div>
       </div>
 
       {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>{error}</Alert>}
 
       {/* ── Search ── */}
       <TextField
-        fullWidth
-        size="small"
+        fullWidth size="small"
         placeholder={t('farm.search_placeholder', 'ابحث باسم قطاع أو مرحلة أو حوشة...')}
         value={searchQuery}
         onChange={e => setSearchQuery(e.target.value)}
@@ -367,10 +352,11 @@ const FarmStructure = () => {
           {tree.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-slate-400">
               <FarmIcon sx={{ fontSize: 56, mb: 2, opacity: 0.2 }} />
-              <p className="font-bold text-sm">{t('farm.no_structure', 'لا يوجد هيكل معرف. ابدأ بإضافة أول قطاع.')}</p>
+              <p className="font-bold text-sm">{t('farm.no_structure', 'لا يوجد هيكل معرف. ابدأ بإضافة أول قطاع أو مرحلة.')}</p>
             </div>
           ) : (
             <ul style={{ padding: 0, margin: 0 }}>
+              {/* Sectors at root */}
               {sectors.map(sector => (
                 <SectorNode
                   key={sector.id}
@@ -382,6 +368,33 @@ const FarmStructure = () => {
                   searchQuery={searchQuery}
                 />
               ))}
+              {/* Stages directly under farm (no sector parent) */}
+              {rootStages.length > 0 && (
+                <>
+                  {sectors.length > 0 && (
+                    <li style={{ listStyle: 'none', borderTop: '1px dashed #e2e8f0', margin: '12px 0 8px', paddingTop: 4 }}>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        مراحل مباشرة
+                      </Typography>
+                    </li>
+                  )}
+                  <li style={{ listStyle: 'none' }}>
+                    <div className="stages-flex">
+                      {rootStages.map(stage => (
+                        <StageNode
+                          key={stage.id}
+                          node={stage}
+                          siblingCount={rootStages.length}
+                          onAdd={handleOpenAdd}
+                          onEdit={handleOpenEdit}
+                          onDelete={handleDelete}
+                          searchQuery={searchQuery}
+                        />
+                      ))}
+                    </div>
+                  </li>
+                </>
+              )}
             </ul>
           )}
         </div>
@@ -390,30 +403,42 @@ const FarmStructure = () => {
       {/* ── Modal ── */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
         <DialogTitle sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#1e293b' }}>
-          {editMode ? t('farm.edit_node', 'تعديل العنصر') : (
-            modalType === NT.SECTOR ? t('farm.add_sector_title', 'إضافة قطاع جديد') :
-            modalType === NT.STAGE  ? t('farm.add_stage_title', 'إضافة مرحلة جديدة') :
-            t('farm.add_enclosure_title', 'إضافة حوشة جديدة')
-          )}
+          {editMode
+            ? t('farm.edit_node', 'تعديل العنصر')
+            : modalType === NT.SECTOR    ? t('farm.add_sector_title',    'إضافة قطاع جديد')
+            : modalType === NT.STAGE     ? t('farm.add_stage_title',     'إضافة مرحلة جديدة')
+            : t('farm.add_enclosure_title', 'إضافة حوشة جديدة')}
         </DialogTitle>
 
         <DialogContent sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Sector select (for STAGE and ENCLOSURE) */}
-          {!editMode && modalType !== NT.SECTOR && (
-            <TextField select fullWidth label={t('farm.select_sector', 'اختر القطاع')} value={form.sectorId}
-              onChange={e => setForm({ ...form, sectorId: e.target.value, stageId: '' })}
-              InputProps={{ sx: { borderRadius: 2 } }}>
-              {sectors.map(s => <MenuItem key={s.id} value={String(s.id)} sx={{ fontWeight: 600 }}>{s.name}</MenuItem>)}
-            </TextField>
-          )}
 
-          {/* Stage select (for ENCLOSURE only) */}
-          {!editMode && modalType === NT.ENCLOSURE && form.sectorId && stagesOfSelectedSector.length > 0 && (
-            <TextField select fullWidth label={t('farm.select_stage_optional', 'اختر المرحلة (اختياري)')} value={form.stageId}
-              onChange={e => setForm({ ...form, stageId: e.target.value })}
-              InputProps={{ sx: { borderRadius: 2 } }}>
-              <MenuItem value=""><em>{t('common.none', 'بدون مرحلة')}</em></MenuItem>
-              {stagesOfSelectedSector.map(st => <MenuItem key={st.id} value={String(st.id)} sx={{ fontWeight: 600 }}>{st.name}</MenuItem>)}
+          {/* Parent selector — shown for STAGE (optional) and ENCLOSURE (required) */}
+          {!editMode && modalType !== NT.SECTOR && (
+            <TextField
+              select fullWidth
+              label={
+                modalType === NT.STAGE
+                  ? t('farm.parent_sector_optional', 'القطاع الأب (اختياري)')
+                  : t('farm.parent_node_required', 'العنصر الأب')
+              }
+              value={form.parentId}
+              onChange={e => setForm({ ...form, parentId: e.target.value })}
+              InputProps={{ sx: { borderRadius: 2 } }}
+            >
+              {/* STAGE: allow no parent (root-level stage) */}
+              {modalType === NT.STAGE && (
+                <MenuItem value="">
+                  <em style={{ color: '#94a3b8' }}>{t('farm.no_parent', 'بدون قطاع — مرحلة مستقلة')}</em>
+                </MenuItem>
+              )}
+              {validParents.map(p => (
+                <MenuItem key={p.id} value={String(p.id)} sx={{ fontWeight: 600 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: p.type === NT.SECTOR ? '#16a34a' : '#3b82f6', marginLeft: 6 }}>
+                    [{p.type === NT.SECTOR ? 'قطاع' : 'مرحلة'}]
+                  </span>
+                  {' '}{p.name}
+                </MenuItem>
+              ))}
             </TextField>
           )}
 
@@ -421,13 +446,13 @@ const FarmStructure = () => {
           <TextField
             fullWidth autoFocus
             label={
-              modalType === NT.SECTOR ? t('farm.sector_name', 'اسم القطاع') :
-              modalType === NT.STAGE  ? t('farm.stage_name', 'اسم المرحلة') :
-              t('farm.enclosure_name', 'اسم الحوشة')
+              modalType === NT.SECTOR    ? t('farm.sector_name',    'اسم القطاع')
+              : modalType === NT.STAGE   ? t('farm.stage_name',     'اسم المرحلة')
+              : t('farm.enclosure_name', 'اسم الحوشة')
             }
             value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
-            onKeyDown={e => e.key === 'Enter' && form.name && handleSave()}
+            onKeyDown={e => e.key === 'Enter' && !isSaveDisabled && handleSave()}
             InputProps={{ sx: { borderRadius: 2 } }}
           />
         </DialogContent>
@@ -439,7 +464,7 @@ const FarmStructure = () => {
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={formLoading || !form.name || (!editMode && modalType !== NT.SECTOR && !form.sectorId)}
+            disabled={isSaveDisabled}
             sx={{ borderRadius: 2, px: 3, fontWeight: 800, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
           >
             {formLoading ? <CircularProgress size={18} color="inherit" /> : t('common.save', 'حفظ')}
