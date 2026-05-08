@@ -1,57 +1,59 @@
-# 🌿 ATLS — خطة التطوير الشاملة النهائية (SaaS-Ready Master Plan v2)
+﻿<!-- SECURITY NOTICE: This file has been sanitized. Real credentials have been removed. See .env files for configuration. -->
+
+# ðŸŒ¿ ATLS â€” Ø®Ø·Ø© Ø§Ù„ØªØ·ÙˆÙŠØ± Ø§Ù„Ø´Ø§Ù…Ù„Ø© Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ© (SaaS-Ready Master Plan v2)
 
 > **Stack:** Django 6 + DRF | React 19 + Vite | MUI v9 + Tailwind v4 | i18next (AR/EN)
-> **نوع المنتج:** Multi-Tenant Farm Management SaaS — قابل للبيع لأي مزرعة
-> **Core Entity Chain:** `Company → Farm → LocationNode → Report → LaborEntry / Attachment`
+> **Ù†ÙˆØ¹ Ø§Ù„Ù…Ù†ØªØ¬:** Multi-Tenant Farm Management SaaS â€” Ù‚Ø§Ø¨Ù„ Ù„Ù„Ø¨ÙŠØ¹ Ù„Ø£ÙŠ Ù…Ø²Ø±Ø¹Ø©
+> **Core Entity Chain:** `Company â†’ Farm â†’ LocationNode â†’ Report â†’ LaborEntry / Attachment`
 
 ---
 
-## 🎯 الهدف النهائي
+## ðŸŽ¯ Ø§Ù„Ù‡Ø¯Ù Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ
 
-نظام يمكن تخصيصه لأي مزرعة (نخيل، زيتون، فواكه، خضروات) بدون تعديل كود — فقط من Admin Dashboard.
+Ù†Ø¸Ø§Ù… ÙŠÙ…ÙƒÙ† ØªØ®ØµÙŠØµÙ‡ Ù„Ø£ÙŠ Ù…Ø²Ø±Ø¹Ø© (Ù†Ø®ÙŠÙ„ØŒ Ø²ÙŠØªÙˆÙ†ØŒ ÙÙˆØ§ÙƒÙ‡ØŒ Ø®Ø¶Ø±ÙˆØ§Øª) Ø¨Ø¯ÙˆÙ† ØªØ¹Ø¯ÙŠÙ„ ÙƒÙˆØ¯ â€” ÙÙ‚Ø· Ù…Ù† Admin Dashboard.
 
 ---
 
-# ☁️ CLOUDINARY — إعداد المطلوب منك
+# â˜ï¸ CLOUDINARY â€” Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ Ù…Ù†Ùƒ
 
-## ما تفعله أنت (مرة واحدة فقط):
+## Ù…Ø§ ØªÙØ¹Ù„Ù‡ Ø£Ù†Øª (Ù…Ø±Ø© ÙˆØ§Ø­Ø¯Ø© ÙÙ‚Ø·):
 
-### الخطوة 1 — إنشاء حساب
-- اذهب إلى: https://cloudinary.com
-- سجّل حساب مجاني (Free plan يكفي للتطوير)
+### Ø§Ù„Ø®Ø·ÙˆØ© 1 â€” Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø³Ø§Ø¨
+- Ø§Ø°Ù‡Ø¨ Ø¥Ù„Ù‰: https://cloudinary.com
+- Ø³Ø¬Ù‘Ù„ Ø­Ø³Ø§Ø¨ Ù…Ø¬Ø§Ù†ÙŠ (Free plan ÙŠÙƒÙÙŠ Ù„Ù„ØªØ·ÙˆÙŠØ±)
 
-### الخطوة 2 — من الـ Dashboard احضر:
+### Ø§Ù„Ø®Ø·ÙˆØ© 2 â€” Ù…Ù† Ø§Ù„Ù€ Dashboard Ø§Ø­Ø¶Ø±:
 ```
-Cloud Name:    dcpg2t2nb
-API Key:       991725825931581
-API Secret:    WXebNJ7q3yjHBRuUc3JcZOZiK0A
+Cloud Name:    [REDACTED_CLOUD_NAME]
+API Key:       [REDACTED_API_KEY]
+API Secret:    [REDACTED_API_SECRET]
 ```
 
-### الخطوة 3 — أضفها في `.env` (Backend):
+### Ø§Ù„Ø®Ø·ÙˆØ© 3 â€” Ø£Ø¶ÙÙ‡Ø§ ÙÙŠ `.env` (Backend):
 ```env
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### الخطوة 4 — إنشاء Folders في Cloudinary Dashboard:
+### Ø§Ù„Ø®Ø·ÙˆØ© 4 â€” Ø¥Ù†Ø´Ø§Ø¡ Folders ÙÙŠ Cloudinary Dashboard:
 ```
 atls/
-├── employees/avatars/      ← صور الموظفين
-├── employees/attachments/  ← ملفات الموظفين (PDF + صور)
-└── reports/attachments/    ← مرفقات التقارير
+â”œâ”€â”€ employees/avatars/      â† ØµÙˆØ± Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†
+â”œâ”€â”€ employees/attachments/  â† Ù…Ù„ÙØ§Øª Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ† (PDF + ØµÙˆØ±)
+â””â”€â”€ reports/attachments/    â† Ù…Ø±ÙÙ‚Ø§Øª Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±
 ```
 
-### الخطوة 5 — إعداد Upload Preset (مهم للـ Frontend direct upload):
-- من Dashboard → Settings → Upload → Add Upload Preset
-- اسمه: `atls_unsigned`
-- Mode: **Unsigned** (للرفع المباشر من Frontend)
+### Ø§Ù„Ø®Ø·ÙˆØ© 5 â€” Ø¥Ø¹Ø¯Ø§Ø¯ Upload Preset (Ù…Ù‡Ù… Ù„Ù„Ù€ Frontend direct upload):
+- Ù…Ù† Dashboard â†’ Settings â†’ Upload â†’ Add Upload Preset
+- Ø§Ø³Ù…Ù‡: `atls_unsigned`
+- Mode: **Unsigned** (Ù„Ù„Ø±ÙØ¹ Ø§Ù„Ù…Ø¨Ø§Ø´Ø± Ù…Ù† Frontend)
 - Folder: `atls/`
 - Allowed Formats: `jpg,jpeg,png,webp,pdf`
 
-### الكود اللي هيتضاف في المشروع (ستراه في الملفات):
+### Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„Ù„ÙŠ Ù‡ÙŠØªØ¶Ø§Ù ÙÙŠ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹ (Ø³ØªØ±Ø§Ù‡ ÙÙŠ Ø§Ù„Ù…Ù„ÙØ§Øª):
 ```python
-# Backend/config/settings.py — يُضاف تلقائياً:
+# Backend/config/settings.py â€” ÙŠÙØ¶Ø§Ù ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹:
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': env('CLOUDINARY_API_KEY'),
@@ -61,86 +63,86 @@ CLOUDINARY_STORAGE = {
 
 ---
 
-# 📋 فهرس الـ Modules الكاملة
+# ðŸ“‹ ÙÙ‡Ø±Ø³ Ø§Ù„Ù€ Modules Ø§Ù„ÙƒØ§Ù…Ù„Ø©
 
-| # | Module | الحالة الحالية | الأولوية |
+| # | Module | Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© | Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ© |
 |---|--------|---------------|-----------|
-| 1 | FarmStructure UI | ⚠️ موجود — يحتاج تحسين | 🔴 أولاً |
-| 2 | Daily Report — LaborEntry Panel | ⚠️ موجود — يحتاج ميزة | 🔴 ثانياً |
-| 3 | HR Module (Backend + Frontend) | ❌ Backend فاضي | 🔴 ثالثاً |
-| 4 | Admin Dashboard (شامل) | ⚠️ بسيط جداً | 🔴 رابعاً |
-| 5 | Warehouse — إدارة المخازن | ⚠️ موجود — يحتاج تحسين | 🟡 خامساً |
-| 6 | Accounting — المحاسبة | ⚠️ موجود — يحتاج تحسين | 🟡 سادساً |
-| 7 | Fleet — الأسطول والمعدات | ⚠️ موجود — يحتاج تحسين | 🟡 سابعاً |
-| 8 | Palm Records — حقول النخيل | ⚠️ موجود — يحتاج توحيد | 🟢 ثامناً |
-| 9 | Olive Records — حقول الزيتون | ⚠️ موجود — يحتاج توحيد | 🟢 تاسعاً |
-| 10 | Production — المحصول | ⚠️ موجود — يحتاج ربط | 🟢 عاشراً |
+| 1 | FarmStructure UI | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ† | ðŸ”´ Ø£ÙˆÙ„Ø§Ù‹ |
+| 2 | Daily Report â€” LaborEntry Panel | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ Ù…ÙŠØ²Ø© | ðŸ”´ Ø«Ø§Ù†ÙŠØ§Ù‹ |
+| 3 | HR Module (Backend + Frontend) | âŒ Backend ÙØ§Ø¶ÙŠ | ðŸ”´ Ø«Ø§Ù„Ø«Ø§Ù‹ |
+| 4 | Admin Dashboard (Ø´Ø§Ù…Ù„) | âš ï¸ Ø¨Ø³ÙŠØ· Ø¬Ø¯Ø§Ù‹ | ðŸ”´ Ø±Ø§Ø¨Ø¹Ø§Ù‹ |
+| 5 | Warehouse â€” Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø®Ø§Ø²Ù† | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ† | ðŸŸ¡ Ø®Ø§Ù…Ø³Ø§Ù‹ |
+| 6 | Accounting â€” Ø§Ù„Ù…Ø­Ø§Ø³Ø¨Ø© | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ† | ðŸŸ¡ Ø³Ø§Ø¯Ø³Ø§Ù‹ |
+| 7 | Fleet â€” Ø§Ù„Ø£Ø³Ø·ÙˆÙ„ ÙˆØ§Ù„Ù…Ø¹Ø¯Ø§Øª | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ† | ðŸŸ¡ Ø³Ø§Ø¨Ø¹Ø§Ù‹ |
+| 8 | Palm Records â€” Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù†Ø®ÙŠÙ„ | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªÙˆØ­ÙŠØ¯ | ðŸŸ¢ Ø«Ø§Ù…Ù†Ø§Ù‹ |
+| 9 | Olive Records â€” Ø­Ù‚ÙˆÙ„ Ø§Ù„Ø²ÙŠØªÙˆÙ† | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ ØªÙˆØ­ÙŠØ¯ | ðŸŸ¢ ØªØ§Ø³Ø¹Ø§Ù‹ |
+| 10 | Production â€” Ø§Ù„Ù…Ø­ØµÙˆÙ„ | âš ï¸ Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ Ø±Ø¨Ø· | ðŸŸ¢ Ø¹Ø§Ø´Ø±Ø§Ù‹ |
 
 ---
 
-## 🧱 مبادئ ثابتة لا تُخرق أبداً
+## ðŸ§± Ù…Ø¨Ø§Ø¯Ø¦ Ø«Ø§Ø¨ØªØ© Ù„Ø§ ØªÙØ®Ø±Ù‚ Ø£Ø¨Ø¯Ø§Ù‹
 
 ```
-1. كل موديل له company = FK(Company)           [TenantAwareModel]
-2. LocationNode هو المصدر الوحيد للمواقع
-3. كل شيء قابل للتخصيص من Admin Dashboard
-4. لا hardcoded labels — كل شيء من DB
-5. كل feature محكومة بـ role permissions
-6. الكود نظيف: Logic في services/ — لا في Views
-7. كل queryset يمر على company scoping
+1. ÙƒÙ„ Ù…ÙˆØ¯ÙŠÙ„ Ù„Ù‡ company = FK(Company)           [TenantAwareModel]
+2. LocationNode Ù‡Ùˆ Ø§Ù„Ù…ØµØ¯Ø± Ø§Ù„ÙˆØ­ÙŠØ¯ Ù„Ù„Ù…ÙˆØ§Ù‚Ø¹
+3. ÙƒÙ„ Ø´ÙŠØ¡ Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ®ØµÙŠØµ Ù…Ù† Admin Dashboard
+4. Ù„Ø§ hardcoded labels â€” ÙƒÙ„ Ø´ÙŠØ¡ Ù…Ù† DB
+5. ÙƒÙ„ feature Ù…Ø­ÙƒÙˆÙ…Ø© Ø¨Ù€ role permissions
+6. Ø§Ù„ÙƒÙˆØ¯ Ù†Ø¸ÙŠÙ: Logic ÙÙŠ services/ â€” Ù„Ø§ ÙÙŠ Views
+7. ÙƒÙ„ queryset ÙŠÙ…Ø± Ø¹Ù„Ù‰ company scoping
 ```
 
 ---
 
-## 🗺️ Role Permissions Map (الجدول الكامل)
+## ðŸ—ºï¸ Role Permissions Map (Ø§Ù„Ø¬Ø¯ÙˆÙ„ Ø§Ù„ÙƒØ§Ù…Ù„)
 
 | Feature | SUPER_ADMIN | OWNER | MANAGER | ENGINEER | HR | ACCOUNTANT | WAREHOUSE |
 |---------|------------|-------|---------|----------|----|------------|-----------|
-| Admin Dashboard | ✅ كامل | ✅ كامل | ✅ جزئي | ❌ | ❌ | ❌ | ❌ |
-| Farm Structure | ✅ | ✅ | ✅ | 👁️ قراءة | ❌ | ❌ | ❌ |
-| Daily Reports | ✅ | ✅ | ✅ | ✅ إنشاء | ❌ | 👁️ | ❌ |
-| HR Module | ✅ | ✅ | ✅ جزئي | 👁️ ملفه فقط | ✅ كامل | ❌ | ❌ |
-| Warehouse | ✅ | ✅ | ✅ | ❌ | ❌ | 👁️ | ✅ كامل |
-| Accounting | ✅ | ✅ | 👁️ | ❌ | ❌ | ✅ كامل | ❌ |
-| Fleet/Equipment | ✅ | ✅ | ✅ | 👁️ | ❌ | ❌ | ❌ |
-| Palm/Olive Records | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Production | ✅ | ✅ | ✅ | ✅ | ❌ | 👁️ | ❌ |
-| Custom Fields Admin | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Admin Dashboard | âœ… ÙƒØ§Ù…Ù„ | âœ… ÙƒØ§Ù…Ù„ | âœ… Ø¬Ø²Ø¦ÙŠ | âŒ | âŒ | âŒ | âŒ |
+| Farm Structure | âœ… | âœ… | âœ… | ðŸ‘ï¸ Ù‚Ø±Ø§Ø¡Ø© | âŒ | âŒ | âŒ |
+| Daily Reports | âœ… | âœ… | âœ… | âœ… Ø¥Ù†Ø´Ø§Ø¡ | âŒ | ðŸ‘ï¸ | âŒ |
+| HR Module | âœ… | âœ… | âœ… Ø¬Ø²Ø¦ÙŠ | ðŸ‘ï¸ Ù…Ù„ÙÙ‡ ÙÙ‚Ø· | âœ… ÙƒØ§Ù…Ù„ | âŒ | âŒ |
+| Warehouse | âœ… | âœ… | âœ… | âŒ | âŒ | ðŸ‘ï¸ | âœ… ÙƒØ§Ù…Ù„ |
+| Accounting | âœ… | âœ… | ðŸ‘ï¸ | âŒ | âŒ | âœ… ÙƒØ§Ù…Ù„ | âŒ |
+| Fleet/Equipment | âœ… | âœ… | âœ… | ðŸ‘ï¸ | âŒ | âŒ | âŒ |
+| Palm/Olive Records | âœ… | âœ… | âœ… | âœ… | âŒ | âŒ | âŒ |
+| Production | âœ… | âœ… | âœ… | âœ… | âŒ | ðŸ‘ï¸ | âŒ |
+| Custom Fields Admin | âœ… | âœ… | âœ… | âŒ | âŒ | âŒ | âŒ |
 
 ---
 
-# 🏗️ SIDEBAR STRUCTURE (Navigation)
+# ðŸ—ï¸ SIDEBAR STRUCTURE (Navigation)
 
 ```
 SIDEBAR
-├── 📊 Dashboard                (الكل)
-├── 🌳 هيكل المزرعة             (SUPER_ADMIN, OWNER, MANAGER, ENGINEER[read])
-├── 📋 التقارير                  (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
-│   ├── التقرير اليومي
-│   ├── تقرير الري
-│   └── تقرير التسميد
-├── 👥 الموارد البشرية (HR)      (SUPER_ADMIN, OWNER, MANAGER, HR)
-│   ├── الموظفين
-│   └── الإجازات والحضور
-├── 🏭 المخازن                   (SUPER_ADMIN, OWNER, MANAGER, WAREHOUSE)
-├── 💰 المحاسبة                  (SUPER_ADMIN, OWNER, ACCOUNTANT)
-├── 🚜 الأسطول والمعدات          (SUPER_ADMIN, OWNER, MANAGER)
-├── 🌴 حقول النخيل               (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
-├── 🫒 حقول الزيتون              (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
-├── 📦 المحصول                   (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
-└── ⚙️ لوحة الإدارة              (SUPER_ADMIN, OWNER, MANAGER[جزئي])
+â”œâ”€â”€ ðŸ“Š Dashboard                (Ø§Ù„ÙƒÙ„)
+â”œâ”€â”€ ðŸŒ³ Ù‡ÙŠÙƒÙ„ Ø§Ù„Ù…Ø²Ø±Ø¹Ø©             (SUPER_ADMIN, OWNER, MANAGER, ENGINEER[read])
+â”œâ”€â”€ ðŸ“‹ Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±                  (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
+â”‚   â”œâ”€â”€ Ø§Ù„ØªÙ‚Ø±ÙŠØ± Ø§Ù„ÙŠÙˆÙ…ÙŠ
+â”‚   â”œâ”€â”€ ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø±ÙŠ
+â”‚   â””â”€â”€ ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØªØ³Ù…ÙŠØ¯
+â”œâ”€â”€ ðŸ‘¥ Ø§Ù„Ù…ÙˆØ§Ø±Ø¯ Ø§Ù„Ø¨Ø´Ø±ÙŠØ© (HR)      (SUPER_ADMIN, OWNER, MANAGER, HR)
+â”‚   â”œâ”€â”€ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†
+â”‚   â””â”€â”€ Ø§Ù„Ø¥Ø¬Ø§Ø²Ø§Øª ÙˆØ§Ù„Ø­Ø¶ÙˆØ±
+â”œâ”€â”€ ðŸ­ Ø§Ù„Ù…Ø®Ø§Ø²Ù†                   (SUPER_ADMIN, OWNER, MANAGER, WAREHOUSE)
+â”œâ”€â”€ ðŸ’° Ø§Ù„Ù…Ø­Ø§Ø³Ø¨Ø©                  (SUPER_ADMIN, OWNER, ACCOUNTANT)
+â”œâ”€â”€ ðŸšœ Ø§Ù„Ø£Ø³Ø·ÙˆÙ„ ÙˆØ§Ù„Ù…Ø¹Ø¯Ø§Øª          (SUPER_ADMIN, OWNER, MANAGER)
+â”œâ”€â”€ ðŸŒ´ Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù†Ø®ÙŠÙ„               (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
+â”œâ”€â”€ ðŸ«’ Ø­Ù‚ÙˆÙ„ Ø§Ù„Ø²ÙŠØªÙˆÙ†              (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
+â”œâ”€â”€ ðŸ“¦ Ø§Ù„Ù…Ø­ØµÙˆÙ„                   (SUPER_ADMIN, OWNER, MANAGER, ENGINEER)
+â””â”€â”€ âš™ï¸ Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©              (SUPER_ADMIN, OWNER, MANAGER[Ø¬Ø²Ø¦ÙŠ])
 ```
 
 ---
 
-# 🔴 PHASE 1 — FarmStructure UI (أولاً)
+# ðŸ”´ PHASE 1 â€” FarmStructure UI (Ø£ÙˆÙ„Ø§Ù‹)
 
-## المشكلة الحالية:
-الشجرة ثابتة الحجم — لو في 50 عنصر يتداخلوا ويكون المظهر سيئاً.
+## Ø§Ù„Ù…Ø´ÙƒÙ„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:
+Ø§Ù„Ø´Ø¬Ø±Ø© Ø«Ø§Ø¨ØªØ© Ø§Ù„Ø­Ø¬Ù… â€” Ù„Ùˆ ÙÙŠ 50 Ø¹Ù†ØµØ± ÙŠØªØ¯Ø§Ø®Ù„ÙˆØ§ ÙˆÙŠÙƒÙˆÙ† Ø§Ù„Ù…Ø¸Ù‡Ø± Ø³ÙŠØ¦Ø§Ù‹.
 
-## الحل — Adaptive Tree:
+## Ø§Ù„Ø­Ù„ â€” Adaptive Tree:
 
-### خوارزمية الحجم:
+### Ø®ÙˆØ§Ø±Ø²Ù…ÙŠØ© Ø§Ù„Ø­Ø¬Ù…:
 ```javascript
 const getNodeConfig = (totalSiblings) => {
   if (totalSiblings <= 3)  return { size: 'lg', iconSize: 24, textSize: '14px', padding: '12px 16px' };
@@ -152,99 +154,99 @@ const getNodeConfig = (totalSiblings) => {
 
 ### Layout Rules:
 ```
-- الـ Sectors (level 1): عرض 100% — كل sector في row
-- الـ Stages (level 2): flex-wrap داخل الـ sector — يتوزعوا أفقياً
-- الـ Enclosures (level 3): grid بـ columns تتغير بناءً على العدد
-  - 1-4  enclosures → 2 columns
-  - 5-8  enclosures → 3 columns
-  - 9+   enclosures → 4 columns
-- Collapse/Expand على كل branch بزر سهم
-- Horizontal scroll على الـ container لو الشجرة عريضة
+- Ø§Ù„Ù€ Sectors (level 1): Ø¹Ø±Ø¶ 100% â€” ÙƒÙ„ sector ÙÙŠ row
+- Ø§Ù„Ù€ Stages (level 2): flex-wrap Ø¯Ø§Ø®Ù„ Ø§Ù„Ù€ sector â€” ÙŠØªÙˆØ²Ø¹ÙˆØ§ Ø£ÙÙ‚ÙŠØ§Ù‹
+- Ø§Ù„Ù€ Enclosures (level 3): grid Ø¨Ù€ columns ØªØªØºÙŠØ± Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ø¯Ø¯
+  - 1-4  enclosures â†’ 2 columns
+  - 5-8  enclosures â†’ 3 columns
+  - 9+   enclosures â†’ 4 columns
+- Collapse/Expand Ø¹Ù„Ù‰ ÙƒÙ„ branch Ø¨Ø²Ø± Ø³Ù‡Ù…
+- Horizontal scroll Ø¹Ù„Ù‰ Ø§Ù„Ù€ container Ù„Ùˆ Ø§Ù„Ø´Ø¬Ø±Ø© Ø¹Ø±ÙŠØ¶Ø©
 ```
 
-### الملفات المتأثرة:
+### Ø§Ù„Ù…Ù„ÙØ§Øª Ø§Ù„Ù…ØªØ£Ø«Ø±Ø©:
 ```
 Front-End/src/pages/farm/
-├── FarmStructure.jsx   ← إعادة كتابة الـ TreeItem component
-├── FarmStructure.css   ← إضافة classes للـ sizes
-└── hooks/
-    └── useFarmTree.js  ← logic منفصلة (جديد)
+â”œâ”€â”€ FarmStructure.jsx   â† Ø¥Ø¹Ø§Ø¯Ø© ÙƒØªØ§Ø¨Ø© Ø§Ù„Ù€ TreeItem component
+â”œâ”€â”€ FarmStructure.css   â† Ø¥Ø¶Ø§ÙØ© classes Ù„Ù„Ù€ sizes
+â””â”€â”€ hooks/
+    â””â”€â”€ useFarmTree.js  â† logic Ù…Ù†ÙØµÙ„Ø© (Ø¬Ø¯ÙŠØ¯)
 ```
 
-### الميزات المضافة:
-- ✅ Collapse/Expand per branch
-- ✅ حجم متكيف مع العدد
-- ✅ Horizontal scroll عند الحاجة
-- ✅ Hover → أزرار العمليات
-- ✅ Search/Filter بالاسم
-- ✅ Count badge على كل node (عدد الأبناء)
+### Ø§Ù„Ù…ÙŠØ²Ø§Øª Ø§Ù„Ù…Ø¶Ø§ÙØ©:
+- âœ… Collapse/Expand per branch
+- âœ… Ø­Ø¬Ù… Ù…ØªÙƒÙŠÙ Ù…Ø¹ Ø§Ù„Ø¹Ø¯Ø¯
+- âœ… Horizontal scroll Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©
+- âœ… Hover â†’ Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª
+- âœ… Search/Filter Ø¨Ø§Ù„Ø§Ø³Ù…
+- âœ… Count badge Ø¹Ù„Ù‰ ÙƒÙ„ node (Ø¹Ø¯Ø¯ Ø§Ù„Ø£Ø¨Ù†Ø§Ø¡)
 
 ---
 
-# 🔴 PHASE 2 — Daily Report: LaborEntry Inline Panel (ثانياً)
+# ðŸ”´ PHASE 2 â€” Daily Report: LaborEntry Inline Panel (Ø«Ø§Ù†ÙŠØ§Ù‹)
 
-## المطلوب:
+## Ø§Ù„Ù…Ø·Ù„ÙˆØ¨:
 
-### في `DailyTaskForm.jsx`:
-بجانب `company_workers` و`contractor_workers` → أيقونة `✏️`
-
-```
-عمال الشركة: [عداد: 3] ✏️
-عمال المقاول: [عداد: 2] ✏️
-```
-
-عند الضغط على ✏️ → Drawer من الأسفل:
+### ÙÙŠ `DailyTaskForm.jsx`:
+Ø¨Ø¬Ø§Ù†Ø¨ `company_workers` Ùˆ`contractor_workers` â†’ Ø£ÙŠÙ‚ÙˆÙ†Ø© `âœï¸`
 
 ```
-┌─────────────────────────────────────┐
-│  👷 تفاصيل العمال                    │
-│                                      │
-│  ┌──────────────────────────────┐   │
-│  │ اسم العامل  │ ساعات │ إضافي │   │ ← جدول العمال المضافين
-│  │ أحمد محمد  │   8   │   2   │ 🗑️│
-│  │ محمد علي   │   8   │   0   │ 🗑️│
-│  └──────────────────────────────┘   │
-│                                      │
-│  ─── إضافة عامل جديد ─────────────  │
-│  الاسم: [___________________] 🔍    │  ← search في HR
-│  نوع العامل: ○ شركة  ● مقاول        │
-│  المقاول: [dropdown اختياري]         │
-│  ساعات العمل: [8]                   │
-│  ساعات إضافية: [0]                  │
-│  الأجر/ساعة: [50]                   │
-│  ملاحظات: [________________]        │
-│                                      │
-│  [إلغاء]          [➕ إضافة للقائمة] │
-│                                      │
-│            [💾 حفظ التفاصيل]         │
-└─────────────────────────────────────┘
+Ø¹Ù…Ø§Ù„ Ø§Ù„Ø´Ø±ÙƒØ©: [Ø¹Ø¯Ø§Ø¯: 3] âœï¸
+Ø¹Ù…Ø§Ù„ Ø§Ù„Ù…Ù‚Ø§ÙˆÙ„: [Ø¹Ø¯Ø§Ø¯: 2] âœï¸
 ```
 
-### منطق الـ Search:
+Ø¹Ù†Ø¯ Ø§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ âœï¸ â†’ Drawer Ù…Ù† Ø§Ù„Ø£Ø³ÙÙ„:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  ðŸ‘· ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¹Ù…Ø§Ù„                    â”‚
+â”‚                                      â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚ Ø§Ø³Ù… Ø§Ù„Ø¹Ø§Ù…Ù„  â”‚ Ø³Ø§Ø¹Ø§Øª â”‚ Ø¥Ø¶Ø§ÙÙŠ â”‚   â”‚ â† Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø¹Ù…Ø§Ù„ Ø§Ù„Ù…Ø¶Ø§ÙÙŠÙ†
+â”‚  â”‚ Ø£Ø­Ù…Ø¯ Ù…Ø­Ù…Ø¯  â”‚   8   â”‚   2   â”‚ ðŸ—‘ï¸â”‚
+â”‚  â”‚ Ù…Ø­Ù…Ø¯ Ø¹Ù„ÙŠ   â”‚   8   â”‚   0   â”‚ ðŸ—‘ï¸â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚                                      â”‚
+â”‚  â”€â”€â”€ Ø¥Ø¶Ø§ÙØ© Ø¹Ø§Ù…Ù„ Ø¬Ø¯ÙŠØ¯ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€  â”‚
+â”‚  Ø§Ù„Ø§Ø³Ù…: [___________________] ðŸ”    â”‚  â† search ÙÙŠ HR
+â”‚  Ù†ÙˆØ¹ Ø§Ù„Ø¹Ø§Ù…Ù„: â—‹ Ø´Ø±ÙƒØ©  â— Ù…Ù‚Ø§ÙˆÙ„        â”‚
+â”‚  Ø§Ù„Ù…Ù‚Ø§ÙˆÙ„: [dropdown Ø§Ø®ØªÙŠØ§Ø±ÙŠ]         â”‚
+â”‚  Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø¹Ù…Ù„: [8]                   â”‚
+â”‚  Ø³Ø§Ø¹Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©: [0]                  â”‚
+â”‚  Ø§Ù„Ø£Ø¬Ø±/Ø³Ø§Ø¹Ø©: [50]                   â”‚
+â”‚  Ù…Ù„Ø§Ø­Ø¸Ø§Øª: [________________]        â”‚
+â”‚                                      â”‚
+â”‚  [Ø¥Ù„ØºØ§Ø¡]          [âž• Ø¥Ø¶Ø§ÙØ© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©] â”‚
+â”‚                                      â”‚
+â”‚            [ðŸ’¾ Ø­ÙØ¸ Ø§Ù„ØªÙØ§ØµÙŠÙ„]         â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+### Ù…Ù†Ø·Ù‚ Ø§Ù„Ù€ Search:
 ```javascript
-// عند كتابة الاسم → نبحث في HR employees
-// نعرض اقتراحات إذا في نتائج
-// عند الاختيار → يُملأ الأجر تلقائياً من salary الموظف
-// إذا لم يُوجد → يُحفظ كـ worker_name فقط (بدون ربط)
+// Ø¹Ù†Ø¯ ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø§Ø³Ù… â†’ Ù†Ø¨Ø­Ø« ÙÙŠ HR employees
+// Ù†Ø¹Ø±Ø¶ Ø§Ù‚ØªØ±Ø§Ø­Ø§Øª Ø¥Ø°Ø§ ÙÙŠ Ù†ØªØ§Ø¦Ø¬
+// Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø®ØªÙŠØ§Ø± â†’ ÙŠÙÙ…Ù„Ø£ Ø§Ù„Ø£Ø¬Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ù…Ù† salary Ø§Ù„Ù…ÙˆØ¸Ù
+// Ø¥Ø°Ø§ Ù„Ù… ÙŠÙÙˆØ¬Ø¯ â†’ ÙŠÙØ­ÙØ¸ ÙƒÙ€ worker_name ÙÙ‚Ø· (Ø¨Ø¯ÙˆÙ† Ø±Ø¨Ø·)
 ```
 
-### Backend — `LaborEntry` model (تعديل):
+### Backend â€” `LaborEntry` model (ØªØ¹Ø¯ÙŠÙ„):
 ```python
-# إضافة إلى الموديل الموجود:
+# Ø¥Ø¶Ø§ÙØ© Ø¥Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¯ÙŠÙ„ Ø§Ù„Ù…ÙˆØ¬ÙˆØ¯:
 employee = models.ForeignKey(
     'hr.Employee',
     null=True, blank=True,
     on_delete=models.SET_NULL,
     related_name='labor_entries',
-    help_text="ربط بموظف HR إذا كان مسجلاً"
+    help_text="Ø±Ø¨Ø· Ø¨Ù…ÙˆØ¸Ù HR Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø³Ø¬Ù„Ø§Ù‹"
 )
 ```
 
-### منطق الحفظ في Backend:
+### Ù…Ù†Ø·Ù‚ Ø§Ù„Ø­ÙØ¸ ÙÙŠ Backend:
 ```python
-# في serializer أو service:
+# ÙÙŠ serializer Ø£Ùˆ service:
 def resolve_employee(worker_name, company):
-    """البحث عن موظف بالاسم في نفس الشركة"""
+    """Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ù…ÙˆØ¸Ù Ø¨Ø§Ù„Ø§Ø³Ù… ÙÙŠ Ù†ÙØ³ Ø§Ù„Ø´Ø±ÙƒØ©"""
     try:
         return Employee.objects.get(
             user__name__iexact=worker_name,
@@ -254,22 +256,22 @@ def resolve_employee(worker_name, company):
         return None
 ```
 
-### الملفات المتأثرة:
+### Ø§Ù„Ù…Ù„ÙØ§Øª Ø§Ù„Ù…ØªØ£Ø«Ø±Ø©:
 ```
-Back-End/apps/reports/models.py         ← إضافة employee FK إلى LaborEntry
-Back-End/serializers/reports_serializers.py ← تحديث LaborEntrySerializer
+Back-End/apps/reports/models.py         â† Ø¥Ø¶Ø§ÙØ© employee FK Ø¥Ù„Ù‰ LaborEntry
+Back-End/serializers/reports_serializers.py â† ØªØ­Ø¯ÙŠØ« LaborEntrySerializer
 Front-End/src/pages/reports/DailyTaskReport/
-├── DailyTaskForm.jsx                   ← إضافة زر + منطق الـ Drawer
-└── LaborEntryDrawer.jsx                ← جديد (Drawer component)
+â”œâ”€â”€ DailyTaskForm.jsx                   â† Ø¥Ø¶Ø§ÙØ© Ø²Ø± + Ù…Ù†Ø·Ù‚ Ø§Ù„Ù€ Drawer
+â””â”€â”€ LaborEntryDrawer.jsx                â† Ø¬Ø¯ÙŠØ¯ (Drawer component)
 ```
 
 ---
 
-# 🔴 PHASE 3 — HR Module (ثالثاً)
+# ðŸ”´ PHASE 3 â€” HR Module (Ø«Ø§Ù„Ø«Ø§Ù‹)
 
-## 3.1 — Backend Models (تعديل `apps/hr/models.py`):
+## 3.1 â€” Backend Models (ØªØ¹Ø¯ÙŠÙ„ `apps/hr/models.py`):
 
-### إضافات على Employee:
+### Ø¥Ø¶Ø§ÙØ§Øª Ø¹Ù„Ù‰ Employee:
 ```python
 address                  = models.TextField(blank=True, default='')
 national_id              = models.CharField(max_length=20, blank=True, default='')
@@ -277,29 +279,29 @@ phone                    = models.CharField(max_length=20, blank=True, default='
 emergency_contact_name   = models.CharField(max_length=100, blank=True, default='')
 emergency_contact_phone  = models.CharField(max_length=20, blank=True, default='')
 avatar_url               = models.URLField(max_length=500, blank=True, default='')
-# الراتب موجود → نحتفظ به
-# salary = models.DecimalField(...) موجود
+# Ø§Ù„Ø±Ø§ØªØ¨ Ù…ÙˆØ¬ÙˆØ¯ â†’ Ù†Ø­ØªÙØ¸ Ø¨Ù‡
+# salary = models.DecimalField(...) Ù…ÙˆØ¬ÙˆØ¯
 ```
 
-### موديل جديد `EmployeeAttachment`:
+### Ù…ÙˆØ¯ÙŠÙ„ Ø¬Ø¯ÙŠØ¯ `EmployeeAttachment`:
 ```python
 class EmployeeAttachment(models.Model):
     FILE_TYPE_CHOICES = [
-        ('image', 'صورة'),
+        ('image', 'ØµÙˆØ±Ø©'),
         ('pdf', 'PDF'),
-        ('other', 'أخرى'),
+        ('other', 'Ø£Ø®Ø±Ù‰'),
     ]
     employee    = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attachments')
     name        = models.CharField(max_length=200)
-    file_url    = models.URLField(max_length=1000)      # رابط Cloudinary
+    file_url    = models.URLField(max_length=1000)      # Ø±Ø§Ø¨Ø· Cloudinary
     file_type   = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 ```
 
-## 3.2 — Auto-create Employee عند تسجيل مهندس:
+## 3.2 â€” Auto-create Employee Ø¹Ù†Ø¯ ØªØ³Ø¬ÙŠÙ„ Ù…Ù‡Ù†Ø¯Ø³:
 
-### في `services/user_service.py`:
+### ÙÙŠ `services/user_service.py`:
 ```python
 FIELD_ROLES = ['ENGINEER', 'MANAGER', 'HR', 'ACCOUNTANT', 'WAREHOUSE']
 
@@ -308,7 +310,7 @@ def create_user(validated_data):
     
     if user.role in FIELD_ROLES:
         from apps.hr.models import Employee
-        # تحقق أنه مش موجود (للأمان)
+        # ØªØ­Ù‚Ù‚ Ø£Ù†Ù‡ Ù…Ø´ Ù…ÙˆØ¬ÙˆØ¯ (Ù„Ù„Ø£Ù…Ø§Ù†)
         Employee.objects.get_or_create(
             user=user,
             defaults={
@@ -319,173 +321,173 @@ def create_user(validated_data):
     return user
 ```
 
-## 3.3 — Backend Endpoints:
+## 3.3 â€” Backend Endpoints:
 
 ```
-GET    /hr/employees/                  ← قائمة (فلتر: status, department, search)
-POST   /hr/employees/                  ← إنشاء موظف يدوي (non-user employee)
-GET    /hr/employees/<id>/             ← تفاصيل كاملة
-PATCH  /hr/employees/<id>/             ← تعديل
-DELETE /hr/employees/<id>/             ← soft delete (status=terminated)
+GET    /hr/employees/                  â† Ù‚Ø§Ø¦Ù…Ø© (ÙÙ„ØªØ±: status, department, search)
+POST   /hr/employees/                  â† Ø¥Ù†Ø´Ø§Ø¡ Ù…ÙˆØ¸Ù ÙŠØ¯ÙˆÙŠ (non-user employee)
+GET    /hr/employees/<id>/             â† ØªÙØ§ØµÙŠÙ„ ÙƒØ§Ù…Ù„Ø©
+PATCH  /hr/employees/<id>/             â† ØªØ¹Ø¯ÙŠÙ„
+DELETE /hr/employees/<id>/             â† soft delete (status=terminated)
 
-GET    /hr/employees/<id>/attachments/ ← ملفات الموظف
-POST   /hr/employees/<id>/attachments/ ← رفع ملف (file_url + file_type + name)
-DELETE /hr/attachments/<id>/           ← حذف ملف
+GET    /hr/employees/<id>/attachments/ â† Ù…Ù„ÙØ§Øª Ø§Ù„Ù…ÙˆØ¸Ù
+POST   /hr/employees/<id>/attachments/ â† Ø±ÙØ¹ Ù…Ù„Ù (file_url + file_type + name)
+DELETE /hr/attachments/<id>/           â† Ø­Ø°Ù Ù…Ù„Ù
 
-GET    /hr/employees/search/?q=اسم     ← للـ autocomplete في LaborEntry
+GET    /hr/employees/search/?q=Ø§Ø³Ù…     â† Ù„Ù„Ù€ autocomplete ÙÙŠ LaborEntry
 
-GET    /hr/leaves/                     ← الإجازات (فلتر: status, employee, date)
-POST   /hr/leaves/                     ← طلب إجازة
-PATCH  /hr/leaves/<id>/approve/        ← موافقة
-PATCH  /hr/leaves/<id>/reject/         ← رفض
+GET    /hr/leaves/                     â† Ø§Ù„Ø¥Ø¬Ø§Ø²Ø§Øª (ÙÙ„ØªØ±: status, employee, date)
+POST   /hr/leaves/                     â† Ø·Ù„Ø¨ Ø¥Ø¬Ø§Ø²Ø©
+PATCH  /hr/leaves/<id>/approve/        â† Ù…ÙˆØ§ÙÙ‚Ø©
+PATCH  /hr/leaves/<id>/reject/         â† Ø±ÙØ¶
 
-GET    /hr/attendance/                 ← الحضور (فلتر: date, employee)
-POST   /hr/attendance/                 ← تسجيل حضور
-PATCH  /hr/attendance/<id>/            ← تعديل
+GET    /hr/attendance/                 â† Ø§Ù„Ø­Ø¶ÙˆØ± (ÙÙ„ØªØ±: date, employee)
+POST   /hr/attendance/                 â† ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ±
+PATCH  /hr/attendance/<id>/            â† ØªØ¹Ø¯ÙŠÙ„
 ```
 
-## 3.4 — Frontend Pages:
+## 3.4 â€” Frontend Pages:
 
 ```
 src/pages/hr/
-├── HRDashboard.jsx          ← بطاقات إحصائية (موظفين، إجازات معلقة، حضور اليوم)
-├── EmployeeList.jsx         ← جدول + فلاتر + بحث
-├── EmployeeForm.jsx         ← نموذج إضافة/تعديل (Dialog أو Page)
-├── EmployeeDetail.jsx       ← تفاصيل بـ 4 Tabs:
-│   ├── Tab 1: البيانات الأساسية
-│   ├── Tab 2: الملفات والمرفقات (Cloudinary upload)
-│   ├── Tab 3: سجل الحضور
-│   └── Tab 4: الإجازات
-└── LeaveManagement.jsx      ← إدارة طلبات الإجازات
+â”œâ”€â”€ HRDashboard.jsx          â† Ø¨Ø·Ø§Ù‚Ø§Øª Ø¥Ø­ØµØ§Ø¦ÙŠØ© (Ù…ÙˆØ¸ÙÙŠÙ†ØŒ Ø¥Ø¬Ø§Ø²Ø§Øª Ù…Ø¹Ù„Ù‚Ø©ØŒ Ø­Ø¶ÙˆØ± Ø§Ù„ÙŠÙˆÙ…)
+â”œâ”€â”€ EmployeeList.jsx         â† Ø¬Ø¯ÙˆÙ„ + ÙÙ„Ø§ØªØ± + Ø¨Ø­Ø«
+â”œâ”€â”€ EmployeeForm.jsx         â† Ù†Ù…ÙˆØ°Ø¬ Ø¥Ø¶Ø§ÙØ©/ØªØ¹Ø¯ÙŠÙ„ (Dialog Ø£Ùˆ Page)
+â”œâ”€â”€ EmployeeDetail.jsx       â† ØªÙØ§ØµÙŠÙ„ Ø¨Ù€ 4 Tabs:
+â”‚   â”œâ”€â”€ Tab 1: Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ©
+â”‚   â”œâ”€â”€ Tab 2: Ø§Ù„Ù…Ù„ÙØ§Øª ÙˆØ§Ù„Ù…Ø±ÙÙ‚Ø§Øª (Cloudinary upload)
+â”‚   â”œâ”€â”€ Tab 3: Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ±
+â”‚   â””â”€â”€ Tab 4: Ø§Ù„Ø¥Ø¬Ø§Ø²Ø§Øª
+â””â”€â”€ LeaveManagement.jsx      â† Ø¥Ø¯Ø§Ø±Ø© Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø¥Ø¬Ø§Ø²Ø§Øª
 ```
 
 ---
 
-# 🔴 PHASE 4 — Admin Dashboard (رابعاً)
+# ðŸ”´ PHASE 4 â€” Admin Dashboard (Ø±Ø§Ø¨Ø¹Ø§Ù‹)
 
-## هيكل الصفحة:
+## Ù‡ÙŠÙƒÙ„ Ø§Ù„ØµÙØ­Ø©:
 
 ```
 /admin                                 (SUPER_ADMIN + OWNER + MANAGER)
-├── 👥 المستخدمين          ← موجود، يبقى
-├── 🎨 محتوى الموقع (CMS) ← موجود، يبقى
-├── ⚙️ الحقول المخصصة     ← منقول من Reports (SUPER_ADMIN + OWNER + MANAGER)
-├── 🔧 العمليات الفنية     ← جديد (SUPER_ADMIN + OWNER + MANAGER)
-├── 👷 المقاولون           ← جديد (SUPER_ADMIN + OWNER + MANAGER)
-├── 📋 قوائم التقارير      ← جديد — Varieties + Units (SUPER_ADMIN + OWNER + MANAGER)
-├── 🌿 إعدادات المحاصيل    ← جديد — أنواع المحاصيل لكل مزرعة (SUPER_ADMIN + OWNER)
-└── 🏢 إعدادات الشركة      ← جديد (SUPER_ADMIN + OWNER فقط)
+â”œâ”€â”€ ðŸ‘¥ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†          â† Ù…ÙˆØ¬ÙˆØ¯ØŒ ÙŠØ¨Ù‚Ù‰
+â”œâ”€â”€ ðŸŽ¨ Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ù…ÙˆÙ‚Ø¹ (CMS) â† Ù…ÙˆØ¬ÙˆØ¯ØŒ ÙŠØ¨Ù‚Ù‰
+â”œâ”€â”€ âš™ï¸ Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù…Ø®ØµØµØ©     â† Ù…Ù†Ù‚ÙˆÙ„ Ù…Ù† Reports (SUPER_ADMIN + OWNER + MANAGER)
+â”œâ”€â”€ ðŸ”§ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„ÙÙ†ÙŠØ©     â† Ø¬Ø¯ÙŠØ¯ (SUPER_ADMIN + OWNER + MANAGER)
+â”œâ”€â”€ ðŸ‘· Ø§Ù„Ù…Ù‚Ø§ÙˆÙ„ÙˆÙ†           â† Ø¬Ø¯ÙŠØ¯ (SUPER_ADMIN + OWNER + MANAGER)
+â”œâ”€â”€ ðŸ“‹ Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±      â† Ø¬Ø¯ÙŠØ¯ â€” Varieties + Units (SUPER_ADMIN + OWNER + MANAGER)
+â”œâ”€â”€ ðŸŒ¿ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø­Ø§ØµÙŠÙ„    â† Ø¬Ø¯ÙŠØ¯ â€” Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ù…Ø­Ø§ØµÙŠÙ„ Ù„ÙƒÙ„ Ù…Ø²Ø±Ø¹Ø© (SUPER_ADMIN + OWNER)
+â””â”€â”€ ðŸ¢ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø´Ø±ÙƒØ©      â† Ø¬Ø¯ÙŠØ¯ (SUPER_ADMIN + OWNER ÙÙ‚Ø·)
 ```
 
-## Permission Matrix للـ Admin:
+## Permission Matrix Ù„Ù„Ù€ Admin:
 
 | Section | SUPER_ADMIN | OWNER | MANAGER |
 |---------|------------|-------|---------|
-| المستخدمين | ✅ كامل | ✅ كامل | ✅ جزئي (لا حذف) |
-| CMS | ✅ | ✅ | ❌ |
-| الحقول المخصصة | ✅ | ✅ | ✅ |
-| العمليات الفنية | ✅ | ✅ | ✅ |
-| المقاولون | ✅ | ✅ | ✅ |
-| قوائم التقارير | ✅ | ✅ | ✅ |
-| إعدادات المحاصيل | ✅ | ✅ | ❌ |
-| إعدادات الشركة | ✅ | ✅ | ❌ |
+| Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† | âœ… ÙƒØ§Ù…Ù„ | âœ… ÙƒØ§Ù…Ù„ | âœ… Ø¬Ø²Ø¦ÙŠ (Ù„Ø§ Ø­Ø°Ù) |
+| CMS | âœ… | âœ… | âŒ |
+| Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù…Ø®ØµØµØ© | âœ… | âœ… | âœ… |
+| Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„ÙÙ†ÙŠØ© | âœ… | âœ… | âœ… |
+| Ø§Ù„Ù…Ù‚Ø§ÙˆÙ„ÙˆÙ† | âœ… | âœ… | âœ… |
+| Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ± | âœ… | âœ… | âœ… |
+| Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø­Ø§ØµÙŠÙ„ | âœ… | âœ… | âŒ |
+| Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø´Ø±ÙƒØ© | âœ… | âœ… | âŒ |
 
-## الميزة الأساسية — Dynamic Report Fields:
+## Ø§Ù„Ù…ÙŠØ²Ø© Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ© â€” Dynamic Report Fields:
 ```
-Admin يقدر:
-✅ يضيف حقل مخصص لأي تقرير
-✅ يغير نوع الحقل (text/number/date/dropdown/boolean)
-✅ يضيف خيارات dropdown مباشرة
-✅ يرتب الحقول بـ Drag & Drop
-✅ يخفي/يظهر الحقول الثابتة
-✅ يجعل الحقل إجباري أو اختياري
-✅ يربط الحقل بـ محصول معين (فقط يظهر للنخيل مثلاً)
+Admin ÙŠÙ‚Ø¯Ø±:
+âœ… ÙŠØ¶ÙŠÙ Ø­Ù‚Ù„ Ù…Ø®ØµØµ Ù„Ø£ÙŠ ØªÙ‚Ø±ÙŠØ±
+âœ… ÙŠØºÙŠØ± Ù†ÙˆØ¹ Ø§Ù„Ø­Ù‚Ù„ (text/number/date/dropdown/boolean)
+âœ… ÙŠØ¶ÙŠÙ Ø®ÙŠØ§Ø±Ø§Øª dropdown Ù…Ø¨Ø§Ø´Ø±Ø©
+âœ… ÙŠØ±ØªØ¨ Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø¨Ù€ Drag & Drop
+âœ… ÙŠØ®ÙÙŠ/ÙŠØ¸Ù‡Ø± Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ø«Ø§Ø¨ØªØ©
+âœ… ÙŠØ¬Ø¹Ù„ Ø§Ù„Ø­Ù‚Ù„ Ø¥Ø¬Ø¨Ø§Ø±ÙŠ Ø£Ùˆ Ø§Ø®ØªÙŠØ§Ø±ÙŠ
+âœ… ÙŠØ±Ø¨Ø· Ø§Ù„Ø­Ù‚Ù„ Ø¨Ù€ Ù…Ø­ØµÙˆÙ„ Ù…Ø¹ÙŠÙ† (ÙÙ‚Ø· ÙŠØ¸Ù‡Ø± Ù„Ù„Ù†Ø®ÙŠÙ„ Ù…Ø«Ù„Ø§Ù‹)
 ```
 
 ---
 
-# 🟡 PHASE 5 — Warehouse — إدارة المخازن
+# ðŸŸ¡ PHASE 5 â€” Warehouse â€” Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø®Ø§Ø²Ù†
 
-## الحالة الحالية:
-موجود backend أساسي (Items + Movements) — يحتاج تحسين UI وإضافات.
+## Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:
+Ù…ÙˆØ¬ÙˆØ¯ backend Ø£Ø³Ø§Ø³ÙŠ (Items + Movements) â€” ÙŠØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ† UI ÙˆØ¥Ø¶Ø§ÙØ§Øª.
 
-## الإضافات المطلوبة:
+## Ø§Ù„Ø¥Ø¶Ø§ÙØ§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©:
 
 ### Backend:
 ```python
-# إضافة لـ WarehouseItem:
-category = models.CharField(max_length=100)          # فئة المنتج
-unit = models.CharField(max_length=50)               # الوحدة (كيلو/لتر/قطعة)
-min_stock = models.FloatField(default=0)             # الحد الأدنى للتنبيه
-location = models.CharField(max_length=200, blank=True)  # موقع المخزن
+# Ø¥Ø¶Ø§ÙØ© Ù„Ù€ WarehouseItem:
+category = models.CharField(max_length=100)          # ÙØ¦Ø© Ø§Ù„Ù…Ù†ØªØ¬
+unit = models.CharField(max_length=50)               # Ø§Ù„ÙˆØ­Ø¯Ø© (ÙƒÙŠÙ„Ùˆ/Ù„ØªØ±/Ù‚Ø·Ø¹Ø©)
+min_stock = models.FloatField(default=0)             # Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ù„Ù„ØªÙ†Ø¨ÙŠÙ‡
+location = models.CharField(max_length=200, blank=True)  # Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ù…Ø®Ø²Ù†
 
-# Endpoint جديد:
-GET /warehouse/alerts/    ← عناصر قاربت على النفاد (quantity <= min_stock)
-GET /warehouse/summary/   ← إجماليات (قيمة المخزن، عدد الأصناف، التنبيهات)
+# Endpoint Ø¬Ø¯ÙŠØ¯:
+GET /warehouse/alerts/    â† Ø¹Ù†Ø§ØµØ± Ù‚Ø§Ø±Ø¨Øª Ø¹Ù„Ù‰ Ø§Ù„Ù†ÙØ§Ø¯ (quantity <= min_stock)
+GET /warehouse/summary/   â† Ø¥Ø¬Ù…Ø§Ù„ÙŠØ§Øª (Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø®Ø²Ù†ØŒ Ø¹Ø¯Ø¯ Ø§Ù„Ø£ØµÙ†Ø§ÙØŒ Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª)
 ```
 
 ### Frontend:
 ```
 src/pages/warehouse/
-├── InventoryLedger.jsx    ← موجود — تحسين UI
-├── LowStockAlerts.jsx     ← جديد — تنبيهات نقص المخزون
-└── WarehouseSummary.jsx   ← جديد — بطاقات إحصائية
+â”œâ”€â”€ InventoryLedger.jsx    â† Ù…ÙˆØ¬ÙˆØ¯ â€” ØªØ­Ø³ÙŠÙ† UI
+â”œâ”€â”€ LowStockAlerts.jsx     â† Ø¬Ø¯ÙŠØ¯ â€” ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ù†Ù‚Øµ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†
+â””â”€â”€ WarehouseSummary.jsx   â† Ø¬Ø¯ÙŠØ¯ â€” Ø¨Ø·Ø§Ù‚Ø§Øª Ø¥Ø­ØµØ§Ø¦ÙŠØ©
 ```
 
-### ربط مع النظام:
-- تقرير التسميد → يخصم من مخزون المواد
-- Alert تلقائي لـ Manager/OWNER عند نقص المخزون
+### Ø±Ø¨Ø· Ù…Ø¹ Ø§Ù„Ù†Ø¸Ø§Ù…:
+- ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØªØ³Ù…ÙŠØ¯ â†’ ÙŠØ®ØµÙ… Ù…Ù† Ù…Ø®Ø²ÙˆÙ† Ø§Ù„Ù…ÙˆØ§Ø¯
+- Alert ØªÙ„Ù‚Ø§Ø¦ÙŠ Ù„Ù€ Manager/OWNER Ø¹Ù†Ø¯ Ù†Ù‚Øµ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†
 
 ---
 
-# 🟡 PHASE 6 — Accounting — المحاسبة
+# ðŸŸ¡ PHASE 6 â€” Accounting â€” Ø§Ù„Ù…Ø­Ø§Ø³Ø¨Ø©
 
-## الحالة الحالية:
-FinanceDashboard موجود — يحتاج ربط بالبيانات الحقيقية.
+## Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:
+FinanceDashboard Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ Ø±Ø¨Ø· Ø¨Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ©.
 
-## الإضافات المطلوبة:
+## Ø§Ù„Ø¥Ø¶Ø§ÙØ§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©:
 
 ### Backend:
 ```python
-# ربط الرواتب بـ HR:
-GET /accounting/payroll/         ← رواتب الموظفين من HR + LaborEntry costs
-GET /accounting/labor-costs/     ← تكلفة العمالة من التقارير اليومية
-GET /accounting/monthly-summary/ ← ملخص شهري (إيرادات - مصروفات)
+# Ø±Ø¨Ø· Ø§Ù„Ø±ÙˆØ§ØªØ¨ Ø¨Ù€ HR:
+GET /accounting/payroll/         â† Ø±ÙˆØ§ØªØ¨ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ† Ù…Ù† HR + LaborEntry costs
+GET /accounting/labor-costs/     â† ØªÙƒÙ„ÙØ© Ø§Ù„Ø¹Ù…Ø§Ù„Ø© Ù…Ù† Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ± Ø§Ù„ÙŠÙˆÙ…ÙŠØ©
+GET /accounting/monthly-summary/ â† Ù…Ù„Ø®Øµ Ø´Ù‡Ø±ÙŠ (Ø¥ÙŠØ±Ø§Ø¯Ø§Øª - Ù…ØµØ±ÙˆÙØ§Øª)
 
-# تقرير التكلفة لكل حقل:
-GET /accounting/location-costs/?location_id=X ← تكلفة موقع معين
+# ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØªÙƒÙ„ÙØ© Ù„ÙƒÙ„ Ø­Ù‚Ù„:
+GET /accounting/location-costs/?location_id=X â† ØªÙƒÙ„ÙØ© Ù…ÙˆÙ‚Ø¹ Ù…Ø¹ÙŠÙ†
 ```
 
 ### Frontend:
 ```
 src/pages/accounting/
-├── FinanceDashboard.jsx    ← موجود — إضافة charts حقيقية
-├── PayrollPage.jsx         ← جديد — كشف رواتب مربوط بـ HR
-├── CostAnalysis.jsx        ← جديد — تحليل تكلفة لكل موقع/عملية
-└── ExpenseTracker.jsx      ← جديد — تتبع المصروفات
+â”œâ”€â”€ FinanceDashboard.jsx    â† Ù…ÙˆØ¬ÙˆØ¯ â€” Ø¥Ø¶Ø§ÙØ© charts Ø­Ù‚ÙŠÙ‚ÙŠØ©
+â”œâ”€â”€ PayrollPage.jsx         â† Ø¬Ø¯ÙŠØ¯ â€” ÙƒØ´Ù Ø±ÙˆØ§ØªØ¨ Ù…Ø±Ø¨ÙˆØ· Ø¨Ù€ HR
+â”œâ”€â”€ CostAnalysis.jsx        â† Ø¬Ø¯ÙŠØ¯ â€” ØªØ­Ù„ÙŠÙ„ ØªÙƒÙ„ÙØ© Ù„ÙƒÙ„ Ù…ÙˆÙ‚Ø¹/Ø¹Ù…Ù„ÙŠØ©
+â””â”€â”€ ExpenseTracker.jsx      â† Ø¬Ø¯ÙŠØ¯ â€” ØªØªØ¨Ø¹ Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª
 ```
 
-### ربط مع النظام:
+### Ø±Ø¨Ø· Ù…Ø¹ Ø§Ù„Ù†Ø¸Ø§Ù…:
 ```
-HR.salary → Accounting.payroll
-LaborEntry (hours × rate) → Accounting.labor_cost
-Warehouse.movements → Accounting.material_cost
+HR.salary â†’ Accounting.payroll
+LaborEntry (hours Ã— rate) â†’ Accounting.labor_cost
+Warehouse.movements â†’ Accounting.material_cost
 ```
 
 ---
 
-# 🟡 PHASE 7 — Fleet & Equipment — الأسطول والمعدات
+# ðŸŸ¡ PHASE 7 â€” Fleet & Equipment â€” Ø§Ù„Ø£Ø³Ø·ÙˆÙ„ ÙˆØ§Ù„Ù…Ø¹Ø¯Ø§Øª
 
-## الحالة الحالية:
-FleetManager موجود — يحتاج ربط بالتقارير.
+## Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:
+FleetManager Ù…ÙˆØ¬ÙˆØ¯ â€” ÙŠØ­ØªØ§Ø¬ Ø±Ø¨Ø· Ø¨Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±.
 
-## الإضافات المطلوبة:
+## Ø§Ù„Ø¥Ø¶Ø§ÙØ§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©:
 
 ### Backend:
 ```python
-# إضافة لـ Equipment:
+# Ø¥Ø¶Ø§ÙØ© Ù„Ù€ Equipment:
 assigned_location = models.ForeignKey('farm.LocationNode', null=True, blank=True, ...)
-# ربط استخدام المعدات بالتقارير اليومية:
+# Ø±Ø¨Ø· Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø¯Ø§Øª Ø¨Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ± Ø§Ù„ÙŠÙˆÙ…ÙŠØ©:
 class EquipmentUsageLog(TenantAwareModel):
     equipment = models.ForeignKey(Equipment, ...)
     report    = models.ForeignKey('reports.DailyTaskReport', null=True, blank=True, ...)
@@ -495,291 +497,292 @@ class EquipmentUsageLog(TenantAwareModel):
     notes     = models.TextField(blank=True)
 ```
 
-### في التقرير اليومي — إضافة:
+### ÙÙŠ Ø§Ù„ØªÙ‚Ø±ÙŠØ± Ø§Ù„ÙŠÙˆÙ…ÙŠ â€” Ø¥Ø¶Ø§ÙØ©:
 ```
-المعدات المستخدمة: [dropdown من المعدات] + ساعات الاستخدام
+Ø§Ù„Ù…Ø¹Ø¯Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©: [dropdown Ù…Ù† Ø§Ù„Ù…Ø¹Ø¯Ø§Øª] + Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…
 ```
 
 ### Frontend:
 ```
 src/pages/equipment/
-├── FleetManager.jsx      ← موجود — إضافة ربط بالتقارير
-├── MaintenanceLog.jsx    ← جديد — سجل الصيانة
-└── UsageAnalytics.jsx    ← جديد — تحليل استخدام المعدات
+â”œâ”€â”€ FleetManager.jsx      â† Ù…ÙˆØ¬ÙˆØ¯ â€” Ø¥Ø¶Ø§ÙØ© Ø±Ø¨Ø· Ø¨Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±
+â”œâ”€â”€ MaintenanceLog.jsx    â† Ø¬Ø¯ÙŠØ¯ â€” Ø³Ø¬Ù„ Ø§Ù„ØµÙŠØ§Ù†Ø©
+â””â”€â”€ UsageAnalytics.jsx    â† Ø¬Ø¯ÙŠØ¯ â€” ØªØ­Ù„ÙŠÙ„ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø¯Ø§Øª
 ```
 
 ---
 
-# 🟢 PHASE 8 & 9 — Palm + Olive Records (توحيد)
+# ðŸŸ¢ PHASE 8 & 9 â€” Palm + Olive Records (ØªÙˆØ­ÙŠØ¯)
 
-## المشكلة الحالية:
-موديلان منفصلان (PalmRecord + OliveRecord) — وهذا خلاف مبدأ الـ SaaS.
+## Ø§Ù„Ù…Ø´ÙƒÙ„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:
+Ù…ÙˆØ¯ÙŠÙ„Ø§Ù† Ù…Ù†ÙØµÙ„Ø§Ù† (PalmRecord + OliveRecord) â€” ÙˆÙ‡Ø°Ø§ Ø®Ù„Ø§Ù Ù…Ø¨Ø¯Ø£ Ø§Ù„Ù€ SaaS.
 
-## الحل (من REFACTOR_PLAN):
+## Ø§Ù„Ø­Ù„ (Ù…Ù† REFACTOR_PLAN):
 ```python
-# موديل موحد CropRecord:
+# Ù…ÙˆØ¯ÙŠÙ„ Ù…ÙˆØ­Ø¯ CropRecord:
 class CropRecord(TenantAwareModel):
     CROP_TYPES = [
-        ('palm',  'نخيل'),
-        ('olive', 'زيتون'),
-        ('grape', 'عنب'),     # قابل للتوسعة لأي محصول
-        ('other', 'أخرى'),
+        ('palm',  'Ù†Ø®ÙŠÙ„'),
+        ('olive', 'Ø²ÙŠØªÙˆÙ†'),
+        ('grape', 'Ø¹Ù†Ø¨'),     # Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªÙˆØ³Ø¹Ø© Ù„Ø£ÙŠ Ù…Ø­ØµÙˆÙ„
+        ('other', 'Ø£Ø®Ø±Ù‰'),
     ]
     crop_type  = models.CharField(max_length=20, choices=CROP_TYPES)
     location   = models.ForeignKey('farm.LocationNode', ...)
-    # الحقول المشتركة
+    # Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù…Ø´ØªØ±ÙƒØ©
     tree_count = models.IntegerField(default=0)
-    area       = models.FloatField(null=True, blank=True, help_text="بالفدان")
+    area       = models.FloatField(null=True, blank=True, help_text="Ø¨Ø§Ù„ÙØ¯Ø§Ù†")
     variety    = models.ForeignKey('reports.Variety', null=True, blank=True, ...)
     notes      = models.TextField(blank=True)
-    # الحقول الإضافية المخصصة → CustomField system
+    # Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ø¥Ø¶Ø§ÙÙŠØ© Ø§Ù„Ù…Ø®ØµØµØ© â†’ CustomField system
 ```
 
 ### Frontend:
 ```
 src/pages/crops/
-├── CropRecords.jsx        ← موحد بـ type filter (يعوض Palm + Olive)
-└── CropDetail.jsx         ← تفاصيل + إحصاءات + صور
+â”œâ”€â”€ CropRecords.jsx        â† Ù…ÙˆØ­Ø¯ Ø¨Ù€ type filter (ÙŠØ¹ÙˆØ¶ Palm + Olive)
+â””â”€â”€ CropDetail.jsx         â† ØªÙØ§ØµÙŠÙ„ + Ø¥Ø­ØµØ§Ø¡Ø§Øª + ØµÙˆØ±
 ```
 
-### ملاحظة للـ SaaS:
-الـ Admin يضيف أنواع المحاصيل من Admin Dashboard — لا تعديل كود.
+### Ù…Ù„Ø§Ø­Ø¸Ø© Ù„Ù„Ù€ SaaS:
+Ø§Ù„Ù€ Admin ÙŠØ¶ÙŠÙ Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ù…Ø­Ø§ØµÙŠÙ„ Ù…Ù† Admin Dashboard â€” Ù„Ø§ ØªØ¹Ø¯ÙŠÙ„ ÙƒÙˆØ¯.
 
 ---
 
-# 🟢 PHASE 10 — Production — المحصول
+# ðŸŸ¢ PHASE 10 â€” Production â€” Ø§Ù„Ù…Ø­ØµÙˆÙ„
 
-## الإضافات المطلوبة:
+## Ø§Ù„Ø¥Ø¶Ø§ÙØ§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©:
 
 ### Backend:
 ```python
-# إضافة لـ YieldRecord:
-location   = models.ForeignKey('farm.LocationNode', ...)   # ربط بالموقع
-crop_type  = models.CharField(max_length=20)               # نوع المحصول
+# Ø¥Ø¶Ø§ÙØ© Ù„Ù€ YieldRecord:
+location   = models.ForeignKey('farm.LocationNode', ...)   # Ø±Ø¨Ø· Ø¨Ø§Ù„Ù…ÙˆÙ‚Ø¹
+crop_type  = models.CharField(max_length=20)               # Ù†ÙˆØ¹ Ø§Ù„Ù…Ø­ØµÙˆÙ„
 variety    = models.ForeignKey('reports.Variety', null=True, ...)
 # season tracking:
-season     = models.CharField(max_length=50, blank=True)   # موسم الحصاد
+season     = models.CharField(max_length=50, blank=True)   # Ù…ÙˆØ³Ù… Ø§Ù„Ø­ØµØ§Ø¯
 ```
 
 ### Frontend:
 ```
 src/pages/production/
-├── YieldTracking.jsx     ← موجود — إضافة location filter
-├── HarvestCalendar.jsx   ← جديد — تقويم المحصول
-└── YieldAnalytics.jsx    ← جديد — مقارنة سنة بسنة
+â”œâ”€â”€ YieldTracking.jsx     â† Ù…ÙˆØ¬ÙˆØ¯ â€” Ø¥Ø¶Ø§ÙØ© location filter
+â”œâ”€â”€ HarvestCalendar.jsx   â† Ø¬Ø¯ÙŠØ¯ â€” ØªÙ‚ÙˆÙŠÙ… Ø§Ù„Ù…Ø­ØµÙˆÙ„
+â””â”€â”€ YieldAnalytics.jsx    â† Ø¬Ø¯ÙŠØ¯ â€” Ù…Ù‚Ø§Ø±Ù†Ø© Ø³Ù†Ø© Ø¨Ø³Ù†Ø©
 ```
 
 ---
 
-# 📁 الهيكل الكامل للملفات النهائي
+# ðŸ“ Ø§Ù„Ù‡ÙŠÙƒÙ„ Ø§Ù„ÙƒØ§Ù…Ù„ Ù„Ù„Ù…Ù„ÙØ§Øª Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ
 
 ## Backend:
 ```
 Back-End/
-├── apps/
-│   ├── hr/
-│   │   ├── models.py          ← تعديل (+ address, phone, EmployeeAttachment)
-│   │   ├── views.py           ← جديد كامل
-│   │   └── migrations/        ← migration جديدة
-│   ├── reports/
-│   │   └── models.py          ← إضافة employee FK إلى LaborEntry
-│   ├── farm/
-│   │   └── models.py          ← تنظيف (الموديلات القديمة deprecated)
-│   └── crops/                 ← جديد (يوحد Palm + Olive)
-│       ├── models.py          ← CropRecord
-│       └── migrations/
-├── serializers/
-│   ├── hr_serializers.py      ← جديد
-│   └── reports_serializers.py ← تحديث LaborEntry
-├── api/endpoints/
-│   ├── hr_views.py            ← جديد
-│   └── admin_views.py         ← جديد
-├── services/
-│   └── user_service.py        ← تعديل (auto-create Employee)
-└── api/urls.py                ← إضافة جميع الـ routes
+â”œâ”€â”€ apps/
+â”‚   â”œâ”€â”€ hr/
+â”‚   â”‚   â”œâ”€â”€ models.py          â† ØªØ¹Ø¯ÙŠÙ„ (+ address, phone, EmployeeAttachment)
+â”‚   â”‚   â”œâ”€â”€ views.py           â† Ø¬Ø¯ÙŠØ¯ ÙƒØ§Ù…Ù„
+â”‚   â”‚   â””â”€â”€ migrations/        â† migration Ø¬Ø¯ÙŠØ¯Ø©
+â”‚   â”œâ”€â”€ reports/
+â”‚   â”‚   â””â”€â”€ models.py          â† Ø¥Ø¶Ø§ÙØ© employee FK Ø¥Ù„Ù‰ LaborEntry
+â”‚   â”œâ”€â”€ farm/
+â”‚   â”‚   â””â”€â”€ models.py          â† ØªÙ†Ø¸ÙŠÙ (Ø§Ù„Ù…ÙˆØ¯ÙŠÙ„Ø§Øª Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© deprecated)
+â”‚   â””â”€â”€ crops/                 â† Ø¬Ø¯ÙŠØ¯ (ÙŠÙˆØ­Ø¯ Palm + Olive)
+â”‚       â”œâ”€â”€ models.py          â† CropRecord
+â”‚       â””â”€â”€ migrations/
+â”œâ”€â”€ serializers/
+â”‚   â”œâ”€â”€ hr_serializers.py      â† Ø¬Ø¯ÙŠØ¯
+â”‚   â””â”€â”€ reports_serializers.py â† ØªØ­Ø¯ÙŠØ« LaborEntry
+â”œâ”€â”€ api/endpoints/
+â”‚   â”œâ”€â”€ hr_views.py            â† Ø¬Ø¯ÙŠØ¯
+â”‚   â””â”€â”€ admin_views.py         â† Ø¬Ø¯ÙŠØ¯
+â”œâ”€â”€ services/
+â”‚   â””â”€â”€ user_service.py        â† ØªØ¹Ø¯ÙŠÙ„ (auto-create Employee)
+â””â”€â”€ api/urls.py                â† Ø¥Ø¶Ø§ÙØ© Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù€ routes
 ```
 
 ## Frontend:
 ```
 Front-End/src/
-├── layouts/
-│   ├── DashboardLayout.jsx    ← تعديل (إضافة Sidebar)
-│   └── Sidebar.jsx            ← جديد (role-based navigation)
-├── features/
-│   └── hr/
-│       └── services.js        ← جديد
-├── pages/
-│   ├── farm/
-│   │   ├── FarmStructure.jsx  ← تعديل (Adaptive Tree)
-│   │   └── FarmStructure.css  ← تعديل
-│   ├── reports/DailyTaskReport/
-│   │   ├── DailyTaskForm.jsx  ← تعديل (+ LaborEntry button)
-│   │   └── LaborEntryDrawer.jsx ← جديد
-│   ├── hr/
-│   │   ├── HRDashboard.jsx    ← جديد
-│   │   ├── EmployeeList.jsx   ← جديد
-│   │   ├── EmployeeForm.jsx   ← جديد
-│   │   ├── EmployeeDetail.jsx ← جديد
-│   │   └── LeaveManagement.jsx ← جديد
-│   ├── admin/
-│   │   ├── AdminDashboard.jsx ← تعديل كبير
-│   │   └── sections/
-│   │       ├── CustomFieldsAdmin.jsx  ← نقل + تحسين
-│   │       ├── OperationsAdmin.jsx    ← جديد
-│   │       ├── ContractorsAdmin.jsx   ← جديد
-│   │       ├── DropdownsAdmin.jsx     ← جديد
-│   │       ├── CropTypesAdmin.jsx     ← جديد (للـ SaaS)
-│   │       └── CompanySettings.jsx    ← جديد
-│   ├── crops/
-│   │   ├── CropRecords.jsx    ← جديد (يوحد Palm + Olive)
-│   │   └── CropDetail.jsx     ← جديد
-│   ├── warehouse/
-│   │   └── InventoryLedger.jsx ← تحسين + إضافات
-│   ├── accounting/
-│   │   ├── FinanceDashboard.jsx ← تحسين
-│   │   └── PayrollPage.jsx    ← جديد
-│   ├── equipment/
-│   │   └── FleetManager.jsx   ← تحسين + ربط
-│   └── production/
-│       └── YieldTracking.jsx  ← تحسين + ربط
-└── routes/
-    └── AppRoutes.jsx          ← إضافة جميع الـ routes الجديدة
+â”œâ”€â”€ layouts/
+â”‚   â”œâ”€â”€ DashboardLayout.jsx    â† ØªØ¹Ø¯ÙŠÙ„ (Ø¥Ø¶Ø§ÙØ© Sidebar)
+â”‚   â””â”€â”€ Sidebar.jsx            â† Ø¬Ø¯ÙŠØ¯ (role-based navigation)
+â”œâ”€â”€ features/
+â”‚   â””â”€â”€ hr/
+â”‚       â””â”€â”€ services.js        â† Ø¬Ø¯ÙŠØ¯
+â”œâ”€â”€ pages/
+â”‚   â”œâ”€â”€ farm/
+â”‚   â”‚   â”œâ”€â”€ FarmStructure.jsx  â† ØªØ¹Ø¯ÙŠÙ„ (Adaptive Tree)
+â”‚   â”‚   â””â”€â”€ FarmStructure.css  â† ØªØ¹Ø¯ÙŠÙ„
+â”‚   â”œâ”€â”€ reports/DailyTaskReport/
+â”‚   â”‚   â”œâ”€â”€ DailyTaskForm.jsx  â† ØªØ¹Ø¯ÙŠÙ„ (+ LaborEntry button)
+â”‚   â”‚   â””â”€â”€ LaborEntryDrawer.jsx â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”œâ”€â”€ hr/
+â”‚   â”‚   â”œâ”€â”€ HRDashboard.jsx    â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚   â”œâ”€â”€ EmployeeList.jsx   â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚   â”œâ”€â”€ EmployeeForm.jsx   â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚   â”œâ”€â”€ EmployeeDetail.jsx â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚   â””â”€â”€ LeaveManagement.jsx â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”œâ”€â”€ admin/
+â”‚   â”‚   â”œâ”€â”€ AdminDashboard.jsx â† ØªØ¹Ø¯ÙŠÙ„ ÙƒØ¨ÙŠØ±
+â”‚   â”‚   â””â”€â”€ sections/
+â”‚   â”‚       â”œâ”€â”€ CustomFieldsAdmin.jsx  â† Ù†Ù‚Ù„ + ØªØ­Ø³ÙŠÙ†
+â”‚   â”‚       â”œâ”€â”€ OperationsAdmin.jsx    â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚       â”œâ”€â”€ ContractorsAdmin.jsx   â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚       â”œâ”€â”€ DropdownsAdmin.jsx     â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”‚       â”œâ”€â”€ CropTypesAdmin.jsx     â† Ø¬Ø¯ÙŠØ¯ (Ù„Ù„Ù€ SaaS)
+â”‚   â”‚       â””â”€â”€ CompanySettings.jsx    â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”œâ”€â”€ crops/
+â”‚   â”‚   â”œâ”€â”€ CropRecords.jsx    â† Ø¬Ø¯ÙŠØ¯ (ÙŠÙˆØ­Ø¯ Palm + Olive)
+â”‚   â”‚   â””â”€â”€ CropDetail.jsx     â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”œâ”€â”€ warehouse/
+â”‚   â”‚   â””â”€â”€ InventoryLedger.jsx â† ØªØ­Ø³ÙŠÙ† + Ø¥Ø¶Ø§ÙØ§Øª
+â”‚   â”œâ”€â”€ accounting/
+â”‚   â”‚   â”œâ”€â”€ FinanceDashboard.jsx â† ØªØ­Ø³ÙŠÙ†
+â”‚   â”‚   â””â”€â”€ PayrollPage.jsx    â† Ø¬Ø¯ÙŠØ¯
+â”‚   â”œâ”€â”€ equipment/
+â”‚   â”‚   â””â”€â”€ FleetManager.jsx   â† ØªØ­Ø³ÙŠÙ† + Ø±Ø¨Ø·
+â”‚   â””â”€â”€ production/
+â”‚       â””â”€â”€ YieldTracking.jsx  â† ØªØ­Ø³ÙŠÙ† + Ø±Ø¨Ø·
+â””â”€â”€ routes/
+    â””â”€â”€ AppRoutes.jsx          â† Ø¥Ø¶Ø§ÙØ© Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù€ routes Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
 ```
 
 ---
 
-# 🚀 ترتيب التنفيذ الكامل
+# ðŸš€ ØªØ±ØªÙŠØ¨ Ø§Ù„ØªÙ†ÙÙŠØ° Ø§Ù„ÙƒØ§Ù…Ù„
 
 ```
-═══════════════════════════════════════
-PHASE 1 — FarmStructure Adaptive Tree
-═══════════════════════════════════════
-الخطوة 1.1: تعديل FarmStructure.jsx (getNodeConfig function)
-الخطوة 1.2: تعديل FarmStructure.css (size classes)
-الخطوة 1.3: إضافة Collapse/Expand
-الخطوة 1.4: إضافة Search/Filter
-الخطوة 1.5: إضافة Count badges
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 1 â€” FarmStructure Adaptive Tree
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 1.1: ØªØ¹Ø¯ÙŠÙ„ FarmStructure.jsx (getNodeConfig function)
+Ø§Ù„Ø®Ø·ÙˆØ© 1.2: ØªØ¹Ø¯ÙŠÙ„ FarmStructure.css (size classes)
+Ø§Ù„Ø®Ø·ÙˆØ© 1.3: Ø¥Ø¶Ø§ÙØ© Collapse/Expand
+Ø§Ù„Ø®Ø·ÙˆØ© 1.4: Ø¥Ø¶Ø§ÙØ© Search/Filter
+Ø§Ù„Ø®Ø·ÙˆØ© 1.5: Ø¥Ø¶Ø§ÙØ© Count badges
 
-═══════════════════════════════════════
-PHASE 2 — LaborEntry Panel
-═══════════════════════════════════════
-الخطوة 2.1: migration إضافة employee FK إلى LaborEntry
-الخطوة 2.2: تحديث LaborEntrySerializer
-الخطوة 2.3: إنشاء LaborEntryDrawer.jsx
-الخطوة 2.4: تعديل DailyTaskForm.jsx (إضافة الزر والربط)
-الخطوة 2.5: إضافة employee search endpoint
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 2 â€” LaborEntry Panel
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 2.1: migration Ø¥Ø¶Ø§ÙØ© employee FK Ø¥Ù„Ù‰ LaborEntry
+Ø§Ù„Ø®Ø·ÙˆØ© 2.2: ØªØ­Ø¯ÙŠØ« LaborEntrySerializer
+Ø§Ù„Ø®Ø·ÙˆØ© 2.3: Ø¥Ù†Ø´Ø§Ø¡ LaborEntryDrawer.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 2.4: ØªØ¹Ø¯ÙŠÙ„ DailyTaskForm.jsx (Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø²Ø± ÙˆØ§Ù„Ø±Ø¨Ø·)
+Ø§Ù„Ø®Ø·ÙˆØ© 2.5: Ø¥Ø¶Ø§ÙØ© employee search endpoint
 
-═══════════════════════════════════════
-PHASE 3 — HR Backend
-═══════════════════════════════════════
-الخطوة 3.1: تعديل Employee model + إضافة EmployeeAttachment
-الخطوة 3.2: migration
-الخطوة 3.3: إنشاء hr_serializers.py
-الخطوة 3.4: إنشاء hr_views.py (كل الـ endpoints)
-الخطوة 3.5: تحديث user_service.py (auto-create Employee)
-الخطوة 3.6: إضافة routes في urls.py
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 3 â€” HR Backend
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 3.1: ØªØ¹Ø¯ÙŠÙ„ Employee model + Ø¥Ø¶Ø§ÙØ© EmployeeAttachment
+Ø§Ù„Ø®Ø·ÙˆØ© 3.2: migration
+Ø§Ù„Ø®Ø·ÙˆØ© 3.3: Ø¥Ù†Ø´Ø§Ø¡ hr_serializers.py
+Ø§Ù„Ø®Ø·ÙˆØ© 3.4: Ø¥Ù†Ø´Ø§Ø¡ hr_views.py (ÙƒÙ„ Ø§Ù„Ù€ endpoints)
+Ø§Ù„Ø®Ø·ÙˆØ© 3.5: ØªØ­Ø¯ÙŠØ« user_service.py (auto-create Employee)
+Ø§Ù„Ø®Ø·ÙˆØ© 3.6: Ø¥Ø¶Ø§ÙØ© routes ÙÙŠ urls.py
 
-═══════════════════════════════════════
-PHASE 4 — HR Frontend
-═══════════════════════════════════════
-الخطوة 4.1: hr/services.js
-الخطوة 4.2: HRDashboard.jsx
-الخطوة 4.3: EmployeeList.jsx
-الخطوة 4.4: EmployeeForm.jsx
-الخطوة 4.5: EmployeeDetail.jsx (مع upload ملفات Cloudinary)
-الخطوة 4.6: LeaveManagement.jsx
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 4 â€” HR Frontend
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 4.1: hr/services.js
+Ø§Ù„Ø®Ø·ÙˆØ© 4.2: HRDashboard.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 4.3: EmployeeList.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 4.4: EmployeeForm.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 4.5: EmployeeDetail.jsx (Ù…Ø¹ upload Ù…Ù„ÙØ§Øª Cloudinary)
+Ø§Ù„Ø®Ø·ÙˆØ© 4.6: LeaveManagement.jsx
 
-═══════════════════════════════════════
-PHASE 5 — Sidebar + Navigation
-═══════════════════════════════════════
-الخطوة 5.1: Sidebar.jsx (role-based)
-الخطوة 5.2: تعديل DashboardLayout.jsx
-الخطوة 5.3: تحديث AppRoutes.jsx
-الخطوة 5.4: BottomNav تحديث (للموبايل)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 5 â€” Sidebar + Navigation
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 5.1: Sidebar.jsx (role-based)
+Ø§Ù„Ø®Ø·ÙˆØ© 5.2: ØªØ¹Ø¯ÙŠÙ„ DashboardLayout.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 5.3: ØªØ­Ø¯ÙŠØ« AppRoutes.jsx
+Ø§Ù„Ø®Ø·ÙˆØ© 5.4: BottomNav ØªØ­Ø¯ÙŠØ« (Ù„Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„)
 
-═══════════════════════════════════════
-PHASE 6 — Admin Dashboard
-═══════════════════════════════════════
-الخطوة 6.1: Admin backend endpoints (operations, contractors, dropdowns)
-الخطوة 6.2: تعديل AdminDashboard.jsx (هيكل جديد)
-الخطوة 6.3: نقل CustomFields + تحسينها
-الخطوة 6.4: OperationsAdmin + ContractorsAdmin
-الخطوة 6.5: DropdownsAdmin + CropTypesAdmin
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 6 â€” Admin Dashboard
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 6.1: Admin backend endpoints (operations, contractors, dropdowns)
+Ø§Ù„Ø®Ø·ÙˆØ© 6.2: ØªØ¹Ø¯ÙŠÙ„ AdminDashboard.jsx (Ù‡ÙŠÙƒÙ„ Ø¬Ø¯ÙŠØ¯)
+Ø§Ù„Ø®Ø·ÙˆØ© 6.3: Ù†Ù‚Ù„ CustomFields + ØªØ­Ø³ÙŠÙ†Ù‡Ø§
+Ø§Ù„Ø®Ø·ÙˆØ© 6.4: OperationsAdmin + ContractorsAdmin
+Ø§Ù„Ø®Ø·ÙˆØ© 6.5: DropdownsAdmin + CropTypesAdmin
 
-═══════════════════════════════════════
-PHASE 7-10 — باقي الـ Modules
-═══════════════════════════════════════
-الخطوة 7: Warehouse تحسين
-الخطوة 8: Accounting ربط + PayrollPage
-الخطوة 9: Fleet ربط بالتقارير
-الخطوة 10: CropRecord توحيد
-الخطوة 11: Production ربط بالمواقع
-```
-
----
-
-# ⚠️ قواعد للـ AI Coder
-
-```
-❌ لا تكسر أي API موجودة (الـ response shape ثابتة)
-❌ لا تحذف migrations — أضف جديدة فقط
-❌ لا تُنشئ موديل جديد إذا كان مشابه موجود
-❌ لا GenericForeignKey إلا في الـ CustomField system
-❌ لا hardcoded roles في الـ Frontend — استخدم ROLE_PERMISSIONS object
-
-✅ كل queryset يمر على _for_company() أو .for_company()
-✅ كل endpoint له permission_classes صريحة
-✅ Services layer للـ business logic
-✅ Serializers تتحقق من الـ tenant scoping
-✅ كل migration تأتي بعد إنشاء الـ model مباشرة
-✅ الـ Frontend يستخدم الـ role من AuthContext لـ conditional rendering
-
-# CLOUDINARY في Frontend:
-✅ استخدم unsigned upload مع upload_preset='atls_unsigned'
-✅ احفظ الـ secure_url في DB — مش الـ public_id
-✅ اعرض preview قبل الرفع
-✅ اقبل: jpg, jpeg, png, webp, pdf فقط
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+PHASE 7-10 â€” Ø¨Ø§Ù‚ÙŠ Ø§Ù„Ù€ Modules
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ø§Ù„Ø®Ø·ÙˆØ© 7: Warehouse ØªØ­Ø³ÙŠÙ†
+Ø§Ù„Ø®Ø·ÙˆØ© 8: Accounting Ø±Ø¨Ø· + PayrollPage
+Ø§Ù„Ø®Ø·ÙˆØ© 9: Fleet Ø±Ø¨Ø· Ø¨Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±
+Ø§Ù„Ø®Ø·ÙˆØ© 10: CropRecord ØªÙˆØ­ÙŠØ¯
+Ø§Ù„Ø®Ø·ÙˆØ© 11: Production Ø±Ø¨Ø· Ø¨Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹
 ```
 
 ---
 
-# 📊 خريطة الربط الكاملة (Entity Map)
+# âš ï¸ Ù‚ÙˆØ§Ø¹Ø¯ Ù„Ù„Ù€ AI Coder
+
+```
+âŒ Ù„Ø§ ØªÙƒØ³Ø± Ø£ÙŠ API Ù…ÙˆØ¬ÙˆØ¯Ø© (Ø§Ù„Ù€ response shape Ø«Ø§Ø¨ØªØ©)
+âŒ Ù„Ø§ ØªØ­Ø°Ù migrations â€” Ø£Ø¶Ù Ø¬Ø¯ÙŠØ¯Ø© ÙÙ‚Ø·
+âŒ Ù„Ø§ ØªÙÙ†Ø´Ø¦ Ù…ÙˆØ¯ÙŠÙ„ Ø¬Ø¯ÙŠØ¯ Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø´Ø§Ø¨Ù‡ Ù…ÙˆØ¬ÙˆØ¯
+âŒ Ù„Ø§ GenericForeignKey Ø¥Ù„Ø§ ÙÙŠ Ø§Ù„Ù€ CustomField system
+âŒ Ù„Ø§ hardcoded roles ÙÙŠ Ø§Ù„Ù€ Frontend â€” Ø§Ø³ØªØ®Ø¯Ù… ROLE_PERMISSIONS object
+
+âœ… ÙƒÙ„ queryset ÙŠÙ…Ø± Ø¹Ù„Ù‰ _for_company() Ø£Ùˆ .for_company()
+âœ… ÙƒÙ„ endpoint Ù„Ù‡ permission_classes ØµØ±ÙŠØ­Ø©
+âœ… Services layer Ù„Ù„Ù€ business logic
+âœ… Serializers ØªØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù€ tenant scoping
+âœ… ÙƒÙ„ migration ØªØ£ØªÙŠ Ø¨Ø¹Ø¯ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù€ model Ù…Ø¨Ø§Ø´Ø±Ø©
+âœ… Ø§Ù„Ù€ Frontend ÙŠØ³ØªØ®Ø¯Ù… Ø§Ù„Ù€ role Ù…Ù† AuthContext Ù„Ù€ conditional rendering
+
+# CLOUDINARY ÙÙŠ Frontend:
+âœ… Ø§Ø³ØªØ®Ø¯Ù… unsigned upload Ù…Ø¹ upload_preset='atls_unsigned'
+âœ… Ø§Ø­ÙØ¸ Ø§Ù„Ù€ secure_url ÙÙŠ DB â€” Ù…Ø´ Ø§Ù„Ù€ public_id
+âœ… Ø§Ø¹Ø±Ø¶ preview Ù‚Ø¨Ù„ Ø§Ù„Ø±ÙØ¹
+âœ… Ø§Ù‚Ø¨Ù„: jpg, jpeg, png, webp, pdf ÙÙ‚Ø·
+```
+
+---
+
+# ðŸ“Š Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ø±Ø¨Ø· Ø§Ù„ÙƒØ§Ù…Ù„Ø© (Entity Map)
 
 ```
 Company
-├── User
-│   └── Employee (OneToOne — auto على ENGINEER/MANAGER/HR/ACCOUNTANT/WAREHOUSE)
-│       ├── EmployeeAttachment[]  (Cloudinary URLs)
-│       ├── LeaveRequest[]
-│       └── Attendance[]
-│
-├── Farm
-│   └── LocationNode (MPTT tree)
-│       ├── DailyTaskReport[]
-│       │   ├── LaborEntry[] → Employee? (ربط اختياري بالاسم)
-│       │   └── Attachment[] (Cloudinary)
-│       ├── FertilizationReport[]
-│       ├── IrrigationReport[]
-│       └── CropRecord[] (يوحد Palm + Olive)
-│
-├── Operation[]           (عمليات فنية)
-├── Contractor[]          (مقاولون — يظهروا في LaborEntry)
-├── Variety[]             (أصناف)
-├── Unit[]                (وحدات)
-├── CustomFieldDefinition[] (حقول مخصصة لأي تقرير)
-│
-├── WarehouseItem[]
-│   └── WarehouseMovement[]
-│
-├── Equipment[]
-│   └── EquipmentUsageLog[]
-│
-├── Expense[]
-├── Revenue[]
-└── YieldRecord[]
+â”œâ”€â”€ User
+â”‚   â””â”€â”€ Employee (OneToOne â€” auto Ø¹Ù„Ù‰ ENGINEER/MANAGER/HR/ACCOUNTANT/WAREHOUSE)
+â”‚       â”œâ”€â”€ EmployeeAttachment[]  (Cloudinary URLs)
+â”‚       â”œâ”€â”€ LeaveRequest[]
+â”‚       â””â”€â”€ Attendance[]
+â”‚
+â”œâ”€â”€ Farm
+â”‚   â””â”€â”€ LocationNode (MPTT tree)
+â”‚       â”œâ”€â”€ DailyTaskReport[]
+â”‚       â”‚   â”œâ”€â”€ LaborEntry[] â†’ Employee? (Ø±Ø¨Ø· Ø§Ø®ØªÙŠØ§Ø±ÙŠ Ø¨Ø§Ù„Ø§Ø³Ù…)
+â”‚       â”‚   â””â”€â”€ Attachment[] (Cloudinary)
+â”‚       â”œâ”€â”€ FertilizationReport[]
+â”‚       â”œâ”€â”€ IrrigationReport[]
+â”‚       â””â”€â”€ CropRecord[] (ÙŠÙˆØ­Ø¯ Palm + Olive)
+â”‚
+â”œâ”€â”€ Operation[]           (Ø¹Ù…Ù„ÙŠØ§Øª ÙÙ†ÙŠØ©)
+â”œâ”€â”€ Contractor[]          (Ù…Ù‚Ø§ÙˆÙ„ÙˆÙ† â€” ÙŠØ¸Ù‡Ø±ÙˆØ§ ÙÙŠ LaborEntry)
+â”œâ”€â”€ Variety[]             (Ø£ØµÙ†Ø§Ù)
+â”œâ”€â”€ Unit[]                (ÙˆØ­Ø¯Ø§Øª)
+â”œâ”€â”€ CustomFieldDefinition[] (Ø­Ù‚ÙˆÙ„ Ù…Ø®ØµØµØ© Ù„Ø£ÙŠ ØªÙ‚Ø±ÙŠØ±)
+â”‚
+â”œâ”€â”€ WarehouseItem[]
+â”‚   â””â”€â”€ WarehouseMovement[]
+â”‚
+â”œâ”€â”€ Equipment[]
+â”‚   â””â”€â”€ EquipmentUsageLog[]
+â”‚
+â”œâ”€â”€ Expense[]
+â”œâ”€â”€ Revenue[]
+â””â”€â”€ YieldRecord[]
 ```
 
 ---
 
-*هذا الملف هو المرجع الرئيسي للمشروع — كل تعديل يجب أن يتوافق مع هذه الخطة*
-*آخر تحديث: بعد مراجعة الكود الكاملة*
+*Ù‡Ø°Ø§ Ø§Ù„Ù…Ù„Ù Ù‡Ùˆ Ø§Ù„Ù…Ø±Ø¬Ø¹ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ Ù„Ù„Ù…Ø´Ø±ÙˆØ¹ â€” ÙƒÙ„ ØªØ¹Ø¯ÙŠÙ„ ÙŠØ¬Ø¨ Ø£Ù† ÙŠØªÙˆØ§ÙÙ‚ Ù…Ø¹ Ù‡Ø°Ù‡ Ø§Ù„Ø®Ø·Ø©*
+*Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ«: Ø¨Ø¹Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„ÙƒØ§Ù…Ù„Ø©*
+

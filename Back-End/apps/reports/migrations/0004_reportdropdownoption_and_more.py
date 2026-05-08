@@ -5,58 +5,108 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0003_farm_is_active'),
-        ('reports', '0003_customfielddefinition_customfieldvalue'),
+        ("farm", "0003_farm_is_active"),
+        ("reports", "0003_customfielddefinition_customfieldvalue"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ReportDropdownOption',
+            name="ReportDropdownOption",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('category', models.CharField(choices=[('variety', 'Variety'), ('unit', 'Unit'), ('contractor', 'Contractor'), ('enclosure', 'Enclosure')], max_length=50)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("variety", "Variety"),
+                            ("unit", "Unit"),
+                            ("contractor", "Contractor"),
+                            ("enclosure", "Enclosure"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
             ],
         ),
         migrations.RenameIndex(
-            model_name='dailytaskreport',
-            new_name='reports_dai_sector__5403c8_idx',
-            old_name='reports_dai_sector_6c9d27_idx',
+            model_name="dailytaskreport",
+            new_name="reports_dai_sector__5403c8_idx",
+            old_name="reports_dai_sector_6c9d27_idx",
         ),
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='contractor_code',
+            model_name="dailytaskreport",
+            name="contractor_code",
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='sector',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='farm.sector', verbose_name='القطاع'),
+            model_name="dailytaskreport",
+            name="sector",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                to="farm.sector",
+                verbose_name="القطاع",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='reportdropdownoption',
-            unique_together={('name', 'category')},
+            name="reportdropdownoption",
+            unique_together={("name", "category")},
         ),
         migrations.AddField(
-            model_name='dailytaskreport',
-            name='contractor',
-            field=models.ForeignKey(blank=True, limit_choices_to={'category': 'contractor'}, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reports_contractor', to='reports.reportdropdownoption', verbose_name='كود المقاول'),
+            model_name="dailytaskreport",
+            name="contractor",
+            field=models.ForeignKey(
+                blank=True,
+                limit_choices_to={"category": "contractor"},
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_contractor",
+                to="reports.reportdropdownoption",
+                verbose_name="كود المقاول",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='enclosure',
-            field=models.ForeignKey(blank=True, limit_choices_to={'category': 'enclosure'}, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reports_enclosure', to='reports.reportdropdownoption', verbose_name='الحوشة'),
+            model_name="dailytaskreport",
+            name="enclosure",
+            field=models.ForeignKey(
+                blank=True,
+                limit_choices_to={"category": "enclosure"},
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_enclosure",
+                to="reports.reportdropdownoption",
+                verbose_name="الحوشة",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='unit',
-            field=models.ForeignKey(limit_choices_to={'category': 'unit'}, on_delete=django.db.models.deletion.PROTECT, related_name='reports_unit', to='reports.reportdropdownoption', verbose_name='الوحدة'),
+            model_name="dailytaskreport",
+            name="unit",
+            field=models.ForeignKey(
+                limit_choices_to={"category": "unit"},
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_unit",
+                to="reports.reportdropdownoption",
+                verbose_name="الوحدة",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='variety',
-            field=models.ForeignKey(limit_choices_to={'category': 'variety'}, on_delete=django.db.models.deletion.PROTECT, related_name='reports_variety', to='reports.reportdropdownoption', verbose_name='الصنف'),
+            model_name="dailytaskreport",
+            name="variety",
+            field=models.ForeignKey(
+                limit_choices_to={"category": "variety"},
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_variety",
+                to="reports.reportdropdownoption",
+                verbose_name="الصنف",
+            ),
         ),
     ]

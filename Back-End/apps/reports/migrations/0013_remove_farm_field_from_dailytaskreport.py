@@ -4,14 +4,13 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('reports', '0012_replace_reportdropdownoption_with_proper_models'),
+        ("reports", "0012_replace_reportdropdownoption_with_proper_models"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='farm',
+            model_name="dailytaskreport",
+            name="farm",
         ),
     ]

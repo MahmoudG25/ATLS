@@ -5,30 +5,69 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Item',
+            name="Item",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('category', models.CharField(choices=[('tools', 'Tools'), ('pesticides', 'Pesticides'), ('fertilizers', 'Fertilizers')], max_length=50)),
-                ('quantity', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("tools", "Tools"),
+                            ("pesticides", "Pesticides"),
+                            ("fertilizers", "Fertilizers"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "quantity",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=12),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Movement',
+            name="Movement",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('movement_type', models.CharField(choices=[('IN', 'In'), ('OUT', 'Out')], max_length=10)),
-                ('quantity', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('date', models.DateTimeField(auto_now_add=True)),
-                ('item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='movements', to='warehouse.item')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "movement_type",
+                    models.CharField(
+                        choices=[("IN", "In"), ("OUT", "Out")], max_length=10
+                    ),
+                ),
+                ("quantity", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("date", models.DateTimeField(auto_now_add=True)),
+                (
+                    "item",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="movements",
+                        to="warehouse.item",
+                    ),
+                ),
             ],
         ),
     ]

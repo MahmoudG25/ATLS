@@ -4,58 +4,74 @@ from apps.palm.models import PalmRecord
 from apps.production.models import AnnualYield
 from django.db.models import Sum, Prefetch
 
+
 def list_farms():
     return Farm.objects.filter(is_active=True)
 
+
 def list_crop_types():
     return CropType.objects.all()
+
 
 def get_farm_structure(farm_id=None):
     """
     Returns full hierarchy of sectors and their plots
     """
-    active_plots = Prefetch('plots', queryset=Plot.objects.filter(is_active=True))
-    sectors = Sector.objects.filter(is_active=True).select_related('crop_type').prefetch_related(active_plots)
+    active_plots = Prefetch("plots", queryset=Plot.objects.filter(is_active=True))
+    sectors = (
+        Sector.objects.filter(is_active=True)
+        .select_related("crop_type")
+        .prefetch_related(active_plots)
+    )
     if farm_id:
         sectors = sectors.filter(farm_id=farm_id)
     return sectors
 
+
 def create_sector(data):
     return Sector.objects.create(**data)
+
 
 def update_sector(sector_id, data):
     Sector.objects.filter(id=sector_id).update(**data)
     return Sector.objects.get(id=sector_id)
 
+
 def delete_sector(sector_id):
     Sector.objects.filter(id=sector_id).update(is_active=False)
     # Also cascade soft delete to plots if desired, or let plots remain but sector is hidden
 
+
 def create_plot(data):
     return Plot.objects.create(**data)
+
 
 def update_plot(plot_id, data):
     Plot.objects.filter(id=plot_id).update(**data)
     return Plot.objects.get(id=plot_id)
 
+
 def delete_plot(plot_id):
     Plot.objects.filter(id=plot_id).update(is_active=False)
 
+
 def get_plot_stats(plot_id):
-    plot = Plot.objects.select_related('sector__crop_type').get(id=plot_id)
+    plot = Plot.objects.select_related("sector__crop_type").get(id=plot_id)
     crop_type = plot.sector.crop_type.name.lower()
-    
+
     total_trees = 0
-    if 'palm' in crop_type:
+    if "palm" in crop_type:
         records = PalmRecord.objects.filter(plot=plot)
         total_trees = sum([r.trees_count for r in records])
     else:
         records = OliveRecord.objects.filter(plot=plot)
         total_trees = sum([r.trees_count for r in records])
-        
-    total_yield = AnnualYield.objects.filter(plot=plot).aggregate(Sum('production_amount'))['production_amount__sum'] or 0
 
-    return {
-        'total_trees': total_trees,
-        'lifetime_yield': total_yield
-    }
+    total_yield = (
+        AnnualYield.objects.filter(plot=plot).aggregate(Sum("production_amount"))[
+            "production_amount__sum"
+        ]
+        or 0
+    )
+
+    return {"total_trees": total_trees, "lifetime_yield": total_yield}

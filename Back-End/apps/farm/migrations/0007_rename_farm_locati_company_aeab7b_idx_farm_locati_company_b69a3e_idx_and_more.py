@@ -6,60 +6,69 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0006_locationnode_mptt_tenant_strict'),
-        ('users', '0005_company_user_company'),
+        ("farm", "0006_locationnode_mptt_tenant_strict"),
+        ("users", "0005_company_user_company"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='locationnode',
-            new_name='farm_locati_company_b69a3e_idx',
-            old_name='farm_locati_company_aeab7b_idx',
+            model_name="locationnode",
+            new_name="farm_locati_company_b69a3e_idx",
+            old_name="farm_locati_company_aeab7b_idx",
         ),
         migrations.RenameIndex(
-            model_name='locationnode',
-            new_name='farm_locati_farm_id_afeb61_idx',
-            old_name='farm_locati_f8d20f_idx',
+            model_name="locationnode",
+            new_name="farm_locati_farm_id_afeb61_idx",
+            old_name="farm_locati_f8d20f_idx",
         ),
         migrations.RenameIndex(
-            model_name='locationnode',
-            new_name='farm_locati_parent__428083_idx',
-            old_name='farm_locati_6fa9ce_idx',
+            model_name="locationnode",
+            new_name="farm_locati_parent__428083_idx",
+            old_name="farm_locati_6fa9ce_idx",
         ),
         migrations.AlterField(
-            model_name='farm',
-            name='company',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='users.company'),
+            model_name="farm",
+            name="company",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="users.company"
+            ),
         ),
         migrations.AlterField(
-            model_name='locationnode',
-            name='level',
+            model_name="locationnode",
+            name="level",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='locationnode',
-            name='lft',
+            model_name="locationnode",
+            name="lft",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='locationnode',
-            name='parent',
-            field=mptt.fields.TreeForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='farm.locationnode'),
+            model_name="locationnode",
+            name="parent",
+            field=mptt.fields.TreeForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="children",
+                to="farm.locationnode",
+            ),
         ),
         migrations.AlterField(
-            model_name='locationnode',
-            name='rght',
+            model_name="locationnode",
+            name="rght",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='locationnode',
-            name='tree_id',
+            model_name="locationnode",
+            name="tree_id",
             field=models.PositiveIntegerField(db_index=True, editable=False),
         ),
         migrations.AddIndex(
-            model_name='locationnode',
-            index=models.Index(fields=['tree_id', 'lft'], name='farm_locationnode_tree_id_8c8a'),
+            model_name="locationnode",
+            index=models.Index(
+                fields=["tree_id", "lft"], name="farm_locationnode_tree_id_8c8a"
+            ),
         ),
     ]

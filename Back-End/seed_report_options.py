@@ -1,31 +1,68 @@
 """
 Run with: python manage.py shell < seed_report_options.py
 """
+
 import django, os
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
 from apps.reports.models import ReportDropdownOption, Operation
 
 DATA = {
-    'variety': [
-        'مجدول', 'ليمون', 'الصوب', 'اخرى', 'كل الاصناف',
+    "variety": [
+        "مجدول",
+        "ليمون",
+        "الصوب",
+        "اخرى",
+        "كل الاصناف",
     ],
-    'contractor': [
-        '1', '2', '3', '7', '8', '1+2', '7+8', '1/7', '2/7', 'خارجي', 'مقاول خارجي',
+    "contractor": [
+        "1",
+        "2",
+        "3",
+        "7",
+        "8",
+        "1+2",
+        "7+8",
+        "1/7",
+        "2/7",
+        "خارجي",
+        "مقاول خارجي",
     ],
-    'unit': [
-        'نخلة', 'جورة', 'فسيلة', 'فسيلة+كوز', 'كوز', 'حوشة', 'تحضيرة', 'تحضيره',
+    "unit": [
+        "نخلة",
+        "جورة",
+        "فسيلة",
+        "فسيلة+كوز",
+        "كوز",
+        "حوشة",
+        "تحضيرة",
+        "تحضيره",
     ],
-    'enclosure': [],
+    "enclosure": [],
 }
 
 OPERATIONS = [
-    'تلقيح', 'إزالة حشائش', 'إزالة حشائش+تجوير', 'تقليع فسائل', 'زراعة فسائل',
-    'زراعة الشتلات', 'تجوير', 'حفر جور وتجهيز للزراعة', 'فك السبايط', 'فك الخوص',
-    'إزالة الأربطة', 'ازالة العروسه من السبايط', 'خصى العروسه', 'متابعة عمليات المشتل',
-    'متابعة عملية الفصل', 'نقل وتحميل الفسائل', 'صيانة صوب وتنشير أكواز دكار',
-    'رش مبيد حشري', 'توزيع وتنزيل السماد',
+    "تلقيح",
+    "إزالة حشائش",
+    "إزالة حشائش+تجوير",
+    "تقليع فسائل",
+    "زراعة فسائل",
+    "زراعة الشتلات",
+    "تجوير",
+    "حفر جور وتجهيز للزراعة",
+    "فك السبايط",
+    "فك الخوص",
+    "إزالة الأربطة",
+    "ازالة العروسه من السبايط",
+    "خصى العروسه",
+    "متابعة عمليات المشتل",
+    "متابعة عملية الفصل",
+    "نقل وتحميل الفسائل",
+    "صيانة صوب وتنشير أكواز دكار",
+    "رش مبيد حشري",
+    "توزيع وتنزيل السماد",
 ]
 
 created = 0
@@ -37,12 +74,11 @@ for category, names in DATA.items():
         if not name:
             continue
         obj, is_new = ReportDropdownOption.objects.get_or_create(
-            name=name, category=category,
-            defaults={'is_active': True}
+            name=name, category=category, defaults={"is_active": True}
         )
         if is_new:
             created += 1
-            print(f'  [OK] Created [{category}] {name}')
+            print(f"  [OK] Created [{category}] {name}")
         else:
             skipped += 1
 
@@ -51,13 +87,12 @@ for raw in OPERATIONS:
     if not name:
         continue
     obj, is_new = Operation.objects.get_or_create(
-        name=name,
-        defaults={'category': 'other'}
+        name=name, defaults={"category": "other"}
     )
     if is_new:
         created += 1
-        print(f'  [OK] Created [operation] {name}')
+        print(f"  [OK] Created [operation] {name}")
     else:
         skipped += 1
 
-print(f'\nDone. Created: {created}, Skipped (already exist): {skipped}')
+print(f"\nDone. Created: {created}, Skipped (already exist): {skipped}")

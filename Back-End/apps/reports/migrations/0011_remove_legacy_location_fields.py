@@ -5,27 +5,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('reports', '0010_rename_reports_att_company_3d504f_idx_reports_att_company_510d0d_idx_and_more'),
+        (
+            "reports",
+            "0010_rename_reports_att_company_3d504f_idx_reports_att_company_510d0d_idx_and_more",
+        ),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='crop',
+            model_name="dailytaskreport",
+            name="crop",
         ),
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='stage',
+            model_name="dailytaskreport",
+            name="stage",
         ),
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='enclosure',
+            model_name="dailytaskreport",
+            name="enclosure",
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='location',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='daily_task_reports', to='farm.locationnode'),
+            model_name="dailytaskreport",
+            name="location",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="daily_task_reports",
+                to="farm.locationnode",
+            ),
         ),
     ]

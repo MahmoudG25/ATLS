@@ -5,37 +5,78 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Equipment',
+            name="Equipment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='Maintenance',
+            name="Maintenance",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('notes', models.TextField()),
-                ('equipment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='maintenances', to='equipment.equipment')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("notes", models.TextField()),
+                (
+                    "equipment",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="maintenances",
+                        to="equipment.equipment",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Usage',
+            name="Usage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('hours_used', models.DecimalField(decimal_places=2, max_digits=8)),
-                ('fuel_consumption', models.DecimalField(blank=True, decimal_places=2, max_digits=8, null=True)),
-                ('equipment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='usages', to='equipment.equipment')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("hours_used", models.DecimalField(decimal_places=2, max_digits=8)),
+                (
+                    "fuel_consumption",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=8, null=True
+                    ),
+                ),
+                (
+                    "equipment",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="usages",
+                        to="equipment.equipment",
+                    ),
+                ),
             ],
         ),
     ]

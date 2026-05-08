@@ -4,7 +4,12 @@ from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Sum
 from django.db.models.functions import Coalesce
 
 from apps.reports.models import DailyTaskReport, LaborEntry
-from apps.reports.selectors import kpi_metrics, tenant_reports, operations_over_time, worker_usage
+from apps.reports.selectors import (
+    kpi_metrics,
+    tenant_reports,
+    operations_over_time,
+    worker_usage,
+)
 
 
 def cost_analytics(company):
@@ -58,7 +63,12 @@ def productivity_analytics(company):
             output=Coalesce(Sum("actual_productivity"), 0),
             workers=Coalesce(Sum("company_workers") + Sum("contractor_workers"), 0),
         )
-        .annotate(productivity=ExpressionWrapper(F("output") / Coalesce(F("workers"), 1), output_field=DecimalField(max_digits=10, decimal_places=2)))
+        .annotate(
+            productivity=ExpressionWrapper(
+                F("output") / Coalesce(F("workers"), 1),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )
         .order_by("-productivity")
     )
 
@@ -90,9 +100,21 @@ def smart_alerts(company):
     )
     alerts = []
     if low_prod:
-        alerts.append({"type": "low_productivity", "count": low_prod, "message": "Low productivity detected."})
+        alerts.append(
+            {
+                "type": "low_productivity",
+                "count": low_prod,
+                "message": "Low productivity detected.",
+            }
+        )
     if high_cost_reports:
-        alerts.append({"type": "high_cost", "count": high_cost_reports, "message": "High report cost detected."})
+        alerts.append(
+            {
+                "type": "high_cost",
+                "count": high_cost_reports,
+                "message": "High report cost detected.",
+            }
+        )
     return alerts
 
 

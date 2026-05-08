@@ -5,43 +5,98 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='CropType',
+            name="CropType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Farm',
+            name="Farm",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='Sector',
+            name="Sector",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('crop_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='farm.croptype')),
-                ('farm', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sectors', to='farm.farm')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "crop_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, to="farm.croptype"
+                    ),
+                ),
+                (
+                    "farm",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="sectors",
+                        to="farm.farm",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Plot',
+            name="Plot",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('is_general', models.BooleanField(default=False, help_text='True if sector does not have specific plots.')),
-                ('sector', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='plots', to='farm.sector')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "is_general",
+                    models.BooleanField(
+                        default=False,
+                        help_text="True if sector does not have specific plots.",
+                    ),
+                ),
+                (
+                    "sector",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="plots",
+                        to="farm.sector",
+                    ),
+                ),
             ],
         ),
     ]

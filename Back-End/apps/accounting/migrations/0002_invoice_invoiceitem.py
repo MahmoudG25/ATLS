@@ -6,41 +6,101 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('accounting', '0001_initial'),
+        ("accounting", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Invoice',
+            name="Invoice",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('invoice_number', models.CharField(max_length=50, unique=True)),
-                ('type', models.CharField(choices=[('purchase', 'Purchase Invoice'), ('sales', 'Sales Invoice')], max_length=20)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('sent', 'Sent'), ('paid', 'Paid'), ('cancelled', 'Cancelled')], default='draft', max_length=20)),
-                ('party_name', models.CharField(max_length=200)),
-                ('issue_date', models.DateField()),
-                ('due_date', models.DateField(blank=True, null=True)),
-                ('total_amount', models.DecimalField(decimal_places=2, default=0, max_digits=14)),
-                ('notes', models.TextField(blank=True, default='')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='invoices', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("invoice_number", models.CharField(max_length=50, unique=True)),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("purchase", "Purchase Invoice"),
+                            ("sales", "Sales Invoice"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("sent", "Sent"),
+                            ("paid", "Paid"),
+                            ("cancelled", "Cancelled"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                ("party_name", models.CharField(max_length=200)),
+                ("issue_date", models.DateField()),
+                ("due_date", models.DateField(blank=True, null=True)),
+                (
+                    "total_amount",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=14),
+                ),
+                ("notes", models.TextField(blank=True, default="")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="invoices",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-issue_date'],
+                "ordering": ["-issue_date"],
             },
         ),
         migrations.CreateModel(
-            name='InvoiceItem',
+            name="InvoiceItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('description', models.CharField(max_length=255)),
-                ('quantity', models.DecimalField(decimal_places=2, default=1, max_digits=10)),
-                ('unit_price', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('total', models.DecimalField(decimal_places=2, default=0, max_digits=14)),
-                ('invoice', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='items', to='accounting.invoice')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("description", models.CharField(max_length=255)),
+                (
+                    "quantity",
+                    models.DecimalField(decimal_places=2, default=1, max_digits=10),
+                ),
+                ("unit_price", models.DecimalField(decimal_places=2, max_digits=12)),
+                (
+                    "total",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=14),
+                ),
+                (
+                    "invoice",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="items",
+                        to="accounting.invoice",
+                    ),
+                ),
             ],
         ),
     ]

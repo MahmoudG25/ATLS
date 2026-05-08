@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0001_initial'),
+        ("farm", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plot',
-            name='is_active',
+            model_name="plot",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='sector',
-            name='is_active',
+            model_name="sector",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
     ]

@@ -5,29 +5,45 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('reports', '0013_remove_farm_field_from_dailytaskreport'),
+        ("reports", "0013_remove_farm_field_from_dailytaskreport"),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='dailytaskreport',
-            name='reports_dai_crop_id_5c9ce8_idx',
+            model_name="dailytaskreport",
+            name="reports_dai_crop_id_5c9ce8_idx",
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='contractor',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='daily_task_reports', to='reports.contractor', verbose_name='كود المقاول'),
+            model_name="dailytaskreport",
+            name="contractor",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="daily_task_reports",
+                to="reports.contractor",
+                verbose_name="كود المقاول",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='unit',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='daily_task_reports', to='reports.unit', verbose_name='الوحدة'),
+            model_name="dailytaskreport",
+            name="unit",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="daily_task_reports",
+                to="reports.unit",
+                verbose_name="الوحدة",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='variety',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='daily_task_reports', to='reports.variety', verbose_name='الصنف'),
+            model_name="dailytaskreport",
+            name="variety",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="daily_task_reports",
+                to="reports.variety",
+                verbose_name="الصنف",
+            ),
         ),
     ]
