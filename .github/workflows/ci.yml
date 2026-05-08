@@ -69,9 +69,13 @@ jobs:
         run: |
           pip install -r requirements-dev.txt
       
-      - name: Run Pytest
+      - name: Run Pytest & Coverage
         working-directory: ./Back-End
-        # Temporarily use || true so that if no tests exist or they fail, the pipeline stays green
+        # We run the basic smoke test suite and fail CI if it crashes
         run: |
-          echo "Running baseline test suite..."
-          pytest || true
+          pytest --cov
+
+      - name: Run Architecture Validation
+        working-directory: ./Back-End
+        run: |
+          python scripts/arch_check.py

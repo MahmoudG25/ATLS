@@ -17,4 +17,4 @@ repos:
         files: ^Back-End/
         # --exit-zero: Ensures existing legacy code debt won't block the commit.
         # --force-exclude: Respects the excludes defined in pyproject.toml.
-        args: ["--config", "Back-End/pyproject.toml", "--exit-zero", "--force-exclude"]
+        args: ["--config", "Back-End/pyproject.toml", "--exit-zero"]

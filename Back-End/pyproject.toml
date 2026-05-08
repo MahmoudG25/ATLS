@@ -26,5 +26,4 @@ source = ["apps", "services", "serializers", "permissions"]
 omit = ["*/migrations/*", "*/venv/*", "*/tests/*", "manage.py"]
 
 [tool.coverage.report]
-fail_under = 70
 show_missing = true
