@@ -195,6 +195,11 @@ urlpatterns = [
         name="reports_operations",
     ),
     path(
+        "reports/operations/<int:pk>/",
+        reports_views.OperationDetailView.as_view(),
+        name="reports_operations_detail",
+    ),
+    path(
         "reports/options/",
         reports_views.ReportDropdownOptionListCreate.as_view(),
         name="reports_options_list",
@@ -209,11 +214,22 @@ urlpatterns = [
         reports_views.VarietyListView.as_view(),
         name="reports_varieties",
     ),
+    path(
+        "reports/varieties/<int:pk>/",
+        reports_views.VarietyDetailView.as_view(),
+        name="reports_varieties_detail",
+    ),
     path("reports/units/", reports_views.UnitListView.as_view(), name="reports_units"),
+    path("reports/units/<int:pk>/", reports_views.UnitDetailView.as_view(), name="reports_units_detail"),
     path(
         "reports/contractors/",
         reports_views.ContractorListView.as_view(),
         name="reports_contractors",
+    ),
+    path(
+        "reports/contractors/<int:pk>/",
+        reports_views.ContractorDetailView.as_view(),
+        name="reports_contractors_detail",
     ),
     path(
         "reports/custom-fields/",

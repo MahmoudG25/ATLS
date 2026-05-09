@@ -68,7 +68,13 @@ from apps.reports.selectors import (
     operation_location_matrix,
 )
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination
 import django_filters
+
+class TaskPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class DailyTaskFilter(django_filters.FilterSet):
@@ -98,6 +104,7 @@ def _for_company(queryset, request):
     if not company and request.user.is_authenticated:
         from apps.users.models import Company
         company = Company.objects.first()
+        request.company = company
     # ------------------------------------------------------
     
     # Temporary debug logging for tenant/data-access integrity audit
@@ -121,13 +128,35 @@ def _for_company(queryset, request):
     return qs
 
 
-class OperationListView(generics.ListAPIView):
+class OperationListView(generics.ListCreateAPIView):
     serializer_class = OperationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_queryset(self):
         qs = Operation.objects.filter(is_active=True).order_by("name")
         return _for_company(qs, self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
+
+class OperationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = OperationSerializer
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(Operation.objects.all(), self.request)
+
+    def perform_destroy(self, instance):
+        if getattr(instance, "is_system", False):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied({"detail": "System operations cannot be deactivated."})
+        # Soft delete by deactivating
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class DailyTaskReportListCreate(generics.ListCreateAPIView):
@@ -135,6 +164,7 @@ class DailyTaskReportListCreate(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_class = DailyTaskFilter
+    pagination_class = TaskPagination
 
     def get_queryset(self):
         qs = DailyTaskReport.objects.select_related(
@@ -366,9 +396,11 @@ class CustomFieldDefinitionListCreate(generics.ListCreateAPIView):
         return _for_company(CustomFieldDefinition.objects.all(), self.request)
 
     def perform_create(self, serializer):
-        serializer.save(
-            created_by=self.request.user, company=getattr(self.request, "company", None)
-        )
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(created_by=self.request.user, company=company)
 
 
 class CustomFieldDefinitionDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -438,28 +470,88 @@ class ReportDropdownOptionDetail(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-class VarietyListView(generics.ListAPIView):
+class VarietyListView(generics.ListCreateAPIView):
     serializer_class = VarietySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(Variety.objects.filter(is_active=True), self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
+
+
+class VarietyDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = VarietySerializer
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_queryset(self):
         return _for_company(Variety.objects.all(), self.request)
 
+    def perform_destroy(self, instance):
+        # Soft delete
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
-class UnitListView(generics.ListAPIView):
+
+class UnitListView(generics.ListCreateAPIView):
     serializer_class = UnitSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(Unit.objects.filter(is_active=True), self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
+
+
+class UnitDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = UnitSerializer
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_queryset(self):
         return _for_company(Unit.objects.all(), self.request)
 
+    def perform_destroy(self, instance):
+        # Soft delete
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
-class ContractorListView(generics.ListAPIView):
+
+class ContractorListView(generics.ListCreateAPIView):
     serializer_class = ContractorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(Contractor.objects.filter(is_active=True), self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
+
+
+class ContractorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ContractorSerializer
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_queryset(self):
         return _for_company(Contractor.objects.all(), self.request)
+
+    def perform_destroy(self, instance):
+        # Soft delete
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
 
 
 class LaborEntryListCreate(generics.ListCreateAPIView):

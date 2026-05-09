@@ -10,6 +10,9 @@ class Operation(TenantAwareModel):
     """قائمة العمليات الفنية الثابتة"""
 
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=100, null=True, blank=True)
+    profile_type = models.CharField(max_length=50, default="generic")
+    is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     CATEGORY_CHOICES = [
         ("pollination", "تلقيح ومشاتل"),
@@ -39,6 +42,7 @@ class Variety(TenantAwareModel):
     company = models.ForeignKey(
         "users.Company", on_delete=models.CASCADE, related_name="varieties"
     )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Variety"
@@ -55,6 +59,7 @@ class Unit(TenantAwareModel):
     company = models.ForeignKey(
         "users.Company", on_delete=models.CASCADE, related_name="units"
     )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Unit"
@@ -291,6 +296,11 @@ class OperationLog(TenantAwareModel):
     )
     sequence = models.PositiveSmallIntegerField(default=0, verbose_name="الترتيب")
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Dynamic Profiles
+    profile_type = models.CharField(max_length=50, default="generic")
+    profile_version = models.IntegerField(default=1)
+    profile_data = models.JSONField(default=dict, blank=True)
 
     class Meta:
         verbose_name = "سجل عملية"

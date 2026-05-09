@@ -1,10 +1,11 @@
 import React from 'react'
 
-import { DeleteOutlined } from '@mui/icons-material'
-import { IconButton, TextField, Tooltip } from '@mui/material'
-import { Controller } from 'react-hook-form'
+import { DeleteOutlined, DynamicFeedOutlined } from '@mui/icons-material'
+import { FormControl, IconButton, MenuItem, Select, TextField, Tooltip } from '@mui/material'
+import { Controller, useWatch } from 'react-hook-form'
 
 import LocationSelect from '../../../../components/LocationSelect'
+import { OPERATION_PROFILES } from '../../../../constants/operationProfiles'
 import { AC, Field, inputSx, Stepper } from '../../shared/FormControls'
 
 export default function OperationRow({
@@ -20,6 +21,12 @@ export default function OperationRow({
 }) {
   // Helper to extract nested error messages safely
   const getError = (fieldName) => errors?.operations?.[index]?.[fieldName]
+  const getProfileError = (fieldName) => errors?.operations?.[index]?.profile_data?.[fieldName]
+
+  const currentOperationId = useWatch({ control, name: `operations.${index}.operation` })
+  const currentOperation = operations.find((o) => o.id === currentOperationId)
+  const profileType = currentOperation?.profile_type || 'generic'
+  const profileFields = OPERATION_PROFILES[profileType] || []
 
   return (
     <div className="relative border border-[#bfc9c1] rounded-2xl p-6 bg-white shadow-sm mb-6">
@@ -107,7 +114,82 @@ export default function OperationRow({
           </div>
         </div>
 
-        {/* Section 2: Execution (The "Who & How") */}
+        {/* Section 2: Dynamic Profile (If applicable) */}
+        {profileFields.length > 0 && (
+          <div className="bg-[#f8fafc] -mx-6 px-6 py-6 border-y border-[#e2e8f0]">
+            <p className="text-sm font-bold text-[#0f5238] uppercase tracking-wider mb-5 flex items-center gap-2">
+              <DynamicFeedOutlined fontSize="small" />
+              البيانات التشغيلية (
+              {profileType === 'irrigation'
+                ? 'الري'
+                : profileType === 'fertilization'
+                  ? 'التسميد'
+                  : 'الرش'}
+              )
+            </p>
+            <div className="grid grid-cols-12 gap-6">
+              {profileFields.map((f) => (
+                <div key={f.name} className="col-span-12 md:col-span-6 lg:col-span-4">
+                  <Controller
+                    name={`operations.${index}.profile_data.${f.name}`}
+                    control={control}
+                    render={({ field }) => (
+                      <Field label={`${f.label} ${f.required ? '*' : ''}`}>
+                        {f.type === 'select' ? (
+                          <FormControl fullWidth size="small" error={!!getProfileError(f.name)}>
+                            <Select
+                              {...field}
+                              value={field.value || ''}
+                              displayEmpty
+                              sx={{ ...inputSx, bgcolor: 'white' }}
+                            >
+                              <MenuItem value="" disabled>
+                                اختر {f.label}
+                              </MenuItem>
+                              {f.options.map((opt) => (
+                                <MenuItem key={opt} value={opt}>
+                                  {opt}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {getProfileError(f.name) && (
+                              <p className="text-[#ba1a1a] text-xs mt-1 ml-3 font-semibold">
+                                {getProfileError(f.name)?.message}
+                              </p>
+                            )}
+                          </FormControl>
+                        ) : (
+                          <TextField
+                            {...field}
+                            value={field.value || ''}
+                            type={f.type}
+                            fullWidth
+                            size="small"
+                            placeholder={`أدخل ${f.label}`}
+                            InputProps={
+                              f.unit
+                                ? {
+                                    endAdornment: (
+                                      <span className="text-xs text-gray-500 ml-2">{f.unit}</span>
+                                    ),
+                                  }
+                                : {}
+                            }
+                            error={!!getProfileError(f.name)}
+                            helperText={getProfileError(f.name)?.message}
+                            sx={{ ...inputSx, bgcolor: 'white' }}
+                          />
+                        )}
+                      </Field>
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Execution (The "Who & How") */}
         <div>
           <p className="text-sm font-bold text-[#0f5238] uppercase tracking-wider mb-5 border-b border-[#e1e3df] pb-2">
             التنفيذ والعمالة
@@ -164,7 +246,7 @@ export default function OperationRow({
           </div>
         </div>
 
-        {/* Section 3: Metrics (The "Results") */}
+        {/* Section 4: Metrics (The "Results") */}
         <div>
           <p className="text-sm font-bold text-[#0f5238] uppercase tracking-wider mb-5 border-b border-[#e1e3df] pb-2">
             المقاييس والإنتاجية

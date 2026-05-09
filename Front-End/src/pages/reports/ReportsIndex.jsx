@@ -16,11 +16,7 @@ const DailyTaskForm = lazy(() => import('./DailyTaskReport/DailyTaskForm'))
 const DailyTaskCard = lazy(() => import('./DailyTaskReport/DailyTaskCard'))
 const DailyTaskSummary = lazy(() => import('./DailyTaskReport/DailyTaskSummary'))
 
-const FertilizationList = lazy(() => import('./FertilizationReport/FertilizationList'))
-const FertilizationForm = lazy(() => import('./FertilizationReport/FertilizationForm'))
-
-const IrrigationList = lazy(() => import('./IrrigationReport/IrrigationList'))
-const IrrigationForm = lazy(() => import('./IrrigationReport/IrrigationForm'))
+// Legacy silos removed
 
 const CustomFieldsManager = lazy(() => import('./CustomFields/CustomFieldsManager'))
 
@@ -38,9 +34,7 @@ const ReportsIndex = () => {
   const currentTab = () => {
     if (location.pathname.includes('/reports/analytics')) return 0
     if (location.pathname.includes('/reports/tasks')) return 1
-    if (location.pathname.includes('/reports/fertilization')) return 2
-    if (location.pathname.includes('/reports/irrigation')) return 3
-    if (location.pathname.includes('/reports/custom-fields')) return 4
+    if (location.pathname.includes('/reports/custom-fields')) return 2
     return 0
   }
 
@@ -95,23 +89,9 @@ const ReportsIndex = () => {
             to="/reports/tasks"
           />
           <Tab
-            icon={<ScienceIcon />}
-            iconPosition="start"
-            label={t('reports.tab_fertilization', 'التسميد')}
-            component={Link}
-            to="/reports/fertilization"
-          />
-          <Tab
-            icon={<WaterDropIcon />}
-            iconPosition="start"
-            label={t('reports.tab_irrigation', 'الري')}
-            component={Link}
-            to="/reports/irrigation"
-          />
-          <Tab
             icon={<SettingsIcon />}
             iconPosition="start"
-            label={t('reports.tab_custom_fields', 'إعدادات الحقول المخصصة')}
+            label={t('reports.tab_custom_fields', 'البيانات الأساسية (Master Data)')}
             component={Link}
             to="/reports/custom-fields"
           />
@@ -130,11 +110,7 @@ const ReportsIndex = () => {
           <Route path="tasks/:id" element={<DailyTaskCard />} />
           <Route path="tasks/:id/edit" element={<DailyTaskForm />} />
 
-          <Route path="fertilization" element={<FertilizationList />} />
-          <Route path="fertilization/new" element={<FertilizationForm />} />
-
-          <Route path="irrigation" element={<IrrigationList />} />
-          <Route path="irrigation/new" element={<IrrigationForm />} />
+          {/* Legacy Silos Routes Removed */}
 
           <Route path="custom-fields" element={<CustomFieldsManager />} />
         </Routes>

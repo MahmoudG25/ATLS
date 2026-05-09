@@ -43,6 +43,16 @@ class OperationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Operation
         fields = "__all__"
+        read_only_fields = ["company"]
+
+    def validate(self, attrs):
+        # Restrict changing system operations structure
+        if self.instance and self.instance.is_system:
+            if "slug" in attrs and attrs["slug"] != self.instance.slug:
+                raise serializers.ValidationError({"slug": "لا يمكن تغيير المعرف (slug) لعملية أساسية في النظام."})
+            if "profile_type" in attrs and attrs["profile_type"] != self.instance.profile_type:
+                raise serializers.ValidationError({"profile_type": "لا يمكن تغيير نوع القالب (profile_type) لعملية أساسية في النظام."})
+        return super().validate(attrs)
 
 
 class VarietySerializer(serializers.ModelSerializer):
@@ -81,6 +91,39 @@ class OperationLogSerializer(serializers.ModelSerializer):
             node = node.parent
             parts.append(node.name)
         return " / ".join(reversed(parts))
+
+    def validate(self, attrs):
+        profile_type = attrs.get("profile_type", "generic")
+        profile_data = attrs.get("profile_data", {})
+        
+        if profile_type == "irrigation":
+            required_keys = ["water_quantity", "irrigation_duration"]
+            for key in required_keys:
+                if key not in profile_data or profile_data[key] in [None, ""]:
+                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for irrigation."})
+            try:
+                float(profile_data["water_quantity"])
+                float(profile_data["irrigation_duration"])
+            except ValueError:
+                raise serializers.ValidationError({"profile_data": "Irrigation fields must be numeric."})
+                
+        elif profile_type == "fertilization":
+            required_keys = ["fertilizer_material", "fertilizer_dosage"]
+            for key in required_keys:
+                if key not in profile_data or profile_data[key] in [None, ""]:
+                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for fertilization."})
+            try:
+                float(profile_data["fertilizer_dosage"])
+            except ValueError:
+                raise serializers.ValidationError({"profile_data": "Dosage must be numeric."})
+
+        elif profile_type == "spraying":
+            required_keys = ["pesticide_material"]
+            for key in required_keys:
+                if key not in profile_data or profile_data[key] in [None, ""]:
+                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for spraying."})
+
+        return attrs
 
 
 class ContractorSerializer(serializers.ModelSerializer):

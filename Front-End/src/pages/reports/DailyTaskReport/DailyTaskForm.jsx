@@ -84,7 +84,13 @@ export default function DailyTaskForm() {
   const [pendingFiles, setPendingFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({})
 
-  const { engineers, operations, varieties, units, contractors } = useReportOptions()
+  const {
+    engineers,
+    operations: availableOperations,
+    varieties,
+    units,
+    contractors,
+  } = useReportOptions()
 
   const {
     control,
@@ -151,6 +157,8 @@ export default function DailyTaskForm() {
                   work_hours: op.work_hours,
                   overtime_hours: op.overtime_hours || 0,
                   overtime_productivity: op.overtime_productivity || 0,
+                  profile_type: op.profile_type || 'generic',
+                  profile_data: op.profile_data || {},
                 }))
               : [
                   {
@@ -166,6 +174,8 @@ export default function DailyTaskForm() {
                     work_hours: data.work_hours,
                     overtime_hours: data.overtime_hours || 0,
                     overtime_productivity: data.overtime_productivity || 0,
+                    profile_type: 'generic',
+                    profile_data: {},
                   },
                 ]
 
@@ -203,21 +213,27 @@ export default function DailyTaskForm() {
         overtime_productivity: primaryOperation.overtime_productivity,
 
         // Modern Operations Array
-        operations: operations.map((op) => ({
-          id: op.id,
-          temp_id: op.temp_id,
-          location: sanitizeId(op.location),
-          operation: sanitizeId(op.operation),
-          variety: sanitizeId(op.variety),
-          unit: sanitizeId(op.unit),
-          contractor: sanitizeId(op.contractor),
-          company_workers: op.company_workers,
-          contractor_workers: op.contractor_workers,
-          actual_productivity: op.actual_productivity,
-          work_hours: op.work_hours,
-          overtime_hours: op.overtime_hours || 0,
-          overtime_productivity: op.overtime_productivity || 0,
-        })),
+        operations: operations.map((op) => {
+          const matchedOpDef = availableOperations.find((o) => o.id === op.operation)
+          const profileType = matchedOpDef ? matchedOpDef.profile_type : 'generic'
+          return {
+            id: op.id,
+            temp_id: op.temp_id,
+            location: sanitizeId(op.location),
+            operation: sanitizeId(op.operation),
+            variety: sanitizeId(op.variety),
+            unit: sanitizeId(op.unit),
+            contractor: sanitizeId(op.contractor),
+            company_workers: op.company_workers,
+            contractor_workers: op.contractor_workers,
+            actual_productivity: op.actual_productivity,
+            work_hours: op.work_hours,
+            overtime_hours: op.overtime_hours || 0,
+            overtime_productivity: op.overtime_productivity || 0,
+            profile_type: profileType,
+            profile_data: op.profile_data || {},
+          }
+        }),
 
         // Shared
         report_date: dayjs(report_date).format('YYYY-MM-DD'),
@@ -401,7 +417,7 @@ export default function DailyTaskForm() {
                   control={control}
                   getValues={getValues}
                   errors={errors}
-                  operations={operations}
+                  operations={availableOperations}
                   varieties={varieties}
                   units={units}
                   contractors={contractors}

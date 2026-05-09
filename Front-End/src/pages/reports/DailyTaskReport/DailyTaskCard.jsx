@@ -6,6 +6,7 @@ import {
   Assignment as AssignmentIcon,
   CalendarToday as CalendarIcon,
   Delete as DeleteIcon,
+  DynamicFeedOutlined,
   Edit as EditIcon,
   Engineering as EngineerIcon,
   Lock as LockIcon,
@@ -29,6 +30,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../../../app/AuthContext'
+import { OPERATION_PROFILES } from '../../../constants/operationProfiles'
 import api from '../../../services/api'
 import { reportsApi } from '../../../services/reportsApi'
 import ReportActionBar from '../shared/ReportActionBar'
@@ -369,6 +371,37 @@ const DailyTaskCard = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* DYNAMIC PROFILE SECTION */}
+                {event.profile_data &&
+                  Object.keys(event.profile_data).length > 0 &&
+                  event.profile_type &&
+                  OPERATION_PROFILES[event.profile_type] && (
+                    <div className="bg-[#f8fafc] border-t border-[#e2e8f0] p-3 px-4">
+                      <span className="text-[10px] font-bold text-[#0f5238] uppercase tracking-wider block mb-2 flex items-center gap-1">
+                        <DynamicFeedOutlined fontSize="inherit" /> البيانات التشغيلية
+                      </span>
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#334155]">
+                        {OPERATION_PROFILES[event.profile_type].map((field) => {
+                          const val = event.profile_data[field.name]
+                          if (val === undefined || val === null || val === '') return null
+                          return (
+                            <div key={field.name} className="flex items-center gap-2">
+                              <span className="text-[#64748b]">{field.label}:</span>
+                              <span className="font-semibold text-[#0f172a]">
+                                {val}{' '}
+                                {field.unit && (
+                                  <span className="text-[10px] text-[#64748b] font-normal">
+                                    {field.unit}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           ))}
