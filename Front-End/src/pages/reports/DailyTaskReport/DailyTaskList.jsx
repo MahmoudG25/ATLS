@@ -1,23 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Card, Typography, Button, CircularProgress, Alert, Grid } from '@mui/material';
-import { Add as AddIcon, CalendarToday as CalendarIcon, Engineering as EngineerIcon } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
-import { reportsApi } from '../../../services/reportsApi';
-import ReportBadge from '../shared/ReportBadge';
-import ReportFilters from '../shared/ReportFilters';
+import React, { useEffect, useState } from 'react'
+
+import {
+  AccessTime as TimeIcon,
+  Add as AddIcon,
+  Engineering as EngineerIcon,
+  Map as MapIcon,
+  People as PeopleIcon,
+  PrecisionManufacturing as OperationIcon,
+} from '@mui/icons-material'
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
+import { Link } from 'react-router-dom'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+
+import { reportsApi } from '../../../services/reportsApi'
+import ReportFilters from '../shared/ReportFilters'
+import ReportStatusBadge from '../shared/ReportStatusBadge'
+
+import 'dayjs/locale/ar'
+
+dayjs.extend(relativeTime)
+dayjs.locale('ar')
 
 const DailyTaskList = () => {
-  const [reports, setReports] = useState([]);
-  const [filterOptions, setFilterOptions] = useState({ operations: [], engineers: [], locations: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [reports, setReports] = useState([])
+  const [filterOptions, setFilterOptions] = useState({
+    operations: [],
+    engineers: [],
+    locations: [],
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [filters, setFilters] = useState({
-    start_date: '', end_date: '', operation: '', engineer: '', location: ''
-  });
+    start_date: '',
+    end_date: '',
+    operation: '',
+    engineer: '',
+    location: '',
+  })
 
   useEffect(() => {
-    fetchReports();
-  }, [filters]);
+    fetchReports()
+  }, [filters])
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -26,138 +50,157 @@ const DailyTaskList = () => {
           reportsApi.getOperations(),
           reportsApi.getUsers(),
           reportsApi.getFarmHierarchy(),
-        ]);
-        const flattenNodes = (nodes = []) => nodes.flatMap((node) => [node, ...flattenNodes(node.children || [])]);
+        ])
+        const flattenNodes = (nodes = []) =>
+          nodes.flatMap((node) => [node, ...flattenNodes(node.children || [])])
         setFilterOptions({
           operations: operationsRes.data.results || operationsRes.data || [],
           engineers: usersRes.data.results || usersRes.data || [],
           locations: flattenNodes(hierarchyRes.data.location_nodes || []),
-        });
+        })
       } catch {
         // Keep report list usable even if filter dictionaries fail.
       }
-    };
-    loadFilters();
-  }, []);
+    }
+    loadFilters()
+  }, [])
 
   const fetchReports = async () => {
     try {
-      setLoading(true);
-      const params = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''));
-      const res = await reportsApi.getTasks(params);
-      setReports(res.data.results || res.data);
+      setLoading(true)
+      const params = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
+      const res = await reportsApi.getTasks(params)
+      setReports(res.data.results || res.data)
     } catch (err) {
-      setError('فشل في جلب التقارير اليومية');
+      setError('فشل في جلب التقارير اليومية')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const getBorderColor = (crop) => {
-    const colors = {
-      'نخيل': '#4CAF50',
-      'زيتون': '#FF9800'
-    };
-    return colors[crop] || '#cbd5e1';
-  };
+  const getTemporalDisplay = (report) => {
+    // If updated_at is null or very close to created_at, show created
+    if (!report.updated_at) {
+      return `مُنشأ ${dayjs(report.created_at || report.report_date).fromNow()}`
+    }
+    const created = dayjs(report.created_at)
+    const updated = dayjs(report.updated_at)
+    // if difference is less than 1 minute, consider it just created
+    if (updated.diff(created, 'minute') < 1) {
+      return `مُنشأ ${created.fromNow()}`
+    }
+    return `مُحدث ${updated.fromNow()}`
+  }
 
   return (
-    <Box>
+    <Box sx={{ maxWidth: '900px', margin: '0 auto', pb: 8 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h5" fontWeight="800" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          📋 تقارير المهام اليومية
+        <Typography
+          variant="h5"
+          fontWeight="800"
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#0f172a' }}
+        >
+          السجل التشغيلي
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 2 }}>
-          <Button
-            component={Link}
-            to="summary"
-            variant="outlined"
-            sx={{ borderRadius: 1, fontWeight: 700, px: 3 }}
-          >
-            الملخص
-          </Button>
-          <Button
-            component={Link}
-            to="new"
-            variant="contained"
-            startIcon={<AddIcon />}
-            sx={{ borderRadius: 1, fontWeight: 700, px: 3, bgcolor: '#0f172a', '&:hover': { bgcolor: '#1e293b' } }}
-          >
-            تقرير جديد
-          </Button>
-        </Box>
+        <Button
+          component={Link}
+          to="new"
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{
+            borderRadius: 1,
+            fontWeight: 700,
+            px: 3,
+            bgcolor: '#0f5238',
+            '&:hover': { bgcolor: '#064e3b' },
+          }}
+        >
+          تقرير جديد
+        </Button>
       </Box>
 
       <ReportFilters filters={filters} onFilterChange={setFilters} options={filterOptions} />
 
-      {error && <Alert severity="error" sx={{ mb: 5 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 5 }}>
+          {error}
+        </Alert>
+      )}
 
       {loading ? (
-        <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+        <Box display="flex" justifyContent="center" p={4}>
+          <CircularProgress />
+        </Box>
       ) : reports.length === 0 ? (
-        <Card sx={{ p: 6, textAlign: 'center', borderRadius: 4, bgcolor: '#f8fafc', boxShadow: 'none', border: '1px dashed #cbd5e1' }}>
-          <Typography color="text.secondary" fontWeight="600">لا توجد تقارير مطابقة.</Typography>
-        </Card>
+        <div className="p-8 text-center bg-[#f8fafc] border border-dashed border-[#cbd5e1] rounded-md">
+          <Typography color="text.secondary" fontWeight="600">
+            لا توجد تقارير تشغيلية مطابقة.
+          </Typography>
+        </div>
       ) : (
-        <Grid container spacing={3}>
+        <div className="flex flex-col gap-3">
           {reports.map((report) => (
-            <Grid item xs={12} md={6} lg={4} key={report.id}>
-              <Card
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  borderLeft: `6px solid ${getBorderColor(report.crop_name)}`,
-                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.2s',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }
-                }}
-              >
-                <Box display="flex" justifyContent="space-between" mb={2}>
-                  <Box>
-                    <Typography variant="h6" fontWeight="800" color="text.primary">
-                      {report.engineer_name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                      <CalendarIcon fontSize="small" /> {report.report_date}
-                    </Typography>
-                  </Box>
-                  <ReportBadge type="crop" value={report.crop_name} />
-                </Box>
+            <Link
+              key={report.id}
+              to={`/reports/tasks/${report.id}`}
+              className="block bg-white border border-[#e2e8f0] rounded-md hover:border-[#94a3b8] transition-colors shadow-sm"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
+                {/* Left side: Temporal & Status */}
+                <div className="flex-shrink-0 md:w-48 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <ReportStatusBadge status={report.status} />
+                  </div>
+                  <div className="text-[11px] font-bold text-[#64748b] flex items-center gap-1 mt-1">
+                    <TimeIcon sx={{ fontSize: 14 }} />
+                    {getTemporalDisplay(report)}
+                  </div>
+                  <div className="text-xs text-[#475569] font-semibold mt-1">
+                    تاريخ العمل: {report.report_date}
+                  </div>
+                </div>
 
-                <Box mb={2} flexGrow={1}>
-                  <Typography variant="body1" fontWeight="700" color="text.primary" mb={1}>
-                    {report.operation_name}
-                  </Typography>
-                  <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                    <ReportBadge type="variety" value={report.variety_name} label={report.variety_name} />
-                    <span className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded-md text-slate-600">
-                      {report.location_path || report.enclosure_name}
-                    </span>
-                    <span className="text-xs font-semibold bg-green-50 px-2 py-1 rounded-md text-green-700">
-                      عمالة: {report.company_workers + report.contractor_workers}
-                    </span>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {report.notes || 'لا توجد ملاحظات.'}
-                  </Typography>
-                </Box>
+                {/* Middle: Operations & Location */}
+                <div className="flex-grow flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <OperationIcon sx={{ color: '#0f5238', mt: 0.5, fontSize: 18 }} />
+                    <div>
+                      <h3 className="font-bold text-[#0f172a] text-base leading-tight">
+                        {report.operation_summary || report.operation_name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-sm font-semibold text-[#334155] mt-1">
+                        <MapIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                        {report.location_path || report.enclosure_name}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <Box pt={2} borderTop="1px solid #f1f5f9" display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="subtitle2" fontWeight="800" color="primary.main">
-                    انتاجية: {report.actual_productivity} {report.unit_name}
-                  </Typography>
-                  <Button size="small" component={Link} to={`/reports/tasks/${report.id}`} sx={{ fontWeight: 700 }}>التفاصيل</Button>
-                </Box>
-              </Card>
-            </Grid>
+                {/* Right side: Engineer & Labor summary */}
+                <div className="flex-shrink-0 md:w-56 flex flex-col gap-2 md:border-r md:border-[#e2e8f0] md:pr-4">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-[#1e293b]">
+                    <EngineerIcon sx={{ fontSize: 18, color: '#64748b' }} />
+                    {report.engineer_name}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#475569]">
+                    <PeopleIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                    إجمالي العمالة:{' '}
+                    {(report.company_workers || 0) + (report.contractor_workers || 0)}
+                  </div>
+                  {report.operation_logs && report.operation_logs.length > 1 && (
+                    <div className="inline-block mt-1 bg-[#f1f5f9] text-[#475569] text-[10px] font-bold px-2 py-0.5 rounded">
+                      {report.operation_logs.length} أحداث تشغيلية
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
           ))}
-        </Grid>
+        </div>
       )}
     </Box>
-  );
-};
+  )
+}
 
-export default DailyTaskList;
+export default DailyTaskList

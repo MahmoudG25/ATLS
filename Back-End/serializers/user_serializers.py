@@ -3,6 +3,8 @@ from apps.users.models import User, ActivityLog
 
 
 class UserSerializer(serializers.ModelSerializer):
+    permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -15,6 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "last_login",
             "date_joined",
+            "permissions",
         ]
         read_only_fields = [
             "id",
@@ -22,7 +25,11 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "last_login",
             "date_joined",
+            "permissions",
         ]
+
+    def get_permissions(self, obj):
+        return list(obj.app_permissions.values_list("code", flat=True))
 
 
 class RegisterSerializer(serializers.ModelSerializer):

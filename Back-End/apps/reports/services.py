@@ -6,7 +6,7 @@ from django.db.models.functions import Coalesce
 from apps.reports.models import DailyTaskReport, LaborEntry
 from apps.reports.selectors import (
     kpi_metrics,
-    tenant_reports,
+    tenant_operation_logs,
     operations_over_time,
     worker_usage,
 )
@@ -20,7 +20,7 @@ def cost_analytics(company):
     labor = LaborEntry.objects.for_company(company)
     return {
         "per_operation": list(
-            labor.values("report__operation__name")
+            labor.values("operation_log__operation__name")
             .annotate(
                 total_cost=Coalesce(
                     Sum(cost_expr),
@@ -31,7 +31,7 @@ def cost_analytics(company):
             .order_by("-total_cost")
         ),
         "per_farm": list(
-            labor.values("report__farm__name")
+            labor.values("operation_log__location__farm__name")
             .annotate(
                 total_cost=Coalesce(
                     Sum(cost_expr),
@@ -57,7 +57,7 @@ def cost_analytics(company):
 
 def productivity_analytics(company):
     return list(
-        tenant_reports(company)
+        tenant_operation_logs(company)
         .values("operation__name")
         .annotate(
             output=Coalesce(Sum("actual_productivity"), 0),
@@ -74,7 +74,7 @@ def productivity_analytics(company):
 
 
 def comparison_analytics(company):
-    data = tenant_reports(company).aggregate(
+    data = tenant_operation_logs(company).aggregate(
         contractor=Avg("contractor_workers"),
         company_avg=Avg("company_workers"),
     )
@@ -85,7 +85,7 @@ def comparison_analytics(company):
 
 
 def smart_alerts(company):
-    reports = tenant_reports(company)
+    reports = tenant_operation_logs(company)
     low_prod = reports.filter(actual_productivity__lt=10).count()
     cost_expr = ExpressionWrapper(
         (F("hours") + F("overtime")) * F("worker_rate"),
@@ -93,7 +93,7 @@ def smart_alerts(company):
     )
     high_cost_reports = (
         LaborEntry.objects.for_company(company)
-        .values("report")
+        .values("operation_log")
         .annotate(entries=Count("id"), total=Sum(cost_expr))
         .filter(total__gt=5000)
         .count()

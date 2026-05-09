@@ -12,6 +12,7 @@ from apps.reports.models import (
     ReportDropdownOption,
     LaborEntry,
     Attachment,
+    OperationLog,
 )
 from apps.farm.models import LocationNode, FarmSettings
 
@@ -58,6 +59,30 @@ class UnitSerializer(serializers.ModelSerializer):
         read_only_fields = ["company"]
 
 
+class OperationLogSerializer(serializers.ModelSerializer):
+    operation_name = serializers.CharField(source="operation.name", read_only=True)
+    location_name = serializers.CharField(source="location.name", read_only=True)
+    location_path = serializers.SerializerMethodField()
+    variety_name = serializers.CharField(source="variety.name", read_only=True)
+    unit_name = serializers.CharField(source="unit.name", read_only=True)
+    contractor_name = serializers.CharField(source="contractor.name", read_only=True)
+
+    class Meta:
+        model = OperationLog
+        fields = "__all__"
+        read_only_fields = ["company", "report"]
+
+    def get_location_path(self, obj):
+        node = obj.location
+        if not node:
+            return None
+        parts = [node.name]
+        while node.parent_id:
+            node = node.parent
+            parts.append(node.name)
+        return " / ".join(reversed(parts))
+
+
 class ContractorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contractor
@@ -88,6 +113,56 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     work_location_name = serializers.CharField(
         source="work_location.name", read_only=True
     )
+    location_path = serializers.SerializerMethodField()
+    operation_summary = serializers.SerializerMethodField()
+    available_actions = serializers.SerializerMethodField()
+    operation_logs = OperationLogSerializer(many=True, read_only=True)
+    operations = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
+
+    def get_location_path(self, obj):
+        node = obj.location
+        if not node:
+            return None
+        parts = [node.name]
+        while node.parent_id:
+            node = node.parent
+            parts.append(node.name)
+        return " / ".join(reversed(parts))
+
+    def get_operation_summary(self, obj):
+        logs = obj.operation_logs.all()
+        if not logs:
+            return obj.operation.name if obj.operation else "بدون عمليات"
+        # Gather unique operation names keeping sequence order mostly
+        op_names = []
+        for log in logs:
+            if log.operation and log.operation.name not in op_names:
+                op_names.append(log.operation.name)
+        if not op_names:
+            return obj.operation.name if obj.operation else "بدون عمليات"
+        return " + ".join(op_names)
+
+    def get_available_actions(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return []
+        user = request.user
+        user_role = getattr(user, "role", "ENGINEER")
+        is_manager = user_role in ["MANAGER", "SUPER_ADMIN", "OWNER"]
+        
+        actions = []
+        if obj.status in ["draft", "rejected"]:
+            if obj.engineer == user or is_manager:
+                actions.append("submit")
+        
+        if is_manager:
+            if obj.status == "submitted":
+                actions.append("review")
+            if obj.status in ["submitted", "under_review"]:
+                actions.append("approve")
+                actions.append("reject")
+        
+        return actions
 
     def get_contractor_name(self, obj):
         return obj.contractor.name if obj.contractor else None
@@ -105,7 +180,12 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyTaskReport
         fields = "__all__"
-        read_only_fields = ["company"]
+        read_only_fields = [
+            "company", "status", "rejection_reason", 
+            "override_by", "override_at", "was_overridden", 
+            "is_deleted", "deleted_at", "deleted_by",
+            "created_at", "updated_at", "submitted_at", "approved_at", "rejected_at"
+        ]
 
     def validate(self, data):
         request = self.context.get("request")
@@ -163,6 +243,82 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+    def create(self, validated_data):
+        operations_data = validated_data.pop("operations", [])
+        report = super().create(validated_data)
+        if operations_data:
+            self._sync_operations(report, operations_data)
+        else:
+            # Fallback for old API clients: Phase 2 bridge logic
+            from services.reports_service import sync_operation_log
+            sync_operation_log(report)
+        return report
+
+    def update(self, instance, validated_data):
+        operations_data = validated_data.pop("operations", None)
+        report = super().update(instance, validated_data)
+        if operations_data is not None:
+            self._sync_operations(report, operations_data)
+        else:
+            # Fallback for old API clients
+            from services.reports_service import sync_operation_log
+            sync_operation_log(report)
+        return report
+
+    def _sync_operations(self, report, operations_data):
+        """
+        Synchronizes the incoming operations array with the OperationLog model.
+        Preserves ordering, handles creates, updates, and deletes.
+        """
+        existing_logs = {log.id: log for log in report.operation_logs.all()}
+        seen_ids = set()
+
+        for seq, op_data in enumerate(operations_data):
+            op_id = op_data.get("id")
+            
+            # Resolve the enclosure location for this specific operation
+            loc = op_data.get("location")
+            if loc:
+                from apps.farm.models import LocationNode
+                if isinstance(loc, int):
+                    loc_node = LocationNode.objects.filter(id=loc).first()
+                    if loc_node:
+                        op_data["location"] = _resolve_enclosure(loc_node) or loc_node
+
+            if op_id and op_id in existing_logs:
+                # Update existing
+                log = existing_logs[op_id]
+                for key, value in op_data.items():
+                    if key not in ["id", "temp_id"] and hasattr(log, key):
+                        # Ensure FKs are assigned correctly if they are IDs
+                        if key in ["location", "operation", "variety", "unit", "contractor"] and isinstance(value, int):
+                            setattr(log, f"{key}_id", value)
+                        else:
+                            setattr(log, key, value)
+                log.sequence = seq
+                log.save()
+                seen_ids.add(op_id)
+            else:
+                # Create new
+                # Remove non-model fields
+                clean_data = {k: v for k, v in op_data.items() if k not in ["id", "temp_id"]}
+                
+                # Convert FK integers to _id fields
+                for fk in ["location", "operation", "variety", "unit", "contractor"]:
+                    if fk in clean_data and isinstance(clean_data[fk], int):
+                        val = clean_data.pop(fk)
+                        clean_data[f"{fk}_id"] = val
+                        
+                clean_data["report"] = report
+                clean_data["company_id"] = report.company_id
+                clean_data["sequence"] = seq
+                OperationLog.objects.create(**clean_data)
+
+        # Delete operations that were removed
+        for old_id, old_log in existing_logs.items():
+            if old_id not in seen_ids:
+                old_log.delete()
 
 
 class FertilizationReportSerializer(serializers.ModelSerializer):

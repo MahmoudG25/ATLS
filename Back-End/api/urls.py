@@ -109,6 +109,11 @@ urlpatterns = [
         name="reports_tasks_detail",
     ),
     path(
+        "reports/tasks/<int:pk>/<str:action>/",
+        reports_views.DailyTaskReportActionView.as_view(),
+        name="reports_tasks_action",
+    ),
+    path(
         "reports/tasks/summary/",
         reports_views.DailyTaskSummaryView.as_view(),
         name="reports_tasks_summary",

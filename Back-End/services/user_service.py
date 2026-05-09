@@ -12,6 +12,18 @@ def create_user(validated_data):
     password = validated_data.pop("password", None)
     user = User(**validated_data)
     user.is_approved = False  # Ensures user is not approved
+    
+    # --- TEMPORARY SINGLE-TENANT COMPATIBILITY FALLBACK ---
+    # TODO: [Strict Tenant Assignment Enforcement]
+    # Future multi-tenant expansion MUST require the registration flow 
+    # or an admin to explicitly map users to a specific company.
+    # For now, we auto-assign to the first company to prevent orphaned users.
+    from apps.users.models import Company
+    main_company = Company.objects.first()
+    if main_company:
+        user.company = main_company
+    # ------------------------------------------------------
+        
     if password:
         user.set_password(password)
     user.save()

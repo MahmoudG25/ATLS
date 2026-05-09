@@ -13,21 +13,32 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce, TruncDate
 
-from apps.reports.models import DailyTaskReport, LaborEntry
+from apps.reports.models import DailyTaskReport, LaborEntry, OperationLog
+
+
+def tenant_operation_logs(company):
+    """
+    Phase 3: Source of truth for analytics is now OperationLog.
+    """
+    return (
+        OperationLog.objects.for_company(company)
+        .select_related("operation", "report", "report__engineer", "location", "location__farm")
+    )
 
 
 def tenant_reports(company):
+    """Legacy container query, maintained for non-analytics endpoints"""
     return (
         DailyTaskReport.objects.for_company(company)
-        .select_related("operation", "farm", "engineer", "location", "location__farm")
+        .select_related("operation", "engineer", "location", "location__farm")
         .prefetch_related("labor_entries", "attachments")
     )
 
 
 def operations_over_time(company):
     return list(
-        tenant_reports(company)
-        .annotate(day=TruncDate("report_date"))
+        tenant_operation_logs(company)
+        .annotate(day=TruncDate("report__report_date"))
         .values("day")
         .annotate(total=Count("id"))
         .order_by("day")
@@ -36,7 +47,7 @@ def operations_over_time(company):
 
 def worker_usage(company):
     return list(
-        tenant_reports(company)
+        tenant_operation_logs(company)
         .values("operation__name")
         .annotate(
             company_workers=Coalesce(
@@ -51,9 +62,9 @@ def worker_usage(company):
 
 
 def kpi_metrics(company):
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
     labor = LaborEntry.objects.for_company(company)
-    workers = reports.aggregate(
+    workers = logs.aggregate(
         company_workers=Coalesce(
             Sum("company_workers"), 0, output_field=IntegerField()
         ),
@@ -66,7 +77,7 @@ def kpi_metrics(company):
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )
     return {
-        "total_operations": reports.aggregate(total=Count("operation", distinct=True))[
+        "total_operations": logs.aggregate(total=Count("operation", distinct=True))[
             "total"
         ]
         or 0,
@@ -78,7 +89,7 @@ def kpi_metrics(company):
                 output_field=DecimalField(max_digits=14, decimal_places=2),
             )
         )["total"],
-        "avg_productivity": reports.aggregate(avg=Avg("actual_productivity"))["avg"]
+        "avg_productivity": logs.aggregate(avg=Avg("actual_productivity"))["avg"]
         or 0,
     }
 
@@ -98,16 +109,16 @@ def kpi_dashboard(company, start_date=None, end_date=None):
     - Average productivity per operation
     - Workers per location
     """
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
 
     if start_date:
-        reports = reports.filter(report_date__gte=start_date)
+        logs = logs.filter(report__report_date__gte=start_date)
     if end_date:
-        reports = reports.filter(report_date__lte=end_date)
+        logs = logs.filter(report__report_date__lte=end_date)
 
-    total_reports = reports.count()
+    total_reports = logs.count()
 
-    worker_stats = reports.aggregate(
+    worker_stats = logs.aggregate(
         total_company_workers=Coalesce(
             Sum("company_workers"), 0, output_field=IntegerField()
         ),
@@ -119,7 +130,7 @@ def kpi_dashboard(company, start_date=None, end_date=None):
         ),
     )
 
-    operation_stats = reports.aggregate(
+    operation_stats = logs.aggregate(
         unique_operations=Count("operation", distinct=True),
         total_operations=Count("id"),
         avg_productivity=Avg("actual_productivity"),
@@ -159,16 +170,16 @@ def productivity_analytics(company, start_date=None, end_date=None):
     - GROUP BY operation, location, date
     - Sorted by productivity DESC
     """
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
 
     if start_date:
-        reports = reports.filter(report_date__gte=start_date)
+        logs = logs.filter(report__report_date__gte=start_date)
     if end_date:
-        reports = reports.filter(report_date__lte=end_date)
+        logs = logs.filter(report__report_date__lte=end_date)
 
     # By operation
     by_operation = list(
-        reports.values("operation__id", "operation__name")
+        logs.values("operation__id", "operation__name")
         .annotate(
             total_productivity=Coalesce(
                 Sum("actual_productivity"), 0, output_field=IntegerField()
@@ -183,7 +194,7 @@ def productivity_analytics(company, start_date=None, end_date=None):
 
     # By location
     by_location = list(
-        reports.values("location__id", "location__name", "location__type")
+        logs.values("location__id", "location__name", "location__type")
         .annotate(
             total_productivity=Coalesce(
                 Sum("actual_productivity"), 0, output_field=IntegerField()
@@ -196,7 +207,7 @@ def productivity_analytics(company, start_date=None, end_date=None):
 
     # By date
     by_date = list(
-        reports.values("report_date")
+        logs.values(report_date=F("report__report_date"))
         .annotate(
             total_productivity=Coalesce(
                 Sum("actual_productivity"), 0, output_field=IntegerField()
@@ -224,15 +235,15 @@ def operations_summary(company, start_date=None, end_date=None):
     - Reports count per operation
     - Location breakdown
     """
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
 
     if start_date:
-        reports = reports.filter(report_date__gte=start_date)
+        logs = logs.filter(report__report_date__gte=start_date)
     if end_date:
-        reports = reports.filter(report_date__lte=end_date)
+        logs = logs.filter(report__report_date__lte=end_date)
 
     operations_data = list(
-        reports.values("operation__id", "operation__name", "operation__category")
+        logs.values("operation__id", "operation__name", "operation__category")
         .annotate(
             total_reports=Count("id"),
             total_company_workers=Coalesce(
@@ -248,7 +259,7 @@ def operations_summary(company, start_date=None, end_date=None):
                 Sum("actual_productivity"), 0, output_field=IntegerField()
             ),
             avg_productivity=Avg("actual_productivity"),
-            unique_engineers=Count("engineer", distinct=True),
+            unique_engineers=Count("report__engineer", distinct=True),
             unique_locations=Count("location", distinct=True),
         )
         .order_by("-total_reports")
@@ -269,15 +280,15 @@ def workers_by_location(company, start_date=None, end_date=None):
     - Company vs contractor split
     - Reports count
     """
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
 
     if start_date:
-        reports = reports.filter(report_date__gte=start_date)
+        logs = logs.filter(report__report_date__gte=start_date)
     if end_date:
-        reports = reports.filter(report_date__lte=end_date)
+        logs = logs.filter(report__report_date__lte=end_date)
 
     locations_data = list(
-        reports.values(
+        logs.values(
             "location__id",
             "location__name",
             "location__type",
@@ -293,7 +304,7 @@ def workers_by_location(company, start_date=None, end_date=None):
             ),
             total_workers=F("total_company_workers") + F("total_contractor_workers"),
             total_reports=Count("id"),
-            unique_engineers=Count("engineer", distinct=True),
+            unique_engineers=Count("report__engineer", distinct=True),
             unique_operations=Count("operation", distinct=True),
         )
         .order_by("-total_workers")
@@ -311,15 +322,15 @@ def operation_location_matrix(company, start_date=None, end_date=None):
 
     Shows worker counts at intersection of operation x location.
     """
-    reports = tenant_reports(company)
+    logs = tenant_operation_logs(company)
 
     if start_date:
-        reports = reports.filter(report_date__gte=start_date)
+        logs = logs.filter(report__report_date__gte=start_date)
     if end_date:
-        reports = reports.filter(report_date__lte=end_date)
+        logs = logs.filter(report__report_date__lte=end_date)
 
     matrix = list(
-        reports.values(
+        logs.values(
             "operation__id",
             "operation__name",
             "location__id",

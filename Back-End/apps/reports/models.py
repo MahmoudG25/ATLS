@@ -96,6 +96,18 @@ class ReportDropdownOption(models.Model):
 class DailyTaskReport(TenantAwareModel):
     """تقرير المهام اليومي"""
 
+    STATUS_CHOICES = [
+        ("draft", "مسودة"),
+        ("submitted", "مقدم"),
+        ("under_review", "قيد المراجعة"),
+        ("approved", "معتمد"),
+        ("rejected", "مرفوض"),
+    ]
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="draft", verbose_name="حالة التقرير"
+    )
+    rejection_reason = models.TextField(blank=True, verbose_name="سبب الرفض")
+
     engineer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -152,12 +164,42 @@ class DailyTaskReport(TenantAwareModel):
         null=True, blank=True, verbose_name="انتاجية الإضافي"
     )
     notes = models.TextField(blank=True, verbose_name="ملاحظة")
+    
+    # Override fields
+    override_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="overridden_reports",
+        verbose_name="المعدل الاستثنائي"
+    )
+    override_at = models.DateTimeField(null=True, blank=True, verbose_name="وقت التعديل الاستثنائي")
+    override_reason = models.TextField(null=True, blank=True, verbose_name="سبب التعديل")
+    was_overridden = models.BooleanField(default=False, verbose_name="تم تعديله استثنائياً")
+    
+    # Soft Delete fields for auditability
+    is_deleted = models.BooleanField(default=False, verbose_name="محذوف")
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الحذف")
+    deleted_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deleted_reports",
+        verbose_name="تم الحذف بواسطة"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ التقديم")
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الاعتماد")
+    rejected_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الرفض")
 
     class Meta:
         verbose_name = "تقرير مهام يومي"
         verbose_name_plural = "تقارير المهام اليومية"
-        ordering = ["-report_date", "engineer"]
+        ordering = ["-updated_at", "-created_at"]
         indexes = [
             models.Index(fields=["company", "report_date"]),
             models.Index(fields=["company", "operation", "report_date"]),
@@ -195,6 +237,89 @@ class DailyTaskReport(TenantAwareModel):
             raise ValidationError({"unit": "Invalid tenant relation"})
         if self.operation and self.operation.company_id != self.company_id:
             raise ValidationError({"operation": "Invalid tenant relation"})
+
+
+class OperationLog(TenantAwareModel):
+    """سجل العمليات (Atomic Event)"""
+
+    report = models.ForeignKey(
+        DailyTaskReport, on_delete=models.CASCADE, related_name="operation_logs", verbose_name="التقرير الحاوي"
+    )
+    location = models.ForeignKey(
+        "farm.LocationNode", on_delete=models.PROTECT, related_name="operation_logs"
+    )
+    operation = models.ForeignKey(
+        Operation, on_delete=models.PROTECT, verbose_name="العملية الفنية"
+    )
+    variety = models.ForeignKey(
+        "reports.Variety",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="operation_logs",
+        verbose_name="الصنف",
+    )
+    unit = models.ForeignKey(
+        "reports.Unit",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="operation_logs",
+        verbose_name="الوحدة",
+    )
+    contractor = models.ForeignKey(
+        "reports.Contractor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="operation_logs",
+        verbose_name="كود المقاول",
+    )
+    company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
+    contractor_workers = models.PositiveIntegerField(
+        default=0, verbose_name="عمال المقاول"
+    )
+    actual_productivity = models.FloatField(
+        null=True, blank=True, verbose_name="الانتاجية الفعلية"
+    )
+    work_hours = models.FloatField(default=0.0, verbose_name="ساعات العمل")
+    overtime_hours = models.FloatField(
+        null=True, blank=True, verbose_name="ساعات الإضافي"
+    )
+    overtime_productivity = models.FloatField(
+        null=True, blank=True, verbose_name="انتاجية الإضافي"
+    )
+    sequence = models.PositiveSmallIntegerField(default=0, verbose_name="الترتيب")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "سجل عملية"
+        verbose_name_plural = "سجلات العمليات"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["company", "operation"]),
+            models.Index(fields=["company", "location"]),
+        ]
+
+    def __str__(self):
+        return f"{self.operation} @ {self.location} ({self.created_at.date()})"
+
+    def clean(self):
+        super().clean()
+        if not self.location:
+            raise ValidationError({"location": "Location is required."})
+        self.assert_same_company(self.report, "report")
+        self.assert_same_company(self.location, "location")
+        if self.location.farm.company_id != self.company_id:
+            raise ValidationError({"location": "Invalid tenant relation"})
+        if self.operation and self.operation.company_id != self.company_id:
+            raise ValidationError({"operation": "Invalid tenant relation"})
+        if self.variety and self.variety.company_id != self.company_id:
+            raise ValidationError({"variety": "Invalid tenant relation"})
+        if self.unit and self.unit.company_id != self.company_id:
+            raise ValidationError({"unit": "Invalid tenant relation"})
+        if self.contractor and self.contractor.company_id != self.company_id:
+            raise ValidationError({"contractor": "Invalid tenant relation"})
 
 
 class FertilizationReport(models.Model):
@@ -362,6 +487,13 @@ class LaborEntry(TenantAwareModel):
     report = models.ForeignKey(
         DailyTaskReport, on_delete=models.CASCADE, related_name="labor_entries"
     )
+    operation_log = models.ForeignKey(
+        "reports.OperationLog",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="labor_entries",
+    )
     worker_name = models.CharField(max_length=120)
     worker_type = models.CharField(max_length=20, choices=WORKER_TYPE_CHOICES)
     contractor = models.ForeignKey(
@@ -391,6 +523,12 @@ class LaborEntry(TenantAwareModel):
             raise ValidationError({"report": "Invalid tenant relation"})
         if self.contractor and self.contractor.company_id != self.company_id:
             raise ValidationError({"contractor": "Invalid tenant relation"})
+        if (
+            self.operation_log_id
+            and self.company_id
+            and self.operation_log.company_id != self.company_id
+        ):
+            raise ValidationError({"operation_log": "Invalid tenant relation"})
 
 
 class Attachment(TenantAwareModel):
@@ -405,6 +543,13 @@ class Attachment(TenantAwareModel):
 
     report = models.ForeignKey(
         DailyTaskReport, on_delete=models.CASCADE, related_name="attachments"
+    )
+    operation_log = models.ForeignKey(
+        "reports.OperationLog",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
     )
     file_url = models.URLField(max_length=1000)
     file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES)
@@ -422,3 +567,11 @@ class Attachment(TenantAwareModel):
             and self.report.company_id != self.company_id
         ):
             raise ValidationError({"report": "Invalid tenant relation"})
+        if (
+            self.operation_log_id
+            and self.company_id
+            and self.operation_log.company_id != self.company_id
+        ):
+            raise ValidationError({"operation_log": "Invalid tenant relation"})
+
+

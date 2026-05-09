@@ -44,6 +44,20 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
+class AppPermission(models.Model):
+    code = models.CharField(max_length=100, unique=True, help_text="e.g. 'reports.override', 'reports.delete'")
+    name = models.CharField(max_length=255, help_text="e.g. 'Can Override Reports'")
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "صلاحية مخصصة"
+        verbose_name_plural = "صلاحيات مخصصة"
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
 class RoleChoices(models.TextChoices):
     SUPER_ADMIN = "SUPER_ADMIN", _("Super Admin")
     OWNER = "OWNER", _("Owner")
@@ -71,6 +85,14 @@ class User(AbstractUser):
     # Custom flags
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+
+    # Formal Relational Permission Architecture (Phase 4)
+    app_permissions = models.ManyToManyField(
+        AppPermission,
+        blank=True,
+        related_name="users",
+        verbose_name="صلاحيات مخصصة"
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name", "role"]
