@@ -106,6 +106,36 @@ const EnclosureHeader = ({ profile, loading }) => {
                   borderColor: profile?.is_active ? '#bcf0da' : '#e2e8f0',
                 }}
               />
+              {profile?.asset_profile?.crop_type && (
+                <Chip
+                  label={`الصنف: ${profile.asset_profile.crop_type}`}
+                  size="small"
+                  sx={{
+                    borderRadius: '4px',
+                    fontWeight: 700,
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: '#eff6ff',
+                    color: '#1e40af',
+                    border: '1px solid #dbeafe',
+                  }}
+                />
+              )}
+              {profile?.asset_profile?.planting_year && (
+                <Chip
+                  label={`سنة الزراعة: ${profile.asset_profile.planting_year}`}
+                  size="small"
+                  sx={{
+                    borderRadius: '4px',
+                    fontWeight: 700,
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: '#f8fafc',
+                    color: '#475569',
+                    border: '1px solid #e2e8f0',
+                  }}
+                />
+              )}
             </Stack>
             <Typography
               variant="body2"

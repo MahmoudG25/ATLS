@@ -122,20 +122,34 @@ const OperationalJournal = ({ enclosureId }) => {
               <IconButton
                 onClick={() => fetchEvents(1, true)}
                 size="small"
-                sx={{ border: '1px solid #e2e8f0' }}
+                sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}
               >
                 <RefreshIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             {!isMobile && (
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon />}
-                disableElevation
-                sx={{ borderRadius: '8px', bgcolor: '#0f172a' }}
-              >
-                تصدير PDF
-              </Button>
+              <>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    borderRadius: '8px',
+                    borderColor: '#e2e8f0',
+                    color: '#475569',
+                    fontWeight: 600,
+                  }}
+                >
+                  إجراءات جماعية
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadIcon />}
+                  disableElevation
+                  sx={{ borderRadius: '8px', bgcolor: '#0f172a' }}
+                >
+                  تصدير التقارير
+                </Button>
+              </>
             )}
           </Stack>
         </Stack>

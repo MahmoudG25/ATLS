@@ -5,9 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import EnclosureHeader from './components/EnclosureHeader'
 import OperationActionBar from './components/OperationActionBar'
-import OperationalAlerts from './components/OperationalAlerts'
 import OperationalJournal from './components/OperationalJournal'
-import OperationalSnapshot from './components/OperationalSnapshot'
 import { useEnclosureProfile } from './hooks/useEnclosureProfile'
 
 /**
@@ -42,7 +40,7 @@ const EnclosureDashboard = () => {
       <EnclosureHeader profile={profile} loading={loading} />
 
       <Container maxWidth={false} sx={{ px: { xs: 1, sm: 2, md: 4 } }}>
-        <Stack spacing={2} sx={{ mt: -3 }}>
+        <Stack spacing={3} sx={{ mt: -3 }}>
           {/* 2. Operational Action Bar */}
           <OperationActionBar
             enclosureId={id}
@@ -50,14 +48,16 @@ const EnclosureDashboard = () => {
             onAction={handleRefresh}
           />
 
-          {/* 3. Priority Alerts */}
-          <OperationalAlerts profile={profile} />
-
-          {/* 4. Live Operational Snapshot (Dense Row) */}
-          <OperationalSnapshot profile={profile} loading={loading} />
-
-          {/* 5. The Core: Operational Journal (The Ledger) */}
-          <Box sx={{ mt: 1, flexGrow: 1 }}>
+          {/* 3. The Core: Operational Reports Operations Center */}
+          <Box sx={{ flexGrow: 1 }}>
+            <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                مركز إدارة التقارير التشغيلية
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
+                (Operational Ledger)
+              </Typography>
+            </Box>
             <OperationalJournal enclosureId={id} />
           </Box>
         </Stack>
