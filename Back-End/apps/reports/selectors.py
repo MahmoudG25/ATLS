@@ -10,6 +10,7 @@ from django.db.models import (
     Sum,
     Max,
     Min,
+    Q,
 )
 from django.db.models.functions import Coalesce, TruncDate
 
@@ -352,4 +353,83 @@ def operation_location_matrix(company, start_date=None, end_date=None):
 
     return {
         "matrix": matrix,
+    }
+
+
+# ─── Enclosure Profile Selectors ───────────────────────────────────────────
+
+
+def get_location_timeline(location_node, profile_type=None, operation_id=None, search=None):
+    """
+    Returns a paginated-ready queryset of OperationLog records for a specific location.
+    Optimized for the 'Enclosure Profile' timeline widget.
+    """
+    logs = OperationLog.objects.filter(
+        location=location_node, 
+        is_deleted=False
+    ).select_related(
+        "operation", "report", "report__engineer", "contractor", "unit"
+    ).prefetch_related("attachments", "labor_entries")
+
+    if profile_type:
+        logs = logs.filter(profile_type=profile_type)
+    
+    if operation_id:
+        logs = logs.filter(operation_id=operation_id)
+        
+    if search:
+        logs = logs.filter(
+            Q(operation__name__icontains=search) | 
+            Q(report__engineer__first_name__icontains=search) |
+            Q(report__engineer__last_name__icontains=search)
+        )
+        
+    return logs.order_by("-report__report_date", "-created_at")
+
+
+def get_location_analytics(location_node):
+    """
+    Aggregated metrics for a specific Enclosure.
+    """
+    logs = OperationLog.objects.filter(location=location_node, is_deleted=False)
+    
+    # 1. Summary Metrics with matching types (FloatField uses 0.0)
+    summary = logs.aggregate(
+        total_ops=Coalesce(Count("id"), 0),
+        total_hours=Coalesce(Sum("work_hours"), 0.0),
+        total_productivity=Coalesce(Sum("actual_productivity"), 0.0),
+        last_op_date=Max("report__report_date"),
+        last_irrigation_date=Max("report__report_date", filter=Q(operation__category="irrigation") | Q(profile_type="irrigation")),
+        last_fertilization_date=Max("report__report_date", filter=Q(operation__category="fertilization") | Q(profile_type="fertilization"))
+    )
+
+    # 2. Cost Distribution by Category (DecimalField uses Decimal('0'))
+    cost_expr = ExpressionWrapper(
+        (Coalesce(F("labor_entries__hours"), Decimal("0")) + Coalesce(F("labor_entries__overtime"), Decimal("0"))) * 
+        Coalesce(F("labor_entries__worker_rate"), Decimal("0")),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+    
+    cost_trend = list(
+        logs.annotate(period=TruncDate("report__report_date"))
+        .values("period")
+        .annotate(cost=Coalesce(Sum(cost_expr), Decimal("0")))
+        .order_by("period")
+    )
+    
+    # 3. Operation distribution
+    distribution = list(
+        logs.values(category=F("operation__category"))
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    
+    total_count = summary["total_ops"] or 1
+    for item in distribution:
+        item["percentage"] = round((item["count"] / total_count) * 100, 2)
+
+    return {
+        "summary": summary,
+        "cost_trend": cost_trend,
+        "operation_distribution": distribution
     }

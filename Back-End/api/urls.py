@@ -58,6 +58,21 @@ urlpatterns = [
         farm_views.location_node_detail_view,
         name="location_node_detail",
     ),
+    path(
+        "farm/location-nodes/<int:pk>/profile/",
+        farm_views.location_node_profile_view,
+        name="location_node_profile",
+    ),
+    path(
+        "farm/location-nodes/<int:pk>/timeline/",
+        farm_views.LocationNodeTimelineView.as_view(),
+        name="location_node_timeline",
+    ),
+    path(
+        "farm/location-nodes/<int:pk>/analytics/",
+        farm_views.location_node_analytics_view,
+        name="location_node_analytics",
+    ),
     path("farm/sectors", farm_views.create_sector_view, name="create_sector"),
     path("farm/sectors/<int:pk>/", sector_detail_view, name="sector_detail"),
     path("farm/plots", farm_views.create_plot_view, name="create_plot"),

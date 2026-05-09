@@ -27,6 +27,17 @@ class Operation(TenantAwareModel):
     category = models.CharField(
         max_length=50, choices=CATEGORY_CHOICES, default="other"
     )
+    
+    # JSON Schema Governance
+    json_schema = models.JSONField(
+        null=True, blank=True, 
+        help_text="JSON Schema (Draft-7) rules for validating profile_data"
+    )
+    ui_schema = models.JSONField(
+        null=True, blank=True, 
+        help_text="UI definitions for rendering forms and timeline fields"
+    )
+    schema_version = models.IntegerField(default=1)
 
     class Meta:
         verbose_name = "عملية فنية"
@@ -302,6 +313,44 @@ class OperationLog(TenantAwareModel):
     profile_version = models.IntegerField(default=1)
     profile_data = models.JSONField(default=dict, blank=True)
 
+    # Soft Delete / Archival metadata
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deleted_operation_logs",
+    )
+
+    # Bulk Operations & Scoping
+    bulk_operation_id = models.UUIDField(null=True, blank=True, db_index=True)
+    OPERATION_SCOPE_CHOICES = [
+        ("SINGLE", "Single Enclosure"),
+        ("STAGE", "Stage Bulk"),
+        ("SECTOR", "Sector Bulk"),
+        ("FARM", "Farm Bulk"),
+    ]
+    operation_scope = models.CharField(
+        max_length=20, 
+        choices=OPERATION_SCOPE_CHOICES, 
+        default="SINGLE"
+    )
+
+    # Execution Status
+    EXECUTION_STATUS_CHOICES = [
+        ("PENDING", "قيد الانتظار"),
+        ("COMPLETED", "تم التنفيذ"),
+        ("FAILED", "فشل التنفيذ"),
+        ("SKIPPED", "تم التخطي"),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=EXECUTION_STATUS_CHOICES,
+        default="COMPLETED"
+    )
+
     class Meta:
         verbose_name = "سجل عملية"
         verbose_name_plural = "سجلات العمليات"
@@ -318,8 +367,26 @@ class OperationLog(TenantAwareModel):
         super().clean()
         if not self.location:
             raise ValidationError({"location": "Location is required."})
+        
+        # 1. Enforce Enclosure-only for operations
+        from apps.farm.models import LocationNode
+        if self.location.type != LocationNode.TYPE_ENCLOSURE:
+            raise ValidationError({"location": "يجب أن تستهدف العمليات التشغيلية 'حوشة' فقط لضمان دقة البيانات."})
+
         self.assert_same_company(self.report, "report")
         self.assert_same_company(self.location, "location")
+        
+        # 2. Hierarchy Branch Consistency
+        # The operation location MUST be the same as or a descendant of the report location
+        if self.report.location_id and self.location_id:
+            report_loc = self.report.location
+            if self.location != report_loc and not self.location.is_descendant_of(report_loc):
+                # Audit log the attempt (simple implementation)
+                print(f"[AUDIT] Location Drift Attempt: Operation {self.operation} tried to link to {self.location} while Report {self.report.id} is at {report_loc}")
+                raise ValidationError({
+                    "location": f"الموقع المختارة ({self.location.name}) لا يقع ضمن نطاق التقرير الحالي ({report_loc.name})."
+                })
+
         if self.location.farm.company_id != self.company_id:
             raise ValidationError({"location": "Invalid tenant relation"})
         if self.operation and self.operation.company_id != self.company_id:

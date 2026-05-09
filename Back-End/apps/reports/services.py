@@ -1,9 +1,26 @@
 from decimal import Decimal
 
+import jsonschema
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Sum
 from django.db.models.functions import Coalesce
 
 from apps.reports.models import DailyTaskReport, LaborEntry
+
+def validate_operation_profile(operation, profile_data):
+    """
+    Validates profile_data against the Operation's json_schema using jsonschema.
+    If no schema is defined, it passes (allowing legacy/unstructured data).
+    """
+    if not operation or not operation.json_schema:
+        return
+    
+    try:
+        jsonschema.validate(instance=profile_data, schema=operation.json_schema)
+    except jsonschema.exceptions.ValidationError as e:
+        # Re-raise as Django ValidationError
+        raise DjangoValidationError(f"بيانات العملية '{operation.name}' غير صالحة: {e.message}")
+
 from apps.reports.selectors import (
     kpi_metrics,
     tenant_operation_logs,

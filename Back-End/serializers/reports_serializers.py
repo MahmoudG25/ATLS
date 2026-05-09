@@ -93,37 +93,22 @@ class OperationLogSerializer(serializers.ModelSerializer):
         return " / ".join(reversed(parts))
 
     def validate(self, attrs):
-        profile_type = attrs.get("profile_type", "generic")
+        # 1. Fetch operation to get its schema
+        operation = attrs.get("operation")
         profile_data = attrs.get("profile_data", {})
-        
-        if profile_type == "irrigation":
-            required_keys = ["water_quantity", "irrigation_duration"]
-            for key in required_keys:
-                if key not in profile_data or profile_data[key] in [None, ""]:
-                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for irrigation."})
-            try:
-                float(profile_data["water_quantity"])
-                float(profile_data["irrigation_duration"])
-            except ValueError:
-                raise serializers.ValidationError({"profile_data": "Irrigation fields must be numeric."})
-                
-        elif profile_type == "fertilization":
-            required_keys = ["fertilizer_material", "fertilizer_dosage"]
-            for key in required_keys:
-                if key not in profile_data or profile_data[key] in [None, ""]:
-                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for fertilization."})
-            try:
-                float(profile_data["fertilizer_dosage"])
-            except ValueError:
-                raise serializers.ValidationError({"profile_data": "Dosage must be numeric."})
 
-        elif profile_type == "spraying":
-            required_keys = ["pesticide_material"]
-            for key in required_keys:
-                if key not in profile_data or profile_data[key] in [None, ""]:
-                    raise serializers.ValidationError({"profile_data": f"Field '{key}' is required for spraying."})
+        # 2. Dynamic Schema Validation (JSON Schema Governance)
+        if operation:
+            from apps.reports.services import validate_operation_profile
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                validate_operation_profile(operation, profile_data)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError({"profile_data": e.message})
 
         return attrs
+
+
 
 
 class ContractorSerializer(serializers.ModelSerializer):
@@ -139,6 +124,9 @@ class ReportDropdownOptionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["company"]
 
+
+from django.db import transaction
+from django.utils import timezone
 
 class DailyTaskReportSerializer(serializers.ModelSerializer):
     engineer_name = serializers.CharField(source="engineer.name", read_only=True)
@@ -173,7 +161,7 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
         return " / ".join(reversed(parts))
 
     def get_operation_summary(self, obj):
-        logs = obj.operation_logs.all()
+        logs = obj.operation_logs.filter(is_deleted=False)
         if not logs:
             return obj.operation.name if obj.operation else "بدون عمليات"
         # Gather unique operation names keeping sequence order mostly
@@ -244,17 +232,9 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
         if not location:
             raise serializers.ValidationError({"location": "الموقع مطلوب."})
 
-        # CRITICAL RULE: Normalize to ENCLOSURE
-        resolved_node = _resolve_enclosure(location)
-        if not resolved_node:
-            raise serializers.ValidationError(
-                {
-                    "location": f"الموقع المختار ({location.name}) لا يحتوي على أي حوشة فعالة للتقرير عليها."
-                }
-            )
-
-        # Update the data dictionary so it saves the ENCLOSURE ID
-        data["location"] = resolved_node
+        if location.type not in [LocationNode.TYPE_ENCLOSURE, LocationNode.TYPE_STAGE, LocationNode.TYPE_SECTOR]:
+            raise serializers.ValidationError({"location": "Invalid location type"})
+        data["location"] = location
 
         if company:
             # Validate tenant isolation for the resolved enclosure and other FKs
@@ -287,81 +267,129 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
 
         return data
 
+    @transaction.atomic
     def create(self, validated_data):
         operations_data = validated_data.pop("operations", [])
         report = super().create(validated_data)
+        
+        # Unified Pipeline
         if operations_data:
             self._sync_operations(report, operations_data)
-        else:
-            # Fallback for old API clients: Phase 2 bridge logic
+        elif validated_data.get("operation"):
             from services.reports_service import sync_operation_log
             sync_operation_log(report)
+            
         return report
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         operations_data = validated_data.pop("operations", None)
         report = super().update(instance, validated_data)
+        
         if operations_data is not None:
             self._sync_operations(report, operations_data)
-        else:
-            # Fallback for old API clients
+        elif report.operation_id:
             from services.reports_service import sync_operation_log
             sync_operation_log(report)
+            
         return report
 
     def _sync_operations(self, report, operations_data):
         """
-        Synchronizes the incoming operations array with the OperationLog model.
-        Preserves ordering, handles creates, updates, and deletes.
+        Synchronizes incoming operations with OperationLog model.
+        Supports Expansion: STAGE/SECTOR -> Multiple ENCLOSURE events.
         """
-        existing_logs = {log.id: log for log in report.operation_logs.all()}
+        import uuid
+        from apps.farm.models import LocationNode
+        from django.utils import timezone
+
+        existing_logs = {log.id: log for log in report.operation_logs.filter(is_deleted=False)}
         seen_ids = set()
+        seen_bulk_ids = set()
+        
+        request = self.context.get("request")
+        user = request.user if request else None
 
         for seq, op_data in enumerate(operations_data):
             op_id = op_data.get("id")
+            bulk_id = op_data.get("bulk_operation_id")
             
-            # Resolve the enclosure location for this specific operation
-            loc = op_data.get("location")
-            if loc:
-                from apps.farm.models import LocationNode
-                if isinstance(loc, int):
-                    loc_node = LocationNode.objects.filter(id=loc).first()
-                    if loc_node:
-                        op_data["location"] = _resolve_enclosure(loc_node) or loc_node
-
-            if op_id and op_id in existing_logs:
-                # Update existing
-                log = existing_logs[op_id]
-                for key, value in op_data.items():
-                    if key not in ["id", "temp_id"] and hasattr(log, key):
-                        # Ensure FKs are assigned correctly if they are IDs
-                        if key in ["location", "operation", "variety", "unit", "contractor"] and isinstance(value, int):
-                            setattr(log, f"{key}_id", value)
-                        else:
-                            setattr(log, key, value)
-                log.sequence = seq
-                log.save()
-                seen_ids.add(op_id)
-            else:
-                # Create new
-                # Remove non-model fields
-                clean_data = {k: v for k, v in op_data.items() if k not in ["id", "temp_id"]}
+            # 1. Resolve Location & Determine Scope
+            loc_id = op_data.get("location")
+            if not loc_id:
+                continue
                 
-                # Convert FK integers to _id fields
-                for fk in ["location", "operation", "variety", "unit", "contractor"]:
-                    if fk in clean_data and isinstance(clean_data[fk], int):
-                        val = clean_data.pop(fk)
-                        clean_data[f"{fk}_id"] = val
-                        
-                clean_data["report"] = report
-                clean_data["company_id"] = report.company_id
-                clean_data["sequence"] = seq
-                OperationLog.objects.create(**clean_data)
+            loc_node = LocationNode.objects.filter(id=loc_id).first()
+            if not loc_node:
+                continue
 
-        # Delete operations that were removed
+            # Determine Target Enclosures
+            if loc_node.type == LocationNode.TYPE_ENCLOSURE:
+                targets = [loc_node]
+                scope = "SINGLE"
+            else:
+                # Expansion Logic: Get all active descendant enclosures
+                targets = list(loc_node.get_descendants().filter(type=LocationNode.TYPE_ENCLOSURE, is_active=True))
+                scope = loc_node.type # STAGE or SECTOR
+            
+            if not targets:
+                continue
+
+            # 2. Update or Create
+            if op_id and op_id in existing_logs:
+                # Individual Update
+                log = existing_logs[op_id]
+                self._apply_op_data(log, op_data, seq)
+                seen_ids.add(op_id)
+            elif bulk_id:
+                # Bulk Update: Update all logs belonging to this bulk group
+                bulk_logs = report.operation_logs.filter(bulk_operation_id=bulk_id, is_deleted=False)
+                for log in bulk_logs:
+                    self._apply_op_data(log, op_data, seq)
+                    seen_ids.add(log.id)
+                seen_bulk_ids.add(bulk_id)
+            else:
+                # NEW Operation (could be single or bulk)
+                new_bulk_id = uuid.uuid4() if len(targets) > 1 else None
+                for target in targets:
+                    clean_data = self._prepare_clean_data(op_data, report, target, seq)
+                    clean_data["bulk_operation_id"] = new_bulk_id
+                    clean_data["operation_scope"] = scope
+                    new_log = OperationLog.objects.create(**clean_data)
+                    seen_ids.add(new_log.id)
+
+        # 3. Soft-delete removed operations
         for old_id, old_log in existing_logs.items():
             if old_id not in seen_ids:
-                old_log.delete()
+                old_log.is_deleted = True
+                old_log.deleted_at = timezone.now()
+                old_log.deleted_by = user
+                old_log.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+
+    def _prepare_clean_data(self, op_data, report, location_node, sequence):
+        clean_data = {k: v for k, v in op_data.items() if k not in ["id", "temp_id", "bulk_operation_id", "location"]}
+        
+        # Convert FK integers to objects or _id
+        for fk in ["operation", "variety", "unit", "contractor"]:
+            if fk in clean_data and isinstance(clean_data[fk], int):
+                val = clean_data.pop(fk)
+                clean_data[f"{fk}_id"] = val
+        
+        clean_data["location"] = location_node
+        clean_data["report"] = report
+        clean_data["company_id"] = report.company_id
+        clean_data["sequence"] = sequence
+        return clean_data
+
+    def _apply_op_data(self, log, op_data, sequence):
+        for key, value in op_data.items():
+            if key not in ["id", "temp_id", "bulk_operation_id", "location"] and hasattr(log, key):
+                if key in ["operation", "variety", "unit", "contractor"] and isinstance(value, int):
+                    setattr(log, f"{key}_id", value)
+                else:
+                    setattr(log, key, value)
+        log.sequence = sequence
+        log.save()
 
 
 class FertilizationReportSerializer(serializers.ModelSerializer):
@@ -407,6 +435,49 @@ class LaborEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = LaborEntry
         fields = "__all__"
+
+
+class OperationLogTimelineSerializer(serializers.ModelSerializer):
+    """
+    Detailed serializer for the Enclosure Timeline feed.
+    Includes full operation metadata and summary metrics.
+    """
+    operation_name = serializers.CharField(source="operation.name", read_only=True)
+    operation_category = serializers.CharField(source="operation.category", read_only=True)
+    ui_schema = serializers.JSONField(source="operation.ui_schema", read_only=True)
+    engineer_name = serializers.CharField(source="report.engineer.name", read_only=True)
+    report_date = serializers.DateField(source="report.report_date", read_only=True)
+    
+    metrics = serializers.SerializerMethodField()
+    attachments_count = serializers.SerializerMethodField()
+    labor_entries = LaborEntrySerializer(many=True, read_only=True)
+    report_status = serializers.CharField(source="report.status", read_only=True)
+    execution_status = serializers.CharField(source="status", read_only=True)
+
+    class Meta:
+        model = OperationLog
+        fields = [
+            "id", "operation_name", "operation_category", "ui_schema",
+            "engineer_name", "report_date", "profile_type", "profile_version", 
+            "profile_data", "metrics", "attachments_count", "created_at",
+            "labor_entries", "report_status", "execution_status", "status"
+        ]
+
+    def get_metrics(self, obj):
+        # Calculate summary metrics for this specific log entry with safety defaults
+        labor = obj.labor_entries.all()
+        total_cost = sum(
+            ((l.hours or 0) + (l.overtime or 0)) * (l.worker_rate or 0) 
+            for l in labor
+        )
+        return {
+            "total_cost": float(total_cost),
+            "total_hours": float(sum(l.hours or 0 for l in labor)),
+            "worker_count": labor.count() or (obj.company_workers + obj.contractor_workers)
+        }
+
+    def get_attachments_count(self, obj):
+        return obj.attachments.all().count()
 
 
 class AttachmentSerializer(serializers.ModelSerializer):

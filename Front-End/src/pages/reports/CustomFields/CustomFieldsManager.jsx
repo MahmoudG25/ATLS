@@ -435,7 +435,7 @@ const MasterDataManager = () => {
               data.contractors.map((item) => (
                 <TableRow key={item.id} hover>
                   <TableCell fontWeight="500">{item.name}</TableCell>
-                  <TableCell>{item.rate_per_hour} ريال</TableCell>
+                  <TableCell>{item.rate_per_hour} جنية</TableCell>
                   <TableCell>
                     {item.is_active ? (
                       <Chip size="small" label="نشط" color="success" />

@@ -216,3 +216,34 @@ class FarmSettings(TenantAwareModel):
 
     def __str__(self):
         return f"Settings for {self.farm}"
+
+
+class EnclosureProfile(TenantAwareModel):
+    """
+    Operational metadata for a specific enclosure.
+    Separates agricultural domain data from the structural hierarchy.
+    """
+    location_node = models.OneToOneField(
+        LocationNode,
+        on_delete=models.CASCADE,
+        related_name="profile",
+        limit_choices_to={"type": LocationNode.TYPE_ENCLOSURE}
+    )
+    crop_type = models.CharField(max_length=50, null=True, blank=True)  # e.g. 'palm', 'olive'
+    planting_year = models.PositiveIntegerField(null=True, blank=True)
+    tree_count = models.PositiveIntegerField(default=0)
+    seedling_count = models.PositiveIntegerField(default=0)
+    expected_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    actual_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Dynamic crop-specific metadata (e.g. variety, spacing)
+    profile_data = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    general_notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات عامة")
+
+    class Meta:
+        verbose_name = "Enclosure Profile"
+        verbose_name_plural = "Enclosure Profiles"
+
+    def __str__(self):
+        return f"Profile for {self.location_node.name}"

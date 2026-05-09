@@ -399,3 +399,156 @@ def location_node_detail_view(request, pk):
             request.user, f"Archived LocationNode: {node.type}:{node.name}", "Farm"
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Enclosure Operational Profile Views ──────────────────────────────────
+
+from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+from apps.reports.selectors import get_location_timeline, get_location_analytics
+from serializers.reports_serializers import OperationLogTimelineSerializer
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def location_node_profile_view(request, pk):
+    """
+    GET: Returns high-level profile summary for an enclosure (Entity-Centric).
+    PATCH: Updates the agricultural profile (tree count, crop, yield, etc.).
+    """
+    try:
+        node = LocationNode.objects.get(pk=pk)
+    except LocationNode.DoesNotExist:
+        return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "PATCH":
+        # Update or create the profile
+        from apps.farm.models import EnclosureProfile
+        profile, created = EnclosureProfile.objects.get_or_create(
+            location_node=node,
+            defaults={"company": node.company}
+        )
+        
+        # Extract fields
+        crop_type = request.data.get("crop_type")
+        planting_year = request.data.get("planting_year")
+        tree_count = request.data.get("tree_count")
+        seedling_count = request.data.get("seedling_count")
+        expected_yield = request.data.get("expected_yield")
+        profile_data = request.data.get("profile_data")
+
+        if crop_type is not None: profile.crop_type = crop_type
+        if planting_year is not None: profile.planting_year = planting_year
+        if tree_count is not None: profile.tree_count = tree_count
+        if seedling_count is not None: profile.seedling_count = seedling_count
+        if expected_yield is not None: profile.expected_yield = expected_yield
+        if request.data.get("general_notes") is not None:
+            profile.general_notes = request.data.get("general_notes")
+        if profile_data is not None:
+            if not profile.profile_data: profile.profile_data = {}
+            profile.profile_data.update(profile_data)
+            
+        profile.save()
+        log_activity(request.user, f"Updated Agricultural Profile for Enclosure {node.name}", "Farm")
+
+    # Basic analytics for profile header with safety fallback
+    try:
+        analytics = get_location_analytics(node)
+    except Exception:
+        analytics = {
+            "summary": {"total_ops": 0, "total_hours": 0, "last_op_date": None},
+            "distribution": [],
+            "cost_trend": []
+        }
+    
+    # Resolve hierarchy breadcrumbs safely
+    try:
+        ancestors = node.get_ancestors()
+        sector = ancestors.filter(type=LocationNode.TYPE_SECTOR).first()
+        stage = ancestors.filter(type=LocationNode.TYPE_STAGE).first()
+    except Exception:
+        sector = stage = None
+
+    # Fetch Enclosure Profile if it exists (using safe hasattr)
+    profile_data = {}
+    if hasattr(node, "profile") and node.profile:
+        p = node.profile
+        profile_data = {
+            "crop_type": p.crop_type,
+            "planting_year": p.planting_year,
+            "tree_count": p.tree_count,
+            "seedling_count": p.seedling_count,
+            "expected_yield": float(p.expected_yield) if p.expected_yield else 0,
+            "actual_yield": float(p.actual_yield) if p.actual_yield else 0,
+            "profile_data": p.profile_data,
+            "general_notes": p.general_notes,
+        }
+
+    return Response({
+        "id": node.id,
+        "name": node.name,
+        "type": node.type,
+        "status": "active" if node.is_active else "inactive",
+        "hierarchy": {
+            "sector": {"id": sector.id, "name": sector.name} if sector else None,
+            "stage": {"id": stage.id, "name": stage.name} if stage else None,
+        },
+        "asset_profile": profile_data,
+        "summary_metrics": {
+            "total_operations": analytics.get("summary", {}).get("total_ops") or 0,
+            "total_work_hours": round(float(analytics.get("summary", {}).get("total_hours") or 0), 2),
+            "last_operation_date": analytics.get("summary", {}).get("last_op_date"),
+            "last_irrigation_date": analytics.get("summary", {}).get("last_irrigation_date"),
+            "last_fertilization_date": analytics.get("summary", {}).get("last_fertilization_date")
+        }
+    })
+
+
+class LocationNodeTimelineView(APIView):
+    """
+    Paginated dynamic timeline of operations for an enclosure.
+    Uses OperationLog as the atomic event source.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            node = LocationNode.objects.get(pk=pk)
+        except LocationNode.DoesNotExist:
+            return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+
+        profile_type = request.query_params.get("profile_type")
+        if profile_type == "all":
+            profile_type = None
+        operation_id = request.query_params.get("operation_id")
+        search = request.query_params.get("search")
+        
+        logs = get_location_timeline(node, profile_type=profile_type, operation_id=operation_id, search=search)
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        result_page = paginator.paginate_queryset(logs, request)
+        serializer = OperationLogTimelineSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def location_node_analytics_view(request, pk):
+    """
+    Aggregated analytics with high reliability. Never returns 500.
+    """
+    try:
+        node = LocationNode.objects.get(pk=pk)
+        analytics = get_location_analytics(node)
+        return Response(analytics)
+    except LocationNode.DoesNotExist:
+        return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        # Graceful degradation for analytics
+        return Response({
+            "summary": {"total_ops": 0, "total_hours": 0, "last_op_date": None},
+            "distribution": [],
+            "cost_trend": [],
+            "error_hint": str(e)
+        })
