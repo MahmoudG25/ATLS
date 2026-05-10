@@ -77,7 +77,7 @@ const ReportsIndex = () => {
           <Tab
             icon={<QueryStatsIcon />}
             iconPosition="start"
-            label={t('reports.tab_analytics', 'التحليلات')}
+            label={t('reports.tab_operations_center', 'مركز العمليات')}
             component={Link}
             to="/reports/analytics"
           />

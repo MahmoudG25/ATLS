@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 
 import {
   Circle as StatusIcon,
@@ -6,24 +6,11 @@ import {
   LocationOn as LocationIcon,
   NavigateNext as NextIcon,
 } from '@mui/icons-material'
-import {
-  Box,
-  Breadcrumbs,
-  Button,
-  Chip,
-  Container,
-  Link,
-  Skeleton,
-  Stack,
-  Typography,
-} from '@mui/material'
+import { Box, Breadcrumbs, Chip, Container, Link, Skeleton, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-
-import EditEnclosureModal from './EditEnclosureModal'
 
 const EnclosureHeader = ({ profile, loading }) => {
   const navigate = useNavigate()
-  const [editModalOpen, setEditModalOpen] = useState(false)
 
   if (loading) {
     return (
@@ -106,36 +93,6 @@ const EnclosureHeader = ({ profile, loading }) => {
                   borderColor: profile?.is_active ? '#bcf0da' : '#e2e8f0',
                 }}
               />
-              {profile?.asset_profile?.crop_type && (
-                <Chip
-                  label={`الصنف: ${profile.asset_profile.crop_type}`}
-                  size="small"
-                  sx={{
-                    borderRadius: '4px',
-                    fontWeight: 700,
-                    height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: '#eff6ff',
-                    color: '#1e40af',
-                    border: '1px solid #dbeafe',
-                  }}
-                />
-              )}
-              {profile?.asset_profile?.planting_year && (
-                <Chip
-                  label={`سنة الزراعة: ${profile.asset_profile.planting_year}`}
-                  size="small"
-                  sx={{
-                    borderRadius: '4px',
-                    fontWeight: 700,
-                    height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: '#f8fafc',
-                    color: '#475569',
-                    border: '1px solid #e2e8f0',
-                  }}
-                />
-              )}
             </Stack>
             <Typography
               variant="body2"
@@ -144,68 +101,9 @@ const EnclosureHeader = ({ profile, loading }) => {
               <LocationIcon sx={{ fontSize: 16, mr: 0.5, opacity: 0.7 }} />
               الأصل الزراعي المعرف بالمعرف رقم: {profile?.id}
             </Typography>
-            {profile?.asset_profile?.general_notes && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  bgcolor: '#fffbeb',
-                  border: '1px dotted #f59e0b',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  gap: 2,
-                  alignItems: 'center',
-                  maxWidth: 'fit-content',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                }}
-              >
-                <Box
-                  sx={{
-                    bgcolor: '#f59e0b',
-                    color: 'white',
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: '4px',
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  تنبيه عام
-                </Box>
-                <Typography
-                  variant="body2"
-                  sx={{ color: '#92400e', fontWeight: 600, fontSize: '0.85rem' }}
-                >
-                  {profile.asset_profile.general_notes}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-          <Box>
-            <Button
-              variant="outlined"
-              onClick={() => setEditModalOpen(true)}
-              sx={{
-                borderRadius: '6px',
-                color: '#475569',
-                borderColor: '#cbd5e1',
-                fontWeight: 600,
-                ml: 2,
-              }}
-            >
-              تعديل بيانات الأصل
-            </Button>
           </Box>
         </Stack>
       </Container>
-
-      <EditEnclosureModal
-        open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        profile={profile}
-        onSaveSuccess={() => window.location.reload()}
-      />
     </Box>
   )
 }

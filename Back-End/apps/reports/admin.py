@@ -2,6 +2,16 @@ from django.contrib import admin
 from .models import (
     Operation,
     DailyTaskReport,
+    OperationLog,
+    Season,
+    Variety,
+    Unit,
+    Contractor,
+    LaborCategory,
+    QualityGrade,
+    SortingCategory,
+    PackagingType,
+    ProductivityClassification,
     FertilizationReport,
     IrrigationReport,
     CustomFieldDefinition,
@@ -82,3 +92,37 @@ class IrrigationReportAdmin(admin.ModelAdmin):
     )
     list_filter = ("report_date", "sector_number")
     date_hierarchy = "report_date"
+
+
+@admin.register(Season)
+class SeasonAdmin(admin.ModelAdmin):
+    list_display = ("name", "start_date", "end_date", "status", "is_active")
+    list_filter = ("status", "is_active")
+
+
+@admin.register(Variety)
+class VarietyAdmin(admin.ModelAdmin):
+    list_display = ("name", "company", "is_active")
+    list_filter = ("company", "is_active")
+
+
+@admin.register(Unit)
+class UnitAdmin(admin.ModelAdmin):
+    list_display = ("name", "company", "is_active")
+    list_filter = ("company", "is_active")
+
+
+@admin.register(Contractor)
+class ContractorAdmin(admin.ModelAdmin):
+    list_display = ("name", "company", "rate_per_hour", "is_active")
+    list_filter = ("company", "is_active")
+
+
+@admin.register(OperationLog)
+class OperationLogAdmin(admin.ModelAdmin):
+    list_display = ("operation", "location", "season", "source_type", "status", "created_at")
+    list_filter = ("operation", "season", "source_type", "status")
+    search_fields = ("location__name", "profile_data")
+
+
+admin.site.register([LaborCategory, QualityGrade, SortingCategory, PackagingType, ProductivityClassification])

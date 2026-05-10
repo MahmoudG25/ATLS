@@ -13,6 +13,7 @@ from apps.reports.models import (
     LaborEntry,
     Attachment,
     OperationLog,
+    Season,
 )
 from apps.farm.models import LocationNode, FarmSettings
 
@@ -121,6 +122,13 @@ class ContractorSerializer(serializers.ModelSerializer):
 class ReportDropdownOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportDropdownOption
+        fields = "__all__"
+        read_only_fields = ["company"]
+
+
+class SeasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Season
         fields = "__all__"
         read_only_fields = ["company"]
 
@@ -326,11 +334,9 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
             # Determine Target Enclosures
             if loc_node.type == LocationNode.TYPE_ENCLOSURE:
                 targets = [loc_node]
-                scope = "SINGLE"
             else:
                 # Expansion Logic: Get all active descendant enclosures
                 targets = list(loc_node.get_descendants().filter(type=LocationNode.TYPE_ENCLOSURE, is_active=True))
-                scope = loc_node.type # STAGE or SECTOR
             
             if not targets:
                 continue
@@ -354,7 +360,6 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
                 for target in targets:
                     clean_data = self._prepare_clean_data(op_data, report, target, seq)
                     clean_data["bulk_operation_id"] = new_bulk_id
-                    clean_data["operation_scope"] = scope
                     new_log = OperationLog.objects.create(**clean_data)
                     seen_ids.add(new_log.id)
 

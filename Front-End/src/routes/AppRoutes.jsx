@@ -20,7 +20,8 @@ const OliveRecords = lazy(() => import('../pages/olive/OliveRecords'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const FleetManager = lazy(() => import('../pages/equipment/FleetManager'))
 const FinanceDashboard = lazy(() => import('../pages/accounting/FinanceDashboard'))
-const YieldTracking = lazy(() => import('../pages/production/YieldTracking'))
+const HarvestManagement = lazy(() => import('../pages/production/HarvestManagement'))
+const HarvestReportCreate = lazy(() => import('../pages/production/HarvestReportCreate'))
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'))
 const AdminControls = lazy(() => import('../pages/admin/AdminControls'))
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'))
@@ -197,7 +198,19 @@ const AppRoutes = () => (
           <ProtectedRoute requireModule="production">
             <DashboardLayout>
               <ErrorBoundary>
-                <YieldTracking />
+                <HarvestManagement />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/production/harvest/new"
+        element={
+          <ProtectedRoute requireModule="production">
+            <DashboardLayout>
+              <ErrorBoundary>
+                <HarvestReportCreate />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>

@@ -27,9 +27,9 @@ from apps.reports.models import (
     IrrigationReport,
     CustomFieldDefinition,
     CustomFieldValue,
-    ReportDropdownOption,
     LaborEntry,
     Attachment,
+    Season,
 )
 from serializers.reports_serializers import (
     OperationSerializer,
@@ -50,6 +50,7 @@ from serializers.reports_serializers import (
     OperationsSummarySerializer,
     WorkersByLocationSerializer,
     OperationLocationMatrixSerializer,
+    SeasonSerializer,
 )
 from apps.reports.permissions import IsManagerOrReadOnly
 from apps.reports.services import (
@@ -87,10 +88,35 @@ class DailyTaskFilter(django_filters.FilterSet):
         field_name="operation__name", lookup_expr="icontains"
     )
     location = django_filters.NumberFilter(field_name="location_id")
+    
+    # Generic operational search
+    search = django_filters.CharFilter(method="filter_search")
 
     class Meta:
         model = DailyTaskReport
-        fields = ["engineer", "report_date", "operation", "location"]
+        fields = ["engineer", "report_date", "operation", "location", "search"]
+
+    def filter_search(self, queryset, name, value):
+        from django.db.models import Q
+        if not value:
+            return queryset
+        
+        # Check if value is a numeric ID
+        id_query = Q()
+        if value.startswith("#"):
+            val = value[1:]
+            if val.isdigit():
+                id_query = Q(id=val)
+        elif value.isdigit():
+            id_query = Q(id=value)
+
+        return queryset.filter(
+            id_query |
+            Q(engineer__name__icontains=value) |
+            Q(operation__name__icontains=value) |
+            Q(enclosure_name__icontains=value) |
+            Q(location__name__icontains=value)
+        )
 
 
 def _for_company(queryset, request):
@@ -384,8 +410,39 @@ class DailyTaskExportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Placeholder for export logic using openpyxl
-        return Response({"message": "Export feature pending implementation"})
+        import csv
+        from django.http import HttpResponse
+        
+        # Reuse the same queryset logic
+        qs = DailyTaskReport.objects.select_related(
+            "engineer", "operation", "location"
+        ).order_by("-report_date")
+        qs = _for_company(qs, request)
+        
+        # Apply filters
+        fs = DailyTaskFilter(request.GET, queryset=qs)
+        reports = fs.qs
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="reports_export.csv"'
+        response.write(u'\ufeff'.encode('utf8')) # BOM for Excel UTF-8 support
+        
+        writer = csv.writer(response)
+        writer.writerow(['ID', 'Date', 'Status', 'Operation', 'Location', 'Engineer', 'Productivity', 'Unit'])
+        
+        for r in reports:
+            writer.writerow([
+                r.id,
+                r.report_date,
+                r.status,
+                r.operation.name if r.operation else "",
+                r.location.name if r.location else (r.enclosure_name or ""),
+                r.engineer.name if r.engineer else "",
+                r.actual_productivity,
+                r.unit.name if r.unit else ""
+            ])
+            
+        return response
 
 
 class CustomFieldDefinitionListCreate(generics.ListCreateAPIView):
@@ -552,6 +609,22 @@ class ContractorDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Soft delete
         instance.is_active = False
         instance.save(update_fields=["is_active"])
+
+
+class SeasonListView(generics.ListCreateAPIView):
+    serializer_class = SeasonSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Season.objects.all().order_by("-start_date")
+        return _for_company(qs, self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
 
 
 class LaborEntryListCreate(generics.ListCreateAPIView):

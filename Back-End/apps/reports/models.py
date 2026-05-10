@@ -48,6 +48,30 @@ class Operation(TenantAwareModel):
         return self.name
 
 
+class Season(TenantAwareModel):
+    """الموسم الزراعي - First-class domain for governing reporting periods"""
+    STATUS_CHOICES = [
+        ("OPEN", "مفتوح"),
+        ("CLOSED", "مغلق"),
+        ("ARCHIVED", "مؤرشف"),
+    ]
+    name = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "موسم"
+        verbose_name_plural = "المواسم"
+        ordering = ["-start_date"]
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return self.name
+
+
 class Variety(TenantAwareModel):
     name = models.CharField(max_length=100)
     company = models.ForeignKey(
@@ -77,6 +101,71 @@ class Unit(TenantAwareModel):
         verbose_name_plural = "Units"
         unique_together = ("company", "name")
         ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class LaborCategory(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Labor Category"
+        verbose_name_plural = "Labor Categories"
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class QualityGrade(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Quality Grade"
+        verbose_name_plural = "Quality Grades"
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class SortingCategory(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Sorting Category"
+        verbose_name_plural = "Sorting Categories"
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class PackagingType(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Packaging Type"
+        verbose_name_plural = "Packaging Types"
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class ProductivityClassification(TenantAwareModel):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Productivity Classification"
+        verbose_name_plural = "Productivity Classifications"
+        unique_together = [("company", "name")]
 
     def __str__(self):
         return self.name
@@ -256,57 +345,66 @@ class DailyTaskReport(TenantAwareModel):
 
 
 class OperationLog(TenantAwareModel):
-    """سجل العمليات (Atomic Event)"""
+    """سجل العمليات (Atomic Event) - Optimized for timeline and traceability"""
 
-    report = models.ForeignKey(
-        DailyTaskReport, on_delete=models.CASCADE, related_name="operation_logs", verbose_name="التقرير الحاوي"
-    )
+    # Core Indexed Relationships (Operational Performance)
     location = models.ForeignKey(
-        "farm.LocationNode", on_delete=models.PROTECT, related_name="operation_logs"
+        "farm.LocationNode", on_delete=models.PROTECT, related_name="operation_logs", db_index=True
     )
     operation = models.ForeignKey(
-        Operation, on_delete=models.PROTECT, verbose_name="العملية الفنية"
+        Operation, on_delete=models.PROTECT, verbose_name="العملية الفنية", db_index=True
     )
+    season = models.ForeignKey(
+        Season, on_delete=models.PROTECT, null=True, blank=True, related_name="operation_logs"
+    )
+    
+    # Generic Source Tracking (Flexible but structured)
+    SOURCE_DAILY_TASK = "DAILY_TASK"
+    SOURCE_HARVEST = "HARVEST"
+    SOURCE_SORTING = "SORTING"
+    SOURCE_CHOICES = [
+        (SOURCE_DAILY_TASK, "Daily Task Report"),
+        (SOURCE_HARVEST, "Harvest Report"),
+        (SOURCE_SORTING, "Sorting Report"),
+    ]
+    source_type = models.CharField(max_length=50, choices=SOURCE_CHOICES, db_index=True, null=True, blank=True)
+    source_id = models.PositiveIntegerField(db_index=True, null=True, blank=True)
+    
+    # Backward compatibility / legacy link (will be deprecated once all domains use generic source)
+    report = models.ForeignKey(
+        DailyTaskReport, on_delete=models.CASCADE, related_name="operation_logs", 
+        verbose_name="التقرير الحاوي", null=True, blank=True
+    )
+
+    # Lineage & Traceability
+    parent_log = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="child_logs",
+        verbose_name="العملية الأب"
+    )
+    chain_id = models.UUIDField(null=True, blank=True, db_index=True, verbose_name="كود السلسلة")
+
+    # Operational Data
     variety = models.ForeignKey(
-        "reports.Variety",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="operation_logs",
-        verbose_name="الصنف",
+        "reports.Variety", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="operation_logs", verbose_name="الصنف"
     )
     unit = models.ForeignKey(
-        "reports.Unit",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="operation_logs",
-        verbose_name="الوحدة",
+        "reports.Unit", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="operation_logs", verbose_name="الوحدة"
     )
     contractor = models.ForeignKey(
-        "reports.Contractor",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="operation_logs",
-        verbose_name="كود المقاول",
+        "reports.Contractor", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="operation_logs", verbose_name="كود المقاول"
     )
+    
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
-    contractor_workers = models.PositiveIntegerField(
-        default=0, verbose_name="عمال المقاول"
-    )
-    actual_productivity = models.FloatField(
-        null=True, blank=True, verbose_name="الانتاجية الفعلية"
-    )
+    contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
+    actual_productivity = models.FloatField(null=True, blank=True, verbose_name="الانتاجية الفعلية")
     work_hours = models.FloatField(default=0.0, verbose_name="ساعات العمل")
-    overtime_hours = models.FloatField(
-        null=True, blank=True, verbose_name="ساعات الإضافي"
-    )
-    overtime_productivity = models.FloatField(
-        null=True, blank=True, verbose_name="انتاجية الإضافي"
-    )
+    overtime_hours = models.FloatField(null=True, blank=True, verbose_name="ساعات الإضافي")
+    overtime_productivity = models.FloatField(null=True, blank=True, verbose_name="انتاجية الإضافي")
     sequence = models.PositiveSmallIntegerField(default=0, verbose_name="الترتيب")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     
     # Dynamic Profiles
     profile_type = models.CharField(max_length=50, default="generic")
@@ -326,38 +424,24 @@ class OperationLog(TenantAwareModel):
 
     # Bulk Operations & Scoping
     bulk_operation_id = models.UUIDField(null=True, blank=True, db_index=True)
-    OPERATION_SCOPE_CHOICES = [
-        ("SINGLE", "Single Enclosure"),
-        ("STAGE", "Stage Bulk"),
-        ("SECTOR", "Sector Bulk"),
-        ("FARM", "Farm Bulk"),
-    ]
-    operation_scope = models.CharField(
-        max_length=20, 
-        choices=OPERATION_SCOPE_CHOICES, 
-        default="SINGLE"
-    )
-
-    # Execution Status
+    
+    # Status
     EXECUTION_STATUS_CHOICES = [
         ("PENDING", "قيد الانتظار"),
         ("COMPLETED", "تم التنفيذ"),
         ("FAILED", "فشل التنفيذ"),
         ("SKIPPED", "تم التخطي"),
     ]
-    status = models.CharField(
-        max_length=20,
-        choices=EXECUTION_STATUS_CHOICES,
-        default="COMPLETED"
-    )
+    status = models.CharField(max_length=20, choices=EXECUTION_STATUS_CHOICES, default="COMPLETED")
 
     class Meta:
         verbose_name = "سجل عملية"
         verbose_name_plural = "سجلات العمليات"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["company", "operation"]),
-            models.Index(fields=["company", "location"]),
+            models.Index(fields=["company", "operation", "created_at"]),
+            models.Index(fields=["company", "location", "created_at"]),
+            models.Index(fields=["source_type", "source_id"]),
         ]
 
     def __str__(self):
@@ -373,12 +457,13 @@ class OperationLog(TenantAwareModel):
         if self.location.type != LocationNode.TYPE_ENCLOSURE:
             raise ValidationError({"location": "يجب أن تستهدف العمليات التشغيلية 'حوشة' فقط لضمان دقة البيانات."})
 
-        self.assert_same_company(self.report, "report")
+        if self.report:
+            self.assert_same_company(self.report, "report")
         self.assert_same_company(self.location, "location")
         
         # 2. Hierarchy Branch Consistency
         # The operation location MUST be the same as or a descendant of the report location
-        if self.report.location_id and self.location_id:
+        if self.report and self.report.location_id and self.location_id:
             report_loc = self.report.location
             if self.location != report_loc and not self.location.is_descendant_of(report_loc):
                 # Audit log the attempt (simple implementation)

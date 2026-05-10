@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from api.endpoints import auth_views
 from api.endpoints import farm_views
 from api.endpoints.farm_views import sector_detail_view, plot_detail_view
@@ -111,7 +111,7 @@ urlpatterns = [
     path("accounting/revenues", accounting_views.revenues_view, name="revenues"),
     path("accounting/salaries", accounting_views.salaries_view, name="salaries"),
     # Production Mappings
-    path("production/yields", production_views.yield_view, name="production_yields"),
+    path("production/", include("apps.production.urls")),
     # Reports Mappings
     path(
         "reports/tasks/",
@@ -236,6 +236,7 @@ urlpatterns = [
     ),
     path("reports/units/", reports_views.UnitListView.as_view(), name="reports_units"),
     path("reports/units/<int:pk>/", reports_views.UnitDetailView.as_view(), name="reports_units_detail"),
+    path("reports/seasons/", reports_views.SeasonListView.as_view(), name="reports_seasons"),
     path(
         "reports/contractors/",
         reports_views.ContractorListView.as_view(),

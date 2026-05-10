@@ -1,173 +1,115 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 
 import {
-  FilterList as FilterIcon,
+  EventBusy as EmptyIcon,
   GetApp as DownloadIcon,
-  Inbox as EmptyIcon,
-  Refresh as RefreshIcon,
   Search as SearchIcon,
 } from '@mui/icons-material'
 import {
   Box,
   Button,
-  CircularProgress,
-  IconButton,
+  FormControl,
+  InputAdornment,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
-  Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material'
 
-import { farmApi } from '../../../../api/farmApi'
+import { useEnclosureTimeline } from '../hooks/useEnclosureProfile'
 
 import OperationalDetailsDrawer from './OperationalDetailsDrawer'
 import OperationLedgerRow from './OperationLedgerRow'
 
 const OperationalJournal = ({ enclosureId }) => {
-  const [events, setEvents] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [filters, setFilters] = useState({ search: '', type: 'all' })
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [filters, setFilters] = useState({ search: '', type: 'all', status: 'all' })
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const { events, loading, hasMore, loadMore, error } = useEnclosureTimeline(enclosureId)
 
-  const fetchEvents = async (pageNumber = 1, isNewSearch = false) => {
-    try {
-      setLoading(true)
-      const response = await farmApi.getLocationOperations(enclosureId, {
-        page: pageNumber,
-        search: filters.search,
-      })
-
-      const newEvents = response.data.results
-      if (isNewSearch) {
-        setEvents(newEvents)
-      } else {
-        setEvents((prev) => [...prev, ...newEvents])
-      }
-
-      setHasMore(!!response.data.next)
-    } catch (error) {
-      console.error('Failed to fetch operations:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchEvents(1, true)
-  }, [enclosureId, filters.search])
-
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      const nextPage = page + 1
-      setPage(nextPage)
-      fetchEvents(nextPage)
-    }
+  const handleRowClick = (event) => {
+    setSelectedEvent(event)
+    setDrawerOpen(true)
   }
 
   return (
-    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* 1. Header & Filters */}
+    <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* 1. Sticky Filter Toolbar */}
       <Paper
         elevation={0}
         sx={{
-          p: 2,
-          borderRadius: '12px',
+          p: 1.5,
+          borderRadius: '8px 8px 0 0',
           border: '1px solid #e2e8f0',
-          bgcolor: 'white',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.05)',
+          borderBottom: 'none',
+          bgcolor: '#f8fafc',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}
       >
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={2}
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Stack direction="row" spacing={2} flexGrow={1} sx={{ width: '100%' }}>
+        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={2} flexGrow={1}>
             <TextField
               size="small"
-              placeholder="البحث في السجل (عملية، مسؤول، ملاحظات)..."
+              placeholder="البحث في السجل..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ color: '#94a3b8', mr: 1, fontSize: 20 }} />,
-              }}
               sx={{
-                width: { xs: '100%', md: 400 },
-                '& .MuiOutlinedInput-root': { bgcolor: '#f8fafc', borderRadius: '8px' },
+                width: 300,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'white',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
+                  </InputAdornment>
+                ),
               }}
             />
-            {!isMobile && (
-              <Button
-                variant="outlined"
-                startIcon={<FilterIcon />}
-                sx={{ borderRadius: '8px', borderColor: '#e2e8f0', color: '#475569' }}
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select
+                value={filters.type}
+                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                sx={{ bgcolor: 'white', borderRadius: '6px', fontSize: '0.85rem' }}
               >
-                تصفية
-              </Button>
-            )}
+                <MenuItem value="all">كل العمليات</MenuItem>
+                <MenuItem value="irrigation">الري</MenuItem>
+                <MenuItem value="fertilization">التسميد</MenuItem>
+                <MenuItem value="spraying">المكافحة</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
 
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="تحديث البيانات">
-              <IconButton
-                onClick={() => fetchEvents(1, true)}
-                size="small"
-                sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}
-              >
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            {!isMobile && (
-              <>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    borderRadius: '8px',
-                    borderColor: '#e2e8f0',
-                    color: '#475569',
-                    fontWeight: 600,
-                  }}
-                >
-                  إجراءات جماعية
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<DownloadIcon />}
-                  disableElevation
-                  sx={{ borderRadius: '8px', bgcolor: '#0f172a' }}
-                >
-                  تصدير التقارير
-                </Button>
-              </>
-            )}
-          </Stack>
+          <Button
+            variant="text"
+            startIcon={<DownloadIcon />}
+            sx={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}
+          >
+            تصدير PDF
+          </Button>
         </Stack>
       </Paper>
 
-      {/* 2. Journal Content */}
+      {/* 2. Journal Ledger (The List) */}
       <Paper
         elevation={0}
         sx={{
-          borderRadius: '12px',
+          borderRadius: '0 0 8px 8px',
           border: '1px solid #e2e8f0',
           overflow: 'hidden',
           flexGrow: 1,
-          width: '100%',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
         }}
       >
         {events.length === 0 && !loading ? (
+          /* Empty State */
           <Box sx={{ py: 10, textAlign: 'center', bgcolor: 'white' }}>
             <Box
               sx={{
@@ -187,110 +129,86 @@ const OperationalJournal = ({ enclosureId }) => {
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
               لا توجد عمليات زراعية
             </Typography>
-            <Typography variant="body2" sx={{ color: '#64748b' }}>
+            <Typography variant="body2" sx={{ color: '#64748b', mb: 3 }}>
               لم يتم تسجيل أي نشاط تشغيلي لهذه الحوشة حتى الآن.
             </Typography>
+            <Button
+              variant="contained"
+              disableElevation
+              sx={{ borderRadius: '6px', bgcolor: '#0f172a' }}
+            >
+              بدء تسجيل أول عملية
+            </Button>
           </Box>
         ) : (
-          <Box sx={{ width: '100%' }}>
-            {/* Table Header */}
+          /* Ledger Table */
+          <Box>
             <Box
               sx={{
-                bgcolor: '#f8fafc',
-                px: 3,
-                py: 2,
+                bgcolor: '#f1f5f9',
+                px: 2,
+                py: 1,
                 display: { xs: 'none', md: 'flex' },
-                borderBottom: '2px solid #f1f5f9',
-                alignItems: 'center',
+                borderBottom: '1px solid #e2e8f0',
               }}
             >
               <Typography
                 variant="caption"
-                sx={{ width: '15%', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}
+                sx={{ width: '15%', fontWeight: 700, color: '#475569' }}
               >
                 التاريخ
               </Typography>
               <Typography
                 variant="caption"
-                sx={{
-                  width: '25%',
-                  fontWeight: 800,
-                  color: '#475569',
-                  textTransform: 'uppercase',
-                  px: 2,
-                }}
+                sx={{ width: '25%', fontWeight: 700, color: '#475569' }}
               >
                 العملية
               </Typography>
               <Typography
                 variant="caption"
-                sx={{ width: '20%', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}
+                sx={{ width: '20%', fontWeight: 700, color: '#475569' }}
               >
                 المسؤول
               </Typography>
               <Typography
                 variant="caption"
-                sx={{ width: '20%', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}
+                sx={{ width: '20%', fontWeight: 700, color: '#475569' }}
               >
                 المؤشرات
               </Typography>
               <Typography
                 variant="caption"
-                sx={{
-                  width: '20%',
-                  fontWeight: 800,
-                  color: '#475569',
-                  textTransform: 'uppercase',
-                  textAlign: 'right',
-                  pr: 5,
-                }}
+                sx={{ width: '20%', fontWeight: 700, color: '#475569', textAlign: 'right' }}
               >
                 الحالة
               </Typography>
             </Box>
 
-            {/* List Rows */}
-            <Box sx={{ width: '100%' }}>
+            <Box>
               {events.map((event) => (
                 <OperationLedgerRow
                   key={event.id}
                   event={event}
-                  onOpenDetails={() => {
-                    setSelectedEvent(event)
-                    setDrawerOpen(true)
-                  }}
+                  onClick={() => handleRowClick(event)}
                 />
               ))}
 
-              {loading && page > 1 && (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <CircularProgress size={24} />
-                </Box>
-              )}
-
-              {hasMore && !loading && (
+              {hasMore && (
                 <Box
                   sx={{
-                    p: 3,
+                    p: 2,
                     textAlign: 'center',
                     borderTop: '1px solid #f1f5f9',
                     bgcolor: 'white',
                   }}
                 >
                   <Button
-                    variant="outlined"
                     size="small"
                     onClick={loadMore}
-                    sx={{
-                      borderRadius: '8px',
-                      px: 4,
-                      py: 1,
-                      borderColor: '#e2e8f0',
-                      color: '#334155',
-                      fontWeight: 700,
-                    }}
+                    disabled={loading}
+                    sx={{ color: '#3b82f6', fontWeight: 700 }}
                   >
-                    عرض المزيد من العمليات التاريخية
+                    {loading ? 'جاري التحميل...' : 'عرض المزيد من العمليات التاريخية'}
                   </Button>
                 </Box>
               )}
