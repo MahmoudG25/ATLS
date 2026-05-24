@@ -5,16 +5,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0004_crop_stage_enclosure'),
-        ('reports', '0006_remove_dailytaskreport_reports_dai_sector__5403c8_idx_and_more'),
+        ("farm", "0004_crop_stage_enclosure"),
+        (
+            "reports",
+            "0006_remove_dailytaskreport_reports_dai_sector__5403c8_idx_and_more",
+        ),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='crop',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='farm.crop', verbose_name='المحصول'),
+            model_name="dailytaskreport",
+            name="crop",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                to="farm.crop",
+                verbose_name="المحصول",
+            ),
         ),
     ]

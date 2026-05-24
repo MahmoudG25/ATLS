@@ -5,24 +5,48 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('farm', '0001_initial'),
+        ("farm", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='OliveRecord',
+            name="OliveRecord",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('trees_count', models.PositiveIntegerField()),
-                ('olive_type', models.CharField(max_length=100)),
-                ('trees_age', models.PositiveIntegerField(blank=True, null=True)),
-                ('last_year_production', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
-                ('expected_production', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
-                ('plot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='olive_records', to='farm.plot')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("trees_count", models.PositiveIntegerField()),
+                ("olive_type", models.CharField(max_length=100)),
+                ("trees_age", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "last_year_production",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=10, null=True
+                    ),
+                ),
+                (
+                    "expected_production",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=10, null=True
+                    ),
+                ),
+                (
+                    "plot",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="olive_records",
+                        to="farm.plot",
+                    ),
+                ),
             ],
         ),
     ]

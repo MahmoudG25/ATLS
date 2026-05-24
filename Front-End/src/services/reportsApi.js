@@ -1,4 +1,4 @@
-import api from './api';
+import api from './api'
 
 export const reportsApi = {
   // Tasks
@@ -9,6 +9,14 @@ export const reportsApi = {
   deleteTask: (id) => api.delete(`/reports/tasks/${id}/`),
   getTasksSummary: (params) => api.get('/reports/tasks/summary/', { params }),
   exportTasks: (params) => api.get('/reports/tasks/export/', { params, responseType: 'blob' }),
+
+  // Task Actions
+  submitTask: (id) => api.post(`/reports/tasks/${id}/submit/`),
+  reviewTask: (id) => api.post(`/reports/tasks/${id}/review/`),
+  approveTask: (id) => api.post(`/reports/tasks/${id}/approve/`),
+  rejectTask: (id, reason) =>
+    api.post(`/reports/tasks/${id}/reject/`, { rejection_reason: reason }),
+
   getOperationsAnalytics: (params) => api.get('/reports/analytics/operations/', { params }),
   getWorkersAnalytics: (params) => api.get('/reports/analytics/workers/', { params }),
   getCostAnalytics: () => api.get('/analytics/costs/'),
@@ -34,31 +42,46 @@ export const reportsApi = {
   deleteIrrigation: (id) => api.delete(`/reports/irrigation/${id}/`),
 
   // Operations (Dropdown data)
-  getOperations: () => api.get('/reports/operations/'),
+  getOperations: (params) => api.get('/reports/operations/', { params }),
+  createOperation: (data) => api.post('/reports/operations/', data),
+  updateOperation: (id, data) => api.put(`/reports/operations/${id}/`, data),
+  deleteOperation: (id) => api.delete(`/reports/operations/${id}/`),
 
   // Custom Fields
-  getCustomFields: (modelName) => api.get('/reports/custom-fields/', { params: { applies_to_model: modelName } }),
+  getCustomFields: (params) => api.get('/reports/custom-fields/', { params }),
   createCustomField: (data) => api.post('/reports/custom-fields/', data),
   updateCustomField: (id, data) => api.put(`/reports/custom-fields/${id}/`, data),
   deleteCustomField: (id) => api.delete(`/reports/custom-fields/${id}/`),
 
   // Custom Field Values
-  saveCustomFieldValues: (data) => api.post('/reports/custom-field-values/', data),
-  getCustomFieldValues: (contentType, objectId) => api.get('/reports/custom-field-values/', { params: { content_type: contentType, object_id: objectId } }),
+  getCustomFieldValues: (params) => api.get('/reports/custom-field-values/', { params }),
+  createCustomFieldValue: (data) => api.post('/reports/custom-field-values/', data),
+  updateCustomFieldValue: (id, data) => api.put(`/reports/custom-field-values/${id}/`, data),
+  deleteCustomFieldValue: (id) => api.delete(`/reports/custom-field-values/${id}/`),
+
+  // Attachments
   getLaborEntries: (params) => api.get('/reports/labor/', { params }),
   createLaborEntry: (data) => api.post('/reports/labor/', data),
   getAttachments: (params) => api.get('/reports/attachments/', { params }),
   createAttachment: (data) => api.post('/reports/attachments/', data),
 
-  // Dropdown Options
+  // Dropdown Options (Legacy - Read Only)
   getOptions: (category) => api.get('/reports/options/', { params: { category } }),
-  createOption: (data) => api.post('/reports/options/', data),
-  updateOption: (id, data) => api.put(`/reports/options/${id}/`, data),
-  deleteOption: (id) => api.delete(`/reports/options/${id}/`),
 
-  getVarieties: () => api.get('/reports/options/', { params: { category: 'variety' } }),
-  getUnits: () => api.get('/reports/options/', { params: { category: 'unit' } }),
-  getContractors: () => api.get('/reports/options/', { params: { category: 'contractor' } }),
+  getVarieties: (params) => api.get('/reports/varieties/', { params }),
+  createVariety: (data) => api.post('/reports/varieties/', data),
+  updateVariety: (id, data) => api.put(`/reports/varieties/${id}/`, data),
+  deleteVariety: (id) => api.delete(`/reports/varieties/${id}/`),
+
+  getUnits: (params) => api.get('/reports/units/', { params }),
+  createUnit: (data) => api.post('/reports/units/', data),
+  updateUnit: (id, data) => api.put(`/reports/units/${id}/`, data),
+  deleteUnit: (id) => api.delete(`/reports/units/${id}/`),
+
+  getContractors: (params) => api.get('/reports/contractors/', { params }),
+  createContractor: (data) => api.post('/reports/contractors/', data),
+  updateContractor: (id, data) => api.put(`/reports/contractors/${id}/`, data),
+  deleteContractor: (id) => api.delete(`/reports/contractors/${id}/`),
 
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
@@ -67,16 +90,16 @@ export const reportsApi = {
   getFarmHierarchy: () => api.get('/farm/hierarchy'),
   // Type-filtered LocationNode queries — use instead of hierarchy for form dropdowns
   getLocationNodes: (type, parentId = null) => {
-    const params = { type };
-    if (parentId) params.parent = parentId;
-    return api.get('/farm/location-nodes/', { params });
+    const params = { type }
+    if (parentId) params.parent = parentId
+    return api.get('/farm/location-nodes/', { params })
   },
   uploadFile: (file, onUploadProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
+    const formData = new FormData()
+    formData.append('file', file)
     return api.post('/uploads/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
-    });
+    })
   },
-};
+}

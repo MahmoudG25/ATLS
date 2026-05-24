@@ -4,25 +4,58 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0001_initial'),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='LandingContent',
+            name="LandingContent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('hero_title_en', models.CharField(default='Precision Agriculture, Redefined.', max_length=255)),
-                ('hero_title_ar', models.CharField(default='الزراعة الدقيقة، أعيد تعريفها.', max_length=255)),
-                ('hero_text_en', models.TextField(default='Seamlessly manage Palm and Olive field structures.')),
-                ('hero_text_ar', models.TextField(default='إدارة مجالات النخيل والزيتون بسلاسة تامة.')),
-                ('palm_text_en', models.TextField(default='Track Every Mother Tree & Offshoot.')),
-                ('palm_text_ar', models.TextField(default='تتبع كل شجرة أم و فسيلة.')),
-                ('olive_text_en', models.TextField(default='Synchronized Harvest Operations.')),
-                ('olive_text_ar', models.TextField(default='عمليات حصاد متزامنة.')),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "hero_title_en",
+                    models.CharField(
+                        default="Precision Agriculture, Redefined.", max_length=255
+                    ),
+                ),
+                (
+                    "hero_title_ar",
+                    models.CharField(
+                        default="الزراعة الدقيقة، أعيد تعريفها.", max_length=255
+                    ),
+                ),
+                (
+                    "hero_text_en",
+                    models.TextField(
+                        default="Seamlessly manage Palm and Olive field structures."
+                    ),
+                ),
+                (
+                    "hero_text_ar",
+                    models.TextField(
+                        default="إدارة مجالات النخيل والزيتون بسلاسة تامة."
+                    ),
+                ),
+                (
+                    "palm_text_en",
+                    models.TextField(default="Track Every Mother Tree & Offshoot."),
+                ),
+                ("palm_text_ar", models.TextField(default="تتبع كل شجرة أم و فسيلة.")),
+                (
+                    "olive_text_en",
+                    models.TextField(default="Synchronized Harvest Operations."),
+                ),
+                ("olive_text_ar", models.TextField(default="عمليات حصاد متزامنة.")),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

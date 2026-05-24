@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["venv", "*/migrations/*", "*.pyc"]
+
+[tool.ruff.lint]
+# Select the same basic flake8/black defaults. 
+# We're keeping this relatively permissive for the existing codebase.
+select = ["E", "F", "W", "I"]
+# Ignore line-too-long (handled by line-length/formatter)
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore everything in migrations
+"*/migrations/*" = ["ALL"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--reuse-db -v --tb=short"
+
+[tool.coverage.run]
+source = ["apps", "services", "serializers", "permissions"]
+omit = ["*/migrations/*", "*/venv/*", "*/tests/*", "manage.py"]
+
+[tool.coverage.report]
+show_missing = true

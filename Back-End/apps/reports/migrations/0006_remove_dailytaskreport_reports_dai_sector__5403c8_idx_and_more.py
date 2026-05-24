@@ -6,39 +6,58 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0004_crop_stage_enclosure'),
-        ('reports', '0005_change_enclosure_to_plot'),
+        ("farm", "0004_crop_stage_enclosure"),
+        ("reports", "0005_change_enclosure_to_plot"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='dailytaskreport',
-            name='reports_dai_sector__5403c8_idx',
+            model_name="dailytaskreport",
+            name="reports_dai_sector__5403c8_idx",
         ),
         migrations.AddField(
-            model_name='dailytaskreport',
-            name='crop',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, to='farm.crop', verbose_name='المحصول'),
+            model_name="dailytaskreport",
+            name="crop",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                to="farm.crop",
+                verbose_name="المحصول",
+            ),
         ),
         migrations.AddField(
-            model_name='dailytaskreport',
-            name='stage',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='farm.stage', verbose_name='المرحلة'),
+            model_name="dailytaskreport",
+            name="stage",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                to="farm.stage",
+                verbose_name="المرحلة",
+            ),
         ),
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='enclosure',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reports_enclosure', to='farm.enclosure', verbose_name='الحوشة'),
+            model_name="dailytaskreport",
+            name="enclosure",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_enclosure",
+                to="farm.enclosure",
+                verbose_name="الحوشة",
+            ),
         ),
         migrations.AddIndex(
-            model_name='dailytaskreport',
-            index=models.Index(fields=['crop', 'report_date'], name='reports_dai_crop_id_5c9ce8_idx'),
+            model_name="dailytaskreport",
+            index=models.Index(
+                fields=["crop", "report_date"], name="reports_dai_crop_id_5c9ce8_idx"
+            ),
         ),
         migrations.RemoveField(
-            model_name='dailytaskreport',
-            name='sector',
+            model_name="dailytaskreport",
+            name="sector",
         ),
     ]

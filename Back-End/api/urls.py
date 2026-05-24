@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from api.endpoints import auth_views
 from api.endpoints import farm_views
 from api.endpoints.farm_views import sector_detail_view, plot_detail_view
@@ -10,108 +10,288 @@ from api.endpoints import equipment_views
 from api.endpoints import accounting_views
 from api.endpoints import production_views
 from api.endpoints import reports_views
-from api.endpoints.reports_views import CostAnalyticsView, TrendsAnalyticsView, InsightsAnalyticsView
+from api.endpoints.reports_views import (
+    CostAnalyticsView,
+    TrendsAnalyticsView,
+    InsightsAnalyticsView,
+)
 from api.endpoints import upload_views
 from api.endpoints import notification_views
 from api.endpoints import activity_views
 
 urlpatterns = [
-    path('auth/activity-logs', activity_views.activity_log_view, name='activity_logs'),
-    path('auth/register', auth_views.register_view, name='register'),
-    path('auth/login', auth_views.login_view, name='login'),
-    path('auth/me', auth_views.me_view, name='me'),
-    path('auth/me/security', auth_views.change_password_view, name='me_security'),
-    path('auth/public/landing', auth_views.landing_content_view, name='public_landing'),
-    
+    path("auth/activity-logs", activity_views.activity_log_view, name="activity_logs"),
+    path("auth/register", auth_views.register_view, name="register"),
+    path("auth/login", auth_views.login_view, name="login"),
+    path("auth/me", auth_views.me_view, name="me"),
+    path("auth/me/security", auth_views.change_password_view, name="me_security"),
+    path("auth/public/landing", auth_views.landing_content_view, name="public_landing"),
     # Admin User Managment
-    path('users', auth_views.users_collection_view, name='users_collection'),
-    path('users/engineers', auth_views.engineers_list_view, name='users_engineers'),
-    path('users/<int:id>/approve', auth_views.approve_user_view, name='approve_user'),
-    path('users/<int:id>/deactivate', auth_views.deactivate_user_view, name='deactivate_user'),
-    path('users/<int:id>/role', auth_views.update_user_role_view, name='update_user_role'),
-    path('users/<int:id>/delete', auth_views.delete_user_view, name='delete_user'),
-
+    path("users", auth_views.users_collection_view, name="users_collection"),
+    path("users/engineers", auth_views.engineers_list_view, name="users_engineers"),
+    path("users/<int:id>/approve", auth_views.approve_user_view, name="approve_user"),
+    path(
+        "users/<int:id>/deactivate",
+        auth_views.deactivate_user_view,
+        name="deactivate_user",
+    ),
+    path(
+        "users/<int:id>/role", auth_views.update_user_role_view, name="update_user_role"
+    ),
+    path("users/<int:id>/delete", auth_views.delete_user_view, name="delete_user"),
     # Admin CMS Mappings
-    path('admin/landing-content', auth_views.manage_landing_content_view, name='manage_landing'),
-
+    path(
+        "admin/landing-content",
+        auth_views.manage_landing_content_view,
+        name="manage_landing",
+    ),
     # Farm Structure Mappings
-    path('farm/farms', farm_views.farms_list_view, name='farms_list'),
-    path('farm/croptypes', farm_views.croptypes_list_view, name='croptypes_list'),
-    path('farm/structure', farm_views.structure_view, name='structure'),
-    path('farm/hierarchy', farm_views.hierarchy_view, name='hierarchy'),
-    path('farm/location-tree/', farm_views.location_tree_view, name='location_tree'),
-    path('farm/settings/', farm_views.farm_settings_view, name='farm_settings'),
-    path('farm/location-nodes/', farm_views.location_nodes_view, name='location_nodes'),
-    path('farm/location-nodes/<int:pk>/', farm_views.location_node_detail_view, name='location_node_detail'),
-    path('farm/sectors', farm_views.create_sector_view, name='create_sector'),
-    path('farm/sectors/<int:pk>/', sector_detail_view, name='sector_detail'),
-    path('farm/plots', farm_views.create_plot_view, name='create_plot'),
-    path('farm/plots/<int:pk>/', plot_detail_view, name='plot_detail'),
-    path('farm/plots/<int:id>/stats', farm_views.plot_stats_view, name='plot_stats'),
-    
+    path("farm/farms", farm_views.farms_list_view, name="farms_list"),
+    path("farm/croptypes", farm_views.croptypes_list_view, name="croptypes_list"),
+    path("farm/structure", farm_views.structure_view, name="structure"),
+    path("farm/hierarchy", farm_views.hierarchy_view, name="hierarchy"),
+    path("farm/location-tree/", farm_views.location_tree_view, name="location_tree"),
+    path("farm/settings/", farm_views.farm_settings_view, name="farm_settings"),
+    path("farm/location-nodes/", farm_views.location_nodes_view, name="location_nodes"),
+    path(
+        "farm/location-nodes/<int:pk>/",
+        farm_views.location_node_detail_view,
+        name="location_node_detail",
+    ),
+    path(
+        "farm/location-nodes/<int:pk>/profile/",
+        farm_views.location_node_profile_view,
+        name="location_node_profile",
+    ),
+    path(
+        "farm/location-nodes/<int:pk>/timeline/",
+        farm_views.LocationNodeTimelineView.as_view(),
+        name="location_node_timeline",
+    ),
+    path(
+        "farm/location-nodes/<int:pk>/analytics/",
+        farm_views.location_node_analytics_view,
+        name="location_node_analytics",
+    ),
+    path("farm/sectors", farm_views.create_sector_view, name="create_sector"),
+    path("farm/sectors/<int:pk>/", sector_detail_view, name="sector_detail"),
+    path("farm/plots", farm_views.create_plot_view, name="create_plot"),
+    path("farm/plots/<int:pk>/", plot_detail_view, name="plot_detail"),
+    path("farm/plots/<int:id>/stats", farm_views.plot_stats_view, name="plot_stats"),
     # Palm Mappings
-    path('palm/records', palm_views.palm_collection_view, name='palm_collection'),
-    path('palm/records/<int:id>', palm_views.palm_detail_view, name='palm_detail'),
-
+    path("palm/records", palm_views.palm_collection_view, name="palm_collection"),
+    path("palm/records/<int:id>", palm_views.palm_detail_view, name="palm_detail"),
     # Olive Mappings
-    path('olive/records', olive_views.olive_collection_view, name='olive_collection'),
-    path('olive/records/<int:id>', olive_views.olive_detail_view, name='olive_detail'),
-
+    path("olive/records", olive_views.olive_collection_view, name="olive_collection"),
+    path("olive/records/<int:id>", olive_views.olive_detail_view, name="olive_detail"),
     # Warehouse Mappings
-    path('warehouse/items/', items_view, name='warehouse-items'),
-    path('warehouse/items/<int:pk>/', item_detail_view, name='warehouse-item-detail'),
-    path('warehouse/movements/', movements_view, name='warehouse-movements'),
-
+    path("warehouse/items/", items_view, name="warehouse-items"),
+    path("warehouse/items/<int:pk>/", item_detail_view, name="warehouse-item-detail"),
+    path("warehouse/movements/", movements_view, name="warehouse-movements"),
     # Equipment Mappings
-    path('equipment/list', equipment_views.equipment_list_view, name='equipment_list'),
-    path('equipment/<int:id>', equipment_views.equipment_detail_view, name='equipment_detail'),
-    path('equipment/maintenance', equipment_views.maintenance_view, name='equipment_maintenance'),
-    path('equipment/usage', equipment_views.usage_view, name='equipment_usage'),
-
+    path("equipment/list", equipment_views.equipment_list_view, name="equipment_list"),
+    path(
+        "equipment/<int:id>",
+        equipment_views.equipment_detail_view,
+        name="equipment_detail",
+    ),
+    path(
+        "equipment/maintenance",
+        equipment_views.maintenance_view,
+        name="equipment_maintenance",
+    ),
+    path("equipment/usage", equipment_views.usage_view, name="equipment_usage"),
     # Accounting Mappings
-    path('accounting/summary', accounting_views.finance_summary_view, name='finance_summary'),
-    path('accounting/expenses', accounting_views.expenses_view, name='expenses'),
-    path('accounting/revenues', accounting_views.revenues_view, name='revenues'),
-    path('accounting/salaries', accounting_views.salaries_view, name='salaries'),
-
+    path(
+        "accounting/summary",
+        accounting_views.finance_summary_view,
+        name="finance_summary",
+    ),
+    path("accounting/expenses", accounting_views.expenses_view, name="expenses"),
+    path("accounting/revenues", accounting_views.revenues_view, name="revenues"),
+    path("accounting/salaries", accounting_views.salaries_view, name="salaries"),
     # Production Mappings
-    path('production/yields', production_views.yield_view, name='production_yields'),
-
+    path("production/", include("apps.production.urls")),
     # Reports Mappings
-    path('reports/tasks/', reports_views.DailyTaskReportListCreate.as_view(), name='reports_tasks'),
-    path('reports/tasks/<int:pk>/', reports_views.DailyTaskReportDetail.as_view(), name='reports_tasks_detail'),
-    path('reports/tasks/summary/', reports_views.DailyTaskSummaryView.as_view(), name='reports_tasks_summary'),
-    path('reports/tasks/export/', reports_views.DailyTaskExportView.as_view(), name='reports_tasks_export'),
-    path('reports/analytics/operations/', reports_views.OperationAnalyticsView.as_view(), name='reports_analytics_operations'),
-    path('reports/analytics/workers/', reports_views.WorkerAnalyticsView.as_view(), name='reports_analytics_workers'),
-    path('analytics/costs/', CostAnalyticsView.as_view()),
-    path('analytics/trends/', TrendsAnalyticsView.as_view()),
-    path('analytics/kpi/', reports_views.KPIAnalyticsView.as_view(), name='analytics_kpi'),
-    path('analytics/productivity/', reports_views.ProductivityAnalyticsView.as_view(), name='analytics_productivity'),
-    path('analytics/operations-summary/', reports_views.OperationsSummaryView.as_view(), name='analytics_operations_summary'),
-    path('analytics/workers-by-location/', reports_views.WorkersByLocationView.as_view(), name='analytics_workers_by_location'),
-    path('analytics/operation-location-matrix/', reports_views.OperationLocationMatrixView.as_view(), name='analytics_operation_location_matrix'),
-    path('analytics/comparison/', reports_views.ComparisonAnalyticsView.as_view(), name='analytics_comparison'),
-    path('analytics/dashboard/', reports_views.DashboardAnalyticsView.as_view(), name='analytics_dashboard'),
-    path('analytics/insights/', InsightsAnalyticsView.as_view()),
-    path('reports/fertilization/', reports_views.FertilizationListCreate.as_view(), name='reports_fertilization'),
-    path('reports/fertilization/<int:pk>/', reports_views.FertilizationDetail.as_view(), name='reports_fertilization_detail'),
-    path('reports/irrigation/', reports_views.IrrigationListCreate.as_view(), name='reports_irrigation'),
-    path('reports/irrigation/<int:pk>/', reports_views.IrrigationDetail.as_view(), name='reports_irrigation_detail'),
-    path('reports/operations/', reports_views.OperationListView.as_view(), name='reports_operations'),
-    path('reports/options/', reports_views.ReportDropdownOptionListCreate.as_view(), name='reports_options_list'),
-    path('reports/options/<int:pk>/', reports_views.ReportDropdownOptionDetail.as_view(), name='reports_options_detail'),
-
-    path('reports/custom-fields/', reports_views.CustomFieldDefinitionListCreate.as_view(), name='custom_fields_list'),
-    path('reports/custom-fields/<int:pk>/', reports_views.CustomFieldDefinitionDetail.as_view(), name='custom_fields_detail'),
-    path('reports/custom-field-values/', reports_views.CustomFieldValueListCreate.as_view(), name='custom_field_values_list'),
-    path('reports/custom-field-values/<int:pk>/', reports_views.CustomFieldValueDetail.as_view(), name='custom_field_values_detail'),
-    path('reports/labor/', reports_views.LaborEntryListCreate.as_view(), name='reports_labor_list'),
-    path('reports/attachments/', reports_views.AttachmentListCreate.as_view(), name='reports_attachments_list'),
-    path('uploads/', upload_views.UploadFileView.as_view(), name='upload_file'),
-
+    path(
+        "reports/tasks/",
+        reports_views.DailyTaskReportListCreate.as_view(),
+        name="reports_tasks",
+    ),
+    path(
+        "reports/tasks/<int:pk>/",
+        reports_views.DailyTaskReportDetail.as_view(),
+        name="reports_tasks_detail",
+    ),
+    path(
+        "reports/tasks/<int:pk>/<str:action>/",
+        reports_views.DailyTaskReportActionView.as_view(),
+        name="reports_tasks_action",
+    ),
+    path(
+        "reports/tasks/summary/",
+        reports_views.DailyTaskSummaryView.as_view(),
+        name="reports_tasks_summary",
+    ),
+    path(
+        "reports/tasks/export/",
+        reports_views.DailyTaskExportView.as_view(),
+        name="reports_tasks_export",
+    ),
+    path(
+        "reports/analytics/operations/",
+        reports_views.OperationAnalyticsView.as_view(),
+        name="reports_analytics_operations",
+    ),
+    path(
+        "reports/analytics/workers/",
+        reports_views.WorkerAnalyticsView.as_view(),
+        name="reports_analytics_workers",
+    ),
+    path("analytics/costs/", CostAnalyticsView.as_view()),
+    path("analytics/trends/", TrendsAnalyticsView.as_view()),
+    path(
+        "analytics/kpi/", reports_views.KPIAnalyticsView.as_view(), name="analytics_kpi"
+    ),
+    path(
+        "analytics/productivity/",
+        reports_views.ProductivityAnalyticsView.as_view(),
+        name="analytics_productivity",
+    ),
+    path(
+        "analytics/operations-summary/",
+        reports_views.OperationsSummaryView.as_view(),
+        name="analytics_operations_summary",
+    ),
+    path(
+        "analytics/workers-by-location/",
+        reports_views.WorkersByLocationView.as_view(),
+        name="analytics_workers_by_location",
+    ),
+    path(
+        "analytics/operation-location-matrix/",
+        reports_views.OperationLocationMatrixView.as_view(),
+        name="analytics_operation_location_matrix",
+    ),
+    path(
+        "analytics/comparison/",
+        reports_views.ComparisonAnalyticsView.as_view(),
+        name="analytics_comparison",
+    ),
+    path(
+        "analytics/dashboard/",
+        reports_views.DashboardAnalyticsView.as_view(),
+        name="analytics_dashboard",
+    ),
+    path("analytics/insights/", InsightsAnalyticsView.as_view()),
+    path(
+        "reports/fertilization/",
+        reports_views.FertilizationListCreate.as_view(),
+        name="reports_fertilization",
+    ),
+    path(
+        "reports/fertilization/<int:pk>/",
+        reports_views.FertilizationDetail.as_view(),
+        name="reports_fertilization_detail",
+    ),
+    path(
+        "reports/irrigation/",
+        reports_views.IrrigationListCreate.as_view(),
+        name="reports_irrigation",
+    ),
+    path(
+        "reports/irrigation/<int:pk>/",
+        reports_views.IrrigationDetail.as_view(),
+        name="reports_irrigation_detail",
+    ),
+    path(
+        "reports/operations/",
+        reports_views.OperationListView.as_view(),
+        name="reports_operations",
+    ),
+    path(
+        "reports/operations/<int:pk>/",
+        reports_views.OperationDetailView.as_view(),
+        name="reports_operations_detail",
+    ),
+    path(
+        "reports/options/",
+        reports_views.ReportDropdownOptionListCreate.as_view(),
+        name="reports_options_list",
+    ),
+    path(
+        "reports/options/<int:pk>/",
+        reports_views.ReportDropdownOptionDetail.as_view(),
+        name="reports_options_detail",
+    ),
+    path(
+        "reports/varieties/",
+        reports_views.VarietyListView.as_view(),
+        name="reports_varieties",
+    ),
+    path(
+        "reports/varieties/<int:pk>/",
+        reports_views.VarietyDetailView.as_view(),
+        name="reports_varieties_detail",
+    ),
+    path("reports/units/", reports_views.UnitListView.as_view(), name="reports_units"),
+    path("reports/units/<int:pk>/", reports_views.UnitDetailView.as_view(), name="reports_units_detail"),
+    path("reports/seasons/", reports_views.SeasonListView.as_view(), name="reports_seasons"),
+    path(
+        "reports/contractors/",
+        reports_views.ContractorListView.as_view(),
+        name="reports_contractors",
+    ),
+    path(
+        "reports/contractors/<int:pk>/",
+        reports_views.ContractorDetailView.as_view(),
+        name="reports_contractors_detail",
+    ),
+    path(
+        "reports/custom-fields/",
+        reports_views.CustomFieldDefinitionListCreate.as_view(),
+        name="custom_fields_list",
+    ),
+    path(
+        "reports/custom-fields/<int:pk>/",
+        reports_views.CustomFieldDefinitionDetail.as_view(),
+        name="custom_fields_detail",
+    ),
+    path(
+        "reports/custom-field-values/",
+        reports_views.CustomFieldValueListCreate.as_view(),
+        name="custom_field_values_list",
+    ),
+    path(
+        "reports/custom-field-values/<int:pk>/",
+        reports_views.CustomFieldValueDetail.as_view(),
+        name="custom_field_values_detail",
+    ),
+    path(
+        "reports/labor/",
+        reports_views.LaborEntryListCreate.as_view(),
+        name="reports_labor_list",
+    ),
+    path(
+        "reports/attachments/",
+        reports_views.AttachmentListCreate.as_view(),
+        name="reports_attachments_list",
+    ),
+    path("uploads/", upload_views.UploadFileView.as_view(), name="upload_file"),
     # Notification Mappings
-    path('notifications/', notification_views.notifications_list_view, name='notifications_list'),
-    path('notifications/<int:id>/read/', notification_views.notification_read_view, name='notification_read'),
-    path('notifications/read-all/', notification_views.notifications_read_all_view, name='notifications_read_all'),
+    path(
+        "notifications/",
+        notification_views.notifications_list_view,
+        name="notifications_list",
+    ),
+    path(
+        "notifications/<int:id>/read/",
+        notification_views.notification_read_view,
+        name="notification_read",
+    ),
+    path(
+        "notifications/read-all/",
+        notification_views.notifications_read_all_view,
+        name="notifications_read_all",
+    ),
 ]

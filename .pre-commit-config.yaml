@@ -1,0 +1,20 @@
+repos:
+  - repo: local
+    hooks:
+      - id: frontend-lint-staged
+        name: Frontend lint-staged
+        # lint-staged queries git for staged files on its own, so we don't pass filenames
+        entry: bash -c "cd Front-End && npx lint-staged"
+        language: system
+        files: ^Front-End/
+        pass_filenames: false
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        name: Backend Ruff Check
+        files: ^Back-End/
+        # --exit-zero: Ensures existing legacy code debt won't block the commit.
+        # --force-exclude: Respects the excludes defined in pyproject.toml.
+        args: ["--config", "Back-End/pyproject.toml", "--exit-zero"]

@@ -5,21 +5,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0003_farm_is_active'),
-        ('reports', '0004_reportdropdownoption_and_more'),
+        ("farm", "0003_farm_is_active"),
+        ("reports", "0004_reportdropdownoption_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='dailytaskreport',
-            name='enclosure',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reports_enclosure', to='farm.plot', verbose_name='الحوشة'),
+            model_name="dailytaskreport",
+            name="enclosure",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reports_enclosure",
+                to="farm.plot",
+                verbose_name="الحوشة",
+            ),
         ),
         migrations.AlterField(
-            model_name='reportdropdownoption',
-            name='category',
-            field=models.CharField(choices=[('variety', 'Variety'), ('unit', 'Unit'), ('contractor', 'Contractor'), ('enclosure', 'Enclosure'), ('work_location', 'Work Location')], max_length=50),
+            model_name="reportdropdownoption",
+            name="category",
+            field=models.CharField(
+                choices=[
+                    ("variety", "Variety"),
+                    ("unit", "Unit"),
+                    ("contractor", "Contractor"),
+                    ("enclosure", "Enclosure"),
+                    ("work_location", "Work Location"),
+                ],
+                max_length=50,
+            ),
         ),
     ]

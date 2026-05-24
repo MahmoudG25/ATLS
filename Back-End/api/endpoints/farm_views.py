@@ -4,35 +4,56 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.farm.models import Farm, LocationNode, FarmSettings
 from serializers.farm_serializers import (
-    FarmSerializer, CropTypeSerializer, SectorSerializer, PlotSerializer,
-    LocationNodeCreateSerializer, LocationNodeSerializer, FarmSettingsSerializer
+    FarmSerializer,
+    CropTypeSerializer,
+    SectorSerializer,
+    PlotSerializer,
+    LocationNodeCreateSerializer,
+    LocationNodeSerializer,
+    FarmSettingsSerializer,
 )
-from services.farm_service import list_farms, list_crop_types, get_farm_structure, create_sector, create_plot, get_plot_stats, update_sector, delete_sector, update_plot, delete_plot
+from services.farm_service import (
+    list_farms,
+    list_crop_types,
+    get_farm_structure,
+    create_sector,
+    create_plot,
+    get_plot_stats,
+    update_sector,
+    delete_sector,
+    update_plot,
+    delete_plot,
+)
 from services.activity_service import log_activity
 from permissions.role_permissions import HasModuleAccess
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def farms_list_view(request):
     farms = list_farms()
     return Response(FarmSerializer(farms, many=True).data)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def croptypes_list_view(request):
     crops = list_crop_types()
     return Response(CropTypeSerializer(crops, many=True).data)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def structure_view(request):
-    farm_id = request.query_params.get('farm_id')
+    farm_id = request.query_params.get("farm_id")
     sectors = get_farm_structure(farm_id)
     return Response(SectorSerializer(sectors, many=True).data)
 
+
 from apps.farm.models import Farm, LocationNode
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def hierarchy_view(request):
     farms_qs = Farm.objects.filter(is_active=True)
@@ -43,40 +64,45 @@ def hierarchy_view(request):
         return Response({}, status=200)
 
     crops_data = []
-    for crop in farm.crops.filter(is_active=True).order_by('order'):
-        if crop.type == 'palm':
+    for crop in farm.crops.filter(is_active=True).order_by("order"):
+        if crop.type == "palm":
             stages_data = []
-            for stage in crop.stages.filter(is_active=True).order_by('order'):
+            for stage in crop.stages.filter(is_active=True).order_by("order"):
                 enclosures_data = [
-                    {'id': enc.id, 'name': enc.name}
-                    for enc in stage.enclosures.filter(is_active=True).order_by('order')
+                    {"id": enc.id, "name": enc.name}
+                    for enc in stage.enclosures.filter(is_active=True).order_by("order")
                 ]
-                stages_data.append({
-                    'id': stage.id,
-                    'name': stage.name,
-                    'enclosures': enclosures_data
-                })
-            crops_data.append({
-                'id': crop.id,
-                'name': crop.name,
-                'type': crop.type,
-                'stages': stages_data
-            })
+                stages_data.append(
+                    {"id": stage.id, "name": stage.name, "enclosures": enclosures_data}
+                )
+            crops_data.append(
+                {
+                    "id": crop.id,
+                    "name": crop.name,
+                    "type": crop.type,
+                    "stages": stages_data,
+                }
+            )
         else:
             regions_data = [
-                {'id': enc.id, 'name': enc.name}
-                for enc in crop.enclosures.filter(is_active=True, stage__isnull=True).order_by('order')
+                {"id": enc.id, "name": enc.name}
+                for enc in crop.enclosures.filter(
+                    is_active=True, stage__isnull=True
+                ).order_by("order")
             ]
-            crops_data.append({
-                'id': crop.id,
-                'name': crop.name,
-                'type': crop.type,
-                'regions': regions_data
-            })
+            crops_data.append(
+                {
+                    "id": crop.id,
+                    "name": crop.name,
+                    "type": crop.type,
+                    "regions": regions_data,
+                }
+            )
 
     nodes = list(
-        LocationNode.objects.filter(farm=farm, is_active=True)
-        .order_by("tree_id", "lft")
+        LocationNode.objects.filter(farm=farm, is_active=True).order_by(
+            "tree_id", "lft"
+        )
     )
     children_map = {}
     roots = []
@@ -91,17 +117,21 @@ def hierarchy_view(request):
             "id": node.id,
             "name": node.name,
             "type": node.type,
-            "children": [to_node_payload(child) for child in children_map.get(node.id, [])],
+            "children": [
+                to_node_payload(child) for child in children_map.get(node.id, [])
+            ],
         }
 
-    return Response({
-        'farm': {'id': farm.id, 'name': farm.name},
-        'crops': crops_data,
-        'location_nodes': [to_node_payload(node) for node in roots],
-    })
+    return Response(
+        {
+            "farm": {"id": farm.id, "name": farm.name},
+            "crops": crops_data,
+            "location_nodes": [to_node_payload(node) for node in roots],
+        }
+    )
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_sector_view(request):
     serializer = SectorSerializer(data=request.data)
@@ -112,7 +142,8 @@ def create_sector_view(request):
     sector_full = get_farm_structure().get(id=sector.id)
     return Response(SectorSerializer(sector_full).data, status=status.HTTP_201_CREATED)
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_plot_view(request):
     serializer = PlotSerializer(data=request.data)
@@ -121,35 +152,38 @@ def create_plot_view(request):
     log_activity(request.user, f"Created Plot: {plot.name}", "Farm")
     return Response(PlotSerializer(plot).data, status=status.HTTP_201_CREATED)
 
-@api_view(['PUT', 'DELETE'])
+
+@api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
 def sector_detail_view(request, pk):
-    if request.method == 'PUT':
+    if request.method == "PUT":
         serializer = SectorSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         sector = update_sector(pk, serializer.validated_data)
         log_activity(request.user, f"Updated Sector: {sector.name}", "Farm")
         return Response(SectorSerializer(sector).data)
-    elif request.method == 'DELETE':
+    elif request.method == "DELETE":
         delete_sector(pk)
         log_activity(request.user, f"Archived Sector ID: {pk}", "Farm")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['PUT', 'DELETE'])
+
+@api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
 def plot_detail_view(request, pk):
-    if request.method == 'PUT':
+    if request.method == "PUT":
         serializer = PlotSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         plot = update_plot(pk, serializer.validated_data)
         log_activity(request.user, f"Updated Plot: {plot.name}", "Farm")
         return Response(PlotSerializer(plot).data)
-    elif request.method == 'DELETE':
+    elif request.method == "DELETE":
         delete_plot(pk)
         log_activity(request.user, f"Archived Plot ID: {pk}", "Farm")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
 def plot_stats_view(request, id):
     try:
@@ -159,7 +193,7 @@ def plot_stats_view(request, id):
         return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PATCH'])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def farm_settings_view(request):
     """
@@ -167,22 +201,25 @@ def farm_settings_view(request):
     PATCH: Update the settings.
     """
     farm_qs = Farm.objects.filter(is_active=True)
-    if getattr(request.user, 'company_id', None):
+    if getattr(request.user, "company_id", None):
         farm_qs = farm_qs.filter(company_id=request.user.company_id)
     farm = farm_qs.first()
 
     if not farm:
-        return Response({'detail': 'No active farm found.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "No active farm found."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # get_or_create to ensure every farm has a settings record
     # Use farm.company as the tenant
     settings_obj, _ = FarmSettings.objects.get_or_create(
-        farm=farm, 
-        defaults={'company': farm.company}
+        farm=farm, defaults={"company": farm.company}
     )
 
-    if request.method == 'PATCH':
-        serializer = FarmSettingsSerializer(settings_obj, data=request.data, partial=True)
+    if request.method == "PATCH":
+        serializer = FarmSettingsSerializer(
+            settings_obj, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         log_activity(request.user, f"Updated Farm Settings for {farm.name}", "Farm")
@@ -192,7 +229,7 @@ def farm_settings_view(request):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def location_tree_view(request):
     """
@@ -200,56 +237,67 @@ def location_tree_view(request):
     Optionally filters based on FarmSettings if ?filtered=1 is passed.
     """
     farm_qs = Farm.objects.filter(is_active=True)
-    if getattr(request.user, 'company_id', None):
+    if getattr(request.user, "company_id", None):
         farm_qs = farm_qs.filter(company_id=request.user.company_id)
     farm = farm_qs.first()
 
     if not farm:
-        return Response({'tree': [], 'farm': None})
+        return Response({"tree": [], "farm": None})
 
     settings_obj, _ = FarmSettings.objects.get_or_create(
-        farm=farm, 
-        defaults={'company': farm.company}
+        farm=farm, defaults={"company": farm.company}
     )
-    apply_filter = request.query_params.get('filtered') == '1'
+    apply_filter = request.query_params.get("filtered") == "1"
 
-    nodes = list(LocationNode.objects.filter(farm=farm, is_active=True).order_by('order', 'created_at'))
-    
+    nodes = list(
+        LocationNode.objects.filter(farm=farm, is_active=True).order_by(
+            "order", "created_at"
+        )
+    )
+
     # Build a lookup dictionary
-    node_map = {node.id: {
-        'id': node.id,
-        'name': node.name,
-        'type': node.type,
-        'parent_id': node.parent_id,
-        'children': []
-    } for node in nodes}
+    node_map = {
+        node.id: {
+            "id": node.id,
+            "name": node.name,
+            "type": node.type,
+            "parent_id": node.parent_id,
+            "children": [],
+        }
+        for node in nodes
+    }
 
     tree = []
     for node in nodes:
         node_data = node_map[node.id]
-        
+
         # Filtering logic: Skip disabled node types
         if apply_filter:
             if node.type == LocationNode.TYPE_SECTOR and not settings_obj.enable_sector:
                 continue
             if node.type == LocationNode.TYPE_STAGE and not settings_obj.enable_stage:
                 continue
-            if node.type == LocationNode.TYPE_ENCLOSURE and not settings_obj.enable_enclosure:
+            if (
+                node.type == LocationNode.TYPE_ENCLOSURE
+                and not settings_obj.enable_enclosure
+            ):
                 continue
 
         if node.parent_id and node.parent_id in node_map:
-            node_map[node.parent_id]['children'].append(node_data)
+            node_map[node.parent_id]["children"].append(node_data)
         else:
             tree.append(node_data)
 
-    return Response({
-        'tree': tree,
-        'farm': FarmSerializer(farm).data,
-        'settings': FarmSettingsSerializer(settings_obj).data
-    })
+    return Response(
+        {
+            "tree": tree,
+            "farm": FarmSerializer(farm).data,
+            "settings": FarmSettingsSerializer(settings_obj).data,
+        }
+    )
 
 
-@api_view(['GET', 'POST'])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def location_nodes_view(request):
     """
@@ -261,30 +309,38 @@ def location_nodes_view(request):
     POST: Creates a new node with full nesting validation.
     """
     farm_qs = Farm.objects.filter(is_active=True)
-    if getattr(request.user, 'company_id', None):
+    if getattr(request.user, "company_id", None):
         farm_qs = farm_qs.filter(company_id=request.user.company_id)
     farm = farm_qs.first()
 
     # ── POST: create a new node ───────────────────────────────────────────────
-    if request.method == 'POST':
+    if request.method == "POST":
         if not farm:
-            return Response({'detail': 'لا توجد مزرعة نشطة.'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = LocationNodeCreateSerializer(data=request.data, context={'request': request})
+            return Response(
+                {"detail": "لا توجد مزرعة نشطة."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = LocationNodeCreateSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         # SUPER_ADMIN has no company FK — fall back to farm.company (already tenant-scoped)
-        company = getattr(request.user, 'company', None) or farm.company
+        company = getattr(request.user, "company", None) or farm.company
         node = serializer.save(
             farm=farm,
             company=company,
         )
-        log_activity(request.user, f"Created LocationNode: {node.type}:{node.name}", "Farm")
-        return Response(LocationNodeSerializer(node).data, status=status.HTTP_201_CREATED)
+        log_activity(
+            request.user, f"Created LocationNode: {node.type}:{node.name}", "Farm"
+        )
+        return Response(
+            LocationNodeSerializer(node).data, status=status.HTTP_201_CREATED
+        )
 
     # ── GET: list filtered nodes ──────────────────────────────────────────────
-    node_type = request.query_params.get('type')
-    parent_id = request.query_params.get('parent')
+    node_type = request.query_params.get("type")
+    parent_id = request.query_params.get("parent")
 
-    qs = LocationNode.objects.filter(is_active=True).select_related('parent')
+    qs = LocationNode.objects.filter(is_active=True).select_related("parent")
     if farm:
         qs = qs.filter(farm=farm)
 
@@ -295,18 +351,18 @@ def location_nodes_view(request):
 
     data = [
         {
-            'id':          node.id,
-            'name':        node.name,
-            'type':        node.type,
-            'parent_id':   node.parent_id,
-            'parent_name': node.parent.name if node.parent_id else None,
+            "id": node.id,
+            "name": node.name,
+            "type": node.type,
+            "parent_id": node.parent_id,
+            "parent_name": node.parent.name if node.parent_id else None,
         }
-        for node in qs.order_by('order', 'created_at')
+        for node in qs.order_by("order", "created_at")
     ]
     return Response(data)
 
 
-@api_view(['PATCH', 'DELETE'])
+@api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def location_node_detail_view(request, pk):
     """
@@ -316,26 +372,183 @@ def location_node_detail_view(request, pk):
     try:
         node = LocationNode.objects.get(pk=pk)
     except LocationNode.DoesNotExist:
-        return Response({'detail': 'العنصر غير موجود.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND
+        )
 
     # Tenant safety check
-    company = getattr(request, 'company', None)
+    company = getattr(request, "company", None)
     if company and node.company_id != company.id:
-        return Response({'detail': 'غير مصرح.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"detail": "غير مصرح."}, status=status.HTTP_403_FORBIDDEN)
 
-    if request.method == 'PATCH':
+    if request.method == "PATCH":
         # Only allow renaming and reordering — parent/type changes are not allowed after creation
-        allowed = {k: v for k, v in request.data.items() if k in ('name', 'order')}
+        allowed = {k: v for k, v in request.data.items() if k in ("name", "order")}
         serializer = LocationNodeSerializer(node, data=allowed, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         log_activity(request.user, f"Updated LocationNode: {node.pk}", "Farm")
         return Response(LocationNodeSerializer(node).data)
 
-    elif request.method == 'DELETE':
+    elif request.method == "DELETE":
         node.is_active = False
-        node.save(update_fields=['is_active'])
+        node.save(update_fields=["is_active"])
         # Also deactivate all descendants
         node.get_descendants().update(is_active=False)
-        log_activity(request.user, f"Archived LocationNode: {node.type}:{node.name}", "Farm")
+        log_activity(
+            request.user, f"Archived LocationNode: {node.type}:{node.name}", "Farm"
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Enclosure Operational Profile Views ──────────────────────────────────
+
+from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+from apps.reports.selectors import get_location_timeline, get_location_analytics
+from serializers.reports_serializers import OperationLogTimelineSerializer
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def location_node_profile_view(request, pk):
+    """
+    GET: Returns high-level profile summary for an enclosure (Entity-Centric).
+    PATCH: Updates the agricultural profile (tree count, crop, yield, etc.).
+    """
+    try:
+        node = LocationNode.objects.get(pk=pk)
+    except LocationNode.DoesNotExist:
+        return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "PATCH":
+        # Update or create the profile
+        from apps.farm.models import EnclosureProfile
+        profile, created = EnclosureProfile.objects.get_or_create(
+            location_node=node,
+            defaults={"company": node.company}
+        )
+        
+        # Extract fields
+        crop_type = request.data.get("crop_type")
+        planting_year = request.data.get("planting_year")
+        tree_count = request.data.get("tree_count")
+        seedling_count = request.data.get("seedling_count")
+        expected_yield = request.data.get("expected_yield")
+        profile_data = request.data.get("profile_data")
+
+        if crop_type is not None: profile.crop_type = crop_type
+        if planting_year is not None: profile.planting_year = planting_year
+        if tree_count is not None: profile.tree_count = tree_count
+        if seedling_count is not None: profile.seedling_count = seedling_count
+        if expected_yield is not None: profile.expected_yield = expected_yield
+        if request.data.get("general_notes") is not None:
+            profile.general_notes = request.data.get("general_notes")
+        if profile_data is not None:
+            if not profile.profile_data: profile.profile_data = {}
+            profile.profile_data.update(profile_data)
+            
+        profile.save()
+        log_activity(request.user, f"Updated Agricultural Profile for Enclosure {node.name}", "Farm")
+
+    # Basic analytics for profile header with safety fallback
+    try:
+        analytics = get_location_analytics(node)
+    except Exception:
+        analytics = {
+            "summary": {"total_ops": 0, "total_hours": 0, "last_op_date": None},
+            "distribution": [],
+            "cost_trend": []
+        }
+    
+    # Resolve hierarchy breadcrumbs safely
+    try:
+        ancestors = node.get_ancestors()
+        sector = ancestors.filter(type=LocationNode.TYPE_SECTOR).first()
+        stage = ancestors.filter(type=LocationNode.TYPE_STAGE).first()
+    except Exception:
+        sector = stage = None
+
+    # Fetch Enclosure Profile if it exists (using safe hasattr)
+    profile_data = {}
+    if hasattr(node, "profile") and node.profile:
+        p = node.profile
+        profile_data = {
+            "crop_type": p.crop_type,
+            "planting_year": p.planting_year,
+            "tree_count": p.tree_count,
+            "seedling_count": p.seedling_count,
+            "expected_yield": float(p.expected_yield) if p.expected_yield else 0,
+            "actual_yield": float(p.actual_yield) if p.actual_yield else 0,
+            "profile_data": p.profile_data,
+            "general_notes": p.general_notes,
+        }
+
+    return Response({
+        "id": node.id,
+        "name": node.name,
+        "type": node.type,
+        "status": "active" if node.is_active else "inactive",
+        "hierarchy": {
+            "sector": {"id": sector.id, "name": sector.name} if sector else None,
+            "stage": {"id": stage.id, "name": stage.name} if stage else None,
+        },
+        "asset_profile": profile_data,
+        "summary_metrics": {
+            "total_operations": analytics.get("summary", {}).get("total_ops") or 0,
+            "total_work_hours": round(float(analytics.get("summary", {}).get("total_hours") or 0), 2),
+            "last_operation_date": analytics.get("summary", {}).get("last_op_date"),
+            "last_irrigation_date": analytics.get("summary", {}).get("last_irrigation_date"),
+            "last_fertilization_date": analytics.get("summary", {}).get("last_fertilization_date")
+        }
+    })
+
+
+class LocationNodeTimelineView(APIView):
+    """
+    Paginated dynamic timeline of operations for an enclosure.
+    Uses OperationLog as the atomic event source.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            node = LocationNode.objects.get(pk=pk)
+        except LocationNode.DoesNotExist:
+            return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+
+        profile_type = request.query_params.get("profile_type")
+        if profile_type == "all":
+            profile_type = None
+        operation_id = request.query_params.get("operation_id")
+        search = request.query_params.get("search")
+        
+        logs = get_location_timeline(node, profile_type=profile_type, operation_id=operation_id, search=search)
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        result_page = paginator.paginate_queryset(logs, request)
+        serializer = OperationLogTimelineSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def location_node_analytics_view(request, pk):
+    """
+    Aggregated analytics with high reliability. Never returns 500.
+    """
+    try:
+        node = LocationNode.objects.get(pk=pk)
+        analytics = get_location_analytics(node)
+        return Response(analytics)
+    except LocationNode.DoesNotExist:
+        return Response({"detail": "العنصر غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        # Graceful degradation for analytics
+        return Response({
+            "summary": {"total_ops": 0, "total_hours": 0, "last_op_date": None},
+            "distribution": [],
+            "cost_trend": [],
+            "error_hint": str(e)
+        })

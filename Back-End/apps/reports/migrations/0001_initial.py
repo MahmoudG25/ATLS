@@ -6,27 +6,57 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('farm', '0001_initial'),
+        ("farm", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DailyReport',
+            name="DailyReport",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('operation_type', models.CharField(max_length=100)),
-                ('date', models.DateField()),
-                ('workers', models.PositiveIntegerField()),
-                ('notes', models.TextField(blank=True, null=True)),
-                ('images', models.JSONField(blank=True, default=list)),
-                ('engineer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='daily_reports', to=settings.AUTH_USER_MODEL)),
-                ('plot', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='daily_reports', to='farm.plot')),
-                ('sector', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='daily_reports', to='farm.sector')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("operation_type", models.CharField(max_length=100)),
+                ("date", models.DateField()),
+                ("workers", models.PositiveIntegerField()),
+                ("notes", models.TextField(blank=True, null=True)),
+                ("images", models.JSONField(blank=True, default=list)),
+                (
+                    "engineer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="daily_reports",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "plot",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="daily_reports",
+                        to="farm.plot",
+                    ),
+                ),
+                (
+                    "sector",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="daily_reports",
+                        to="farm.sector",
+                    ),
+                ),
             ],
         ),
     ]

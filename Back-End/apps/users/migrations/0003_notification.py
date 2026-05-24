@@ -6,26 +6,53 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0002_landingcontent'),
+        ("users", "0002_landingcontent"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Notification',
+            name="Notification",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message_ar', models.CharField(max_length=255)),
-                ('message_en', models.CharField(max_length=255)),
-                ('type', models.CharField(choices=[('user_pending', 'User Pending Approval'), ('low_stock', 'Low Stock Alert'), ('invoice', 'New Invoice'), ('leave_request', 'Leave Request'), ('system', 'System Notification')], default='system', max_length=50)),
-                ('is_read', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('link', models.CharField(blank=True, default='', max_length=200)),
-                ('recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("message_ar", models.CharField(max_length=255)),
+                ("message_en", models.CharField(max_length=255)),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("user_pending", "User Pending Approval"),
+                            ("low_stock", "Low Stock Alert"),
+                            ("invoice", "New Invoice"),
+                            ("leave_request", "Leave Request"),
+                            ("system", "System Notification"),
+                        ],
+                        default="system",
+                        max_length=50,
+                    ),
+                ),
+                ("is_read", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("link", models.CharField(blank=True, default="", max_length=200)),
+                (
+                    "recipient",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notifications",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
     ]

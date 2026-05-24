@@ -5,51 +5,116 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('farm', '0003_farm_is_active'),
+        ("farm", "0003_farm_is_active"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Crop',
+            name="Crop",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, verbose_name='المحصول')),
-                ('type', models.CharField(choices=[('palm', 'نخيل'), ('olive', 'زيتون')], max_length=20, verbose_name='النوع')),
-                ('order', models.IntegerField(default=0, verbose_name='الترتيب')),
-                ('is_active', models.BooleanField(default=True)),
-                ('farm', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='crops', to='farm.farm')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, verbose_name="المحصول")),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[("palm", "نخيل"), ("olive", "زيتون")],
+                        max_length=20,
+                        verbose_name="النوع",
+                    ),
+                ),
+                ("order", models.IntegerField(default=0, verbose_name="الترتيب")),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "farm",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="crops",
+                        to="farm.farm",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order', 'id'],
+                "ordering": ["order", "id"],
             },
         ),
         migrations.CreateModel(
-            name='Stage',
+            name="Stage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, verbose_name='المرحلة')),
-                ('order', models.IntegerField(default=0, verbose_name='الترتيب')),
-                ('is_active', models.BooleanField(default=True)),
-                ('crop', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stages', to='farm.crop')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, verbose_name="المرحلة")),
+                ("order", models.IntegerField(default=0, verbose_name="الترتيب")),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "crop",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="stages",
+                        to="farm.crop",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order', 'id'],
+                "ordering": ["order", "id"],
             },
         ),
         migrations.CreateModel(
-            name='Enclosure',
+            name="Enclosure",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, verbose_name='الحوشة / المنطقة')),
-                ('order', models.IntegerField(default=0, verbose_name='الترتيب')),
-                ('is_active', models.BooleanField(default=True)),
-                ('crop', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enclosures', to='farm.crop', verbose_name='المحصول')),
-                ('stage', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='enclosures', to='farm.stage', verbose_name='المرحلة')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(max_length=100, verbose_name="الحوشة / المنطقة"),
+                ),
+                ("order", models.IntegerField(default=0, verbose_name="الترتيب")),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "crop",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="enclosures",
+                        to="farm.crop",
+                        verbose_name="المحصول",
+                    ),
+                ),
+                (
+                    "stage",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="enclosures",
+                        to="farm.stage",
+                        verbose_name="المرحلة",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order', 'id'],
+                "ordering": ["order", "id"],
             },
         ),
     ]

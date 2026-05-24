@@ -5,24 +5,45 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('farm', '0001_initial'),
+        ("farm", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AnnualYield',
+            name="AnnualYield",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('year', models.PositiveIntegerField()),
-                ('production_amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('plot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='annual_yields', to='farm.plot')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("year", models.PositiveIntegerField()),
+                (
+                    "production_amount",
+                    models.DecimalField(decimal_places=2, max_digits=12),
+                ),
+                (
+                    "plot",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="annual_yields",
+                        to="farm.plot",
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('plot', 'year'), name='unique_plot_year_yield')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("plot", "year"), name="unique_plot_year_yield"
+                    )
+                ],
             },
         ),
     ]
