@@ -15,6 +15,7 @@ from django.db.models import (
     Case,
     When,
     Value,
+    Q,
 )
 from django.db.models.functions import Coalesce
 from apps.reports.models import (
@@ -22,6 +23,7 @@ from apps.reports.models import (
     Variety,
     Unit,
     Contractor,
+    ApplicationMethod,
     DailyTaskReport,
     FertilizationReport,
     IrrigationReport,
@@ -30,10 +32,12 @@ from apps.reports.models import (
     LaborEntry,
     Attachment,
     Season,
+    GalleryMedia
 )
 from serializers.reports_serializers import (
     OperationSerializer,
     DailyTaskReportSerializer,
+    DailyTaskReportListSerializer,
     FertilizationReportSerializer,
     IrrigationReportSerializer,
     CustomFieldDefinitionSerializer,
@@ -41,9 +45,11 @@ from serializers.reports_serializers import (
     ReportDropdownOptionSerializer,
     LaborEntrySerializer,
     AttachmentSerializer,
+    GalleryMediaSerializer,
     VarietySerializer,
     UnitSerializer,
     ContractorSerializer,
+    ApplicationMethodSerializer,
     # Analytics Serializers
     KPIDashboardSerializer,
     ProductivityAnalyticsSerializer,
@@ -71,6 +77,7 @@ from apps.reports.selectors import (
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 import django_filters
+from services.activity_service import log_activity
 
 class TaskPagination(PageNumberPagination):
     page_size = 10
@@ -87,14 +94,29 @@ class DailyTaskFilter(django_filters.FilterSet):
     operation_name = django_filters.CharFilter(
         field_name="operation__name", lookup_expr="icontains"
     )
-    location = django_filters.NumberFilter(field_name="location_id")
+    
+    # Hierarchical location filter (supports UUIDs)
+    location = django_filters.UUIDFilter(method="filter_location")
     
     # Generic operational search
     search = django_filters.CharFilter(method="filter_search")
 
     class Meta:
         model = DailyTaskReport
-        fields = ["engineer", "report_date", "operation", "location", "search"]
+        fields = ["engineer", "operation", "report_date"]
+
+    def filter_location(self, queryset, name, value):
+        if not value:
+            return queryset
+        try:
+            from apps.farm.models import LocationNode
+            # Get node and all its children in the hierarchy
+            node = LocationNode.objects.get(id=value)
+            descendant_ids = node.get_descendants(include_self=True).values_list('id', flat=True)
+            return queryset.filter(location_id__in=descendant_ids)
+        except Exception as e:
+            logger.error(f"Error in location filter: {e}")
+            return queryset
 
     def filter_search(self, queryset, name, value):
         from django.db.models import Q
@@ -119,38 +141,56 @@ class DailyTaskFilter(django_filters.FilterSet):
         )
 
 
-def _for_company(queryset, request):
+import logging
+logger = logging.getLogger(__name__)
+
+def _get_company(request):
+    """
+    Safely resolves the company for the current request.
+    Handles JWT authentication where middleware might not have request.company yet.
+    """
     company = getattr(request, "company", None)
-    
-    # --- TEMPORARY SINGLE-TENANT COMPATIBILITY FALLBACK ---
-    # TODO: [Strict Tenant Assignment Enforcement]
-    # Future multi-tenant expansion MUST require all users to be explicitly assigned to a company.
-    # Currently, Engineer accounts without a company assignment receive empty dropdowns.
-    # We fallback to the first company to stabilize operational reporting.
     if not company and request.user.is_authenticated:
-        from apps.users.models import Company
-        company = Company.objects.first()
-        request.company = company
-    # ------------------------------------------------------
+        company = getattr(request.user, "company", None)
     
-    # Temporary debug logging for tenant/data-access integrity audit
-    print(f"[TENANT DEBUG] User: {request.user} (Superuser: {request.user.is_superuser})")
-    print(f"[TENANT DEBUG] Middleware Company: {getattr(request, 'company', None)}")
-    print(f"[TENANT DEBUG] Resolved Company: {company}")
+    if not company:
+        try:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        except:
+            pass
+    return company
+
+def _for_company(queryset, request):
+    user = request.user
+    if not user or not user.is_authenticated:
+        return queryset.none()
+
+    # 1. Super Admin bypass: sees all records across all tenants
+    if user.is_superuser or getattr(user, "role", None) == "SUPER_ADMIN":
+        return queryset
+
+    # 2. Extract company with multiple fallbacks
+    company = _get_company(request)
+
+    if not company:
+        logger.warning(f"User {user} accessed {queryset.model.__name__} without a company assignment.")
+        return queryset.none()
     
-    if request.user.is_superuser:
-        qs = queryset
-    elif hasattr(queryset, "for_company"):
+    # 3. Apply tenant isolation logic
+    if hasattr(queryset, "for_company"):
+        # Uses the logic in core.tenant.TenantQuerySet
         qs = queryset.for_company(company)
-    elif not company:
-        qs = queryset.none()
     else:
-        qs = queryset.filter(company=company)
+        # Fallback for QuerySets that don't have the for_company manager method
+        filter_q = Q(company=company)
+        if hasattr(queryset.model, "is_system"):
+            filter_q |= Q(is_system=True)
+        qs = queryset.filter(filter_q)
         
-    if hasattr(qs.model, 'is_deleted'):
+    if hasattr(qs.model, "is_deleted"):
         qs = qs.filter(is_deleted=False)
         
-    print(f"[TENANT DEBUG] Queryset ({queryset.model.__name__}) Count: {qs.count()}")
     return qs
 
 
@@ -165,6 +205,7 @@ class OperationListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         company = getattr(self.request, "company", None)
         if not company:
+            # Super Admin: no company from middleware, fall back to first available
             from apps.users.models import Company
             company = Company.objects.first()
         serializer.save(company=company)
@@ -186,11 +227,15 @@ class OperationDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class DailyTaskReportListCreate(generics.ListCreateAPIView):
-    serializer_class = DailyTaskReportSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_class = DailyTaskFilter
     pagination_class = TaskPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return DailyTaskReportListSerializer
+        return DailyTaskReportSerializer
 
     def get_queryset(self):
         qs = DailyTaskReport.objects.select_related(
@@ -201,15 +246,22 @@ class DailyTaskReportListCreate(generics.ListCreateAPIView):
             "contractor",
             "location",
             "location__parent",
-        ).prefetch_related("attachments", "labor_entries")
+        ).prefetch_related(
+            "attachments",
+            "labor_entries",
+            "operation_logs",
+            "operation_logs__operation",
+        )
         return _for_company(qs, self.request)
 
     def perform_create(self, serializer):
-        from apps.users.models import Company
         from rest_framework.exceptions import ValidationError as DRFValidationError
 
-        # Single-Tenant: Auto-fetch the only company in the system
-        main_company = Company.objects.first()
+        # Resolve company: prefer middleware-injected, fall back for Super Admin
+        main_company = getattr(self.request, "company", None)
+        if not main_company:
+            from apps.users.models import Company
+            main_company = Company.objects.first()
         if not main_company:
             raise DRFValidationError(
                 {
@@ -227,6 +279,7 @@ class DailyTaskReportListCreate(generics.ListCreateAPIView):
             save_kwargs["engineer"] = user
 
         instance = serializer.save(**save_kwargs)
+        log_activity(user, f"Created Daily Task Report: {instance.pk}", "Reports")
 
 
 class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -234,7 +287,31 @@ class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return _for_company(DailyTaskReport.objects.all(), self.request)
+        return _for_company(
+            DailyTaskReport.objects.select_related(
+                "engineer",
+                "operation",
+                "variety",
+                "unit",
+                "contractor",
+                "location",
+                "location__parent",
+            ).prefetch_related(
+                "attachments",
+                "attachments__report",
+                "attachments__report__operation",
+                "attachments__report__location",
+                "attachments__report__engineer",
+                "labor_entries",
+                "operation_logs",
+                "operation_logs__operation",
+                "operation_logs__location",
+                "operation_logs__variety",
+                "operation_logs__unit",
+            ),
+            self.request,
+        )
+
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -243,7 +320,7 @@ class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
         is_manager = is_super or user_role == "MANAGER"
 
         if instance.status == "approved":
-            if not is_super:
+            if not is_manager:
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("Approved reports are immutable and cannot be edited.")
             
@@ -261,11 +338,13 @@ class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
             )
             # Ensure status remains approved
             instance.status = "approved"
+            log_activity(self.request.user, f"Super Admin Override: Daily Task Report {instance.pk}", "Reports")
         elif not is_manager and instance.status not in ["draft", "submitted", "rejected"]:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Engineers can only edit draft, submitted, or rejected reports.")
         else:
             serializer.save()
+            log_activity(self.request.user, f"Updated Daily Task Report: {instance.pk}", "Reports")
 
     def perform_destroy(self, instance):
         user_role = getattr(self.request.user, "role", "ENGINEER")
@@ -285,6 +364,7 @@ class DailyTaskReportDetail(generics.RetrieveUpdateDestroyAPIView):
         instance.deleted_at = timezone.now()
         instance.deleted_by = self.request.user
         instance.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+        log_activity(self.request.user, f"Deleted Daily Task Report: {instance.pk}", "Reports")
 
 
 class DailyTaskReportActionView(APIView):
@@ -389,19 +469,17 @@ class DailyTaskSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from apps.reports.models import OperationLog
+        # Use OperationLog as source of truth for Phase 3 analytics
         summary = (
-            _for_company(DailyTaskReport.objects.all(), request)
-            .values("operation__name", "report_date")
+            _for_company(OperationLog.objects.all(), request)
+            .values(sector=F("location__parent__name"))
             .annotate(
+                total_tasks=Count("id"),
                 total_productivity=Sum("actual_productivity"),
-                avg_work_hours=Avg("work_hours"),
-                reports_count=Count("id"),
-                total_workers=Coalesce(
-                    Sum("company_workers"), 0, output_field=IntegerField()
-                )
-                + Coalesce(Sum("contractor_workers"), 0, output_field=IntegerField()),
+                total_workers=Sum(F("company_workers") + F("contractor_workers")),
             )
-            .order_by("-report_date")
+            .order_by("sector")
         )
         return Response(summary)
 
@@ -583,6 +661,33 @@ class UnitDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.save(update_fields=["is_active"])
 
 
+class ApplicationMethodListView(generics.ListCreateAPIView):
+    serializer_class = ApplicationMethodSerializer
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(ApplicationMethod.objects.filter(is_active=True), self.request)
+
+    def perform_create(self, serializer):
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        serializer.save(company=company)
+
+
+class ApplicationMethodDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ApplicationMethodSerializer
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_queryset(self):
+        return _for_company(ApplicationMethod.objects.all(), self.request)
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+
 class ContractorListView(generics.ListCreateAPIView):
     serializer_class = ContractorSerializer
     permission_classes = [IsManagerOrReadOnly]
@@ -658,11 +763,43 @@ class AttachmentListCreate(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
-        instance = serializer.save(company=getattr(self.request, "company", None))
+        company = getattr(self.request, "company", None)
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        instance = serializer.save(company=company)
         
         # Phase 2 Dual-Write Bridge
         from services.reports_service import sync_child_operation_log
         sync_child_operation_log(instance)
+
+
+class AttachmentDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AttachmentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Attachment.objects.filter(
+            report__in=_for_company(DailyTaskReport.objects.all(), self.request)
+        )
+
+
+class GalleryMediaListCreate(generics.ListCreateAPIView):
+    serializer_class = GalleryMediaSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["file_type"]
+
+    def get_queryset(self):
+        return _for_company(GalleryMedia.objects.all(), self.request)
+
+
+class GalleryMediaDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = GalleryMediaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return _for_company(GalleryMedia.objects.all(), self.request)
 
 
 class OperationAnalyticsView(APIView):
@@ -745,7 +882,7 @@ class KPIAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        company = getattr(request, "company", None)
+        company = _get_company(request)
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
@@ -773,7 +910,7 @@ class ProductivityAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        company = getattr(request, "company", None)
+        company = _get_company(request)
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
@@ -786,21 +923,21 @@ class ComparisonAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(comparison_analytics(getattr(request, "company", None)))
+        return Response(comparison_analytics(_get_company(request)))
 
 
 class DashboardAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(dashboard_bundle(getattr(request, "company", None)))
+        return Response(dashboard_bundle(_get_company(request)))
 
 
 class SmartInsightsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        company = getattr(request, "company", None)
+        company = _get_company(request)
         return Response(
             {
                 "alerts": smart_alerts(company),
@@ -833,7 +970,7 @@ class OperationsSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        company = getattr(request, "company", None)
+        company = _get_company(request)
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
@@ -957,38 +1094,26 @@ class TrendsAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        labor_sum_subquery = (
-            LaborEntry.objects.filter(report=OuterRef("pk"))
-            .values("report")
-            .annotate(
-                total=Sum(
-                    ExpressionWrapper(
-                        F("hours") * F("worker_rate"), output_field=FloatField()
-                    )
-                )
-            )
-            .values("total")
-        )
-
-        qs = (
-            _for_company(DailyTaskReport.objects.all(), request)
-            .annotate(
-                report_cost=Coalesce(
-                    Subquery(labor_sum_subquery),
-                    0.0,
-                    output_field=FloatField(),
-                )
-            )
-            .filter(location__type="ENCLOSURE")
-        )
+        from apps.reports.models import OperationLog
+        # In Phase 3, we aggregate metrics from OperationLog
+        qs = _for_company(OperationLog.objects.all(), request)
+        
+        # Filter for enclosure-level logs to maintain consistency with old logic
+        qs = qs.filter(location__type="ENCLOSURE")
 
         trends = list(
-            qs.values("report_date")
+            qs.values(report_date=F("report__report_date"))
             .annotate(
-                total_reports=Count("id"),
-                total_workers=Sum("company_workers") + Sum("contractor_workers"),
+                total_reports=Count("report", distinct=True),
+                total_workers=Sum(F("company_workers") + F("contractor_workers")),
                 total_hours=Sum("work_hours"),
-                total_cost=Sum("report_cost"),
+                # cost aggregation from labor entries related to the log
+                total_cost=Sum(
+                    ExpressionWrapper(
+                        F("labor_entries__hours") * F("labor_entries__worker_rate"),
+                        output_field=FloatField()
+                    )
+                ),
             )
             .order_by("report_date")
         )
@@ -1000,11 +1125,12 @@ class InsightsAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = _for_company(DailyTaskReport.objects.all(), request).filter(
+        from apps.reports.models import OperationLog
+        qs = _for_company(OperationLog.objects.all(), request).filter(
             location__type="ENCLOSURE"
         )
 
-        # Productivity: Output per worker (handling division by zero)
+        # Productivity: Output per worker
         productivity = (
             qs.values("operation__name")
             .annotate(
@@ -1026,36 +1152,131 @@ class InsightsAnalyticsView(APIView):
         best_productivity = productivity.order_by("-productivity").first()
         worst_productivity = productivity.order_by("productivity").first()
 
-        # Cost: Derived from LaborEntry hours * rate via subquery
-        cost_data = qs.annotate(
-            report_cost=Coalesce(
-                Subquery(
-                    LaborEntry.objects.filter(report=OuterRef("pk"))
-                    .values("report")
-                    .annotate(
-                        total=Sum(
-                            ExpressionWrapper(
-                                F("hours") * F("worker_rate"), output_field=FloatField()
-                            )
-                        )
-                    )
-                    .values("total")
-                ),
-                0.0,
-                output_field=FloatField(),
+        # Cost: Derived from LaborEntry hours * rate
+        cost_per_operation = qs.values("operation__name").annotate(
+            total_cost=Sum(
+                ExpressionWrapper(
+                    F("labor_entries__hours") * F("labor_entries__worker_rate"),
+                    output_field=FloatField()
+                )
             )
-        )
-
-        cost_per_operation = cost_data.values("operation__name").annotate(
-            total_cost=Sum("report_cost")
         )
 
         highest_cost_operation = cost_per_operation.order_by("-total_cost").first()
 
+        company = _get_company(request)
         return Response(
             {
                 "best_productivity": best_productivity,
                 "worst_productivity": worst_productivity,
                 "highest_cost_operation": highest_cost_operation,
+                "alerts": smart_alerts(company),
+                "suggestions": smart_suggestions(company),
             }
         )
+
+
+class MediaFeedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        from apps.production.models import HarvestAttachment
+        from apps.production.serializers import HarvestAttachmentSerializer
+
+        attachments_qs = _for_company(Attachment.objects.all(), request)
+        harvest_qs = _for_company(HarvestAttachment.objects.all(), request)
+        gallery_qs = _for_company(GalleryMedia.objects.all(), request)
+
+        engineer = request.query_params.get("engineer")
+        enclosure = request.query_params.get("enclosure")
+        operation_type = request.query_params.get("operation_type")
+        date = request.query_params.get("date")
+        report = request.query_params.get("report")
+        file_type = request.query_params.get("file_type") or request.query_params.get("type")
+
+        if engineer:
+            attachments_qs = attachments_qs.filter(report__engineer_id=engineer)
+            harvest_qs = harvest_qs.filter(
+                Q(report__supervisor_id=engineer) | Q(report__created_by_id=engineer)
+            )
+            gallery_qs = gallery_qs.filter(uploaded_by_id=engineer)
+
+        if enclosure:
+            attachments_qs = attachments_qs.filter(
+                Q(report__location_id=enclosure) | Q(operation_log__location_id=enclosure)
+            )
+            harvest_qs = harvest_qs.filter(report__location_id=enclosure)
+            gallery_qs = gallery_qs.none()
+
+        if operation_type:
+            attachments_qs = attachments_qs.filter(
+                Q(report__operation_id=operation_type) | Q(operation_log__operation_id=operation_type)
+            )
+            harvest_qs = harvest_qs.none()
+            gallery_qs = gallery_qs.none()
+
+        if date:
+            attachments_qs = attachments_qs.filter(report__report_date=date)
+            harvest_qs = harvest_qs.filter(report__harvest_date=date)
+            gallery_qs = gallery_qs.none()
+
+        if report:
+            attachments_qs = attachments_qs.filter(report_id=report)
+            harvest_qs = harvest_qs.filter(report_id=report)
+            gallery_qs = gallery_qs.none()
+
+        if file_type:
+            attachments_qs = attachments_qs.filter(file_type=file_type)
+            harvest_qs = harvest_qs.filter(file_type=file_type)
+            gallery_qs = gallery_qs.filter(file_type=file_type)
+
+        attachments_qs = attachments_qs.select_related(
+            "report", "report__engineer", "report__location", "operation_log"
+        )
+        harvest_qs = harvest_qs.select_related(
+            "report", "report__supervisor", "report__created_by", "report__location"
+        )
+        gallery_qs = gallery_qs.select_related("uploaded_by")
+
+        attachments_data = AttachmentSerializer(attachments_qs, many=True).data
+        harvest_data = HarvestAttachmentSerializer(harvest_qs, many=True).data
+        gallery_data = GalleryMediaSerializer(gallery_qs, many=True).data
+
+        media_items = []
+        media_items.extend(attachments_data)
+        media_items.extend(harvest_data)
+        media_items.extend(gallery_data)
+
+        def get_created_at(item):
+            return item.get("created_at") or "1970-01-01T00:00:00Z"
+        media_items.sort(key=get_created_at, reverse=True)
+
+        page = request.query_params.get("page")
+        page_size = request.query_params.get("page_size") or 20
+
+        if page:
+            try:
+                page = int(page)
+                page_size = int(page_size)
+                start = (page - 1) * page_size
+                end = start + page_size
+                paginated_items = media_items[start:end]
+                
+                has_next = end < len(media_items)
+                has_prev = start > 0
+                total_count = len(media_items)
+                total_pages = (total_count + page_size - 1) // page_size
+                
+                return Response({
+                    "results": paginated_items,
+                    "count": total_count,
+                    "total_pages": total_pages,
+                    "current_page": page,
+                    "has_next": has_next,
+                    "has_prev": has_prev
+                })
+            except ValueError:
+                pass
+
+        return Response(media_items)
+

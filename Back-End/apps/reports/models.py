@@ -171,7 +171,7 @@ class ProductivityClassification(TenantAwareModel):
         return self.name
 
 
-class ReportDropdownOption(models.Model):
+class ReportDropdownOption(TenantAwareModel):
     CATEGORY_CHOICES = [
         ("variety", "Variety"),
         ("unit", "Unit"),
@@ -248,6 +248,12 @@ class DailyTaskReport(TenantAwareModel):
         blank=True,
         related_name="daily_task_reports",
         verbose_name="كود المقاول",
+    )
+    contractors = models.ManyToManyField(
+        "reports.Contractor",
+        blank=True,
+        related_name="daily_task_reports_m2m",
+        verbose_name="المقاولون"
     )
     operation = models.ForeignKey(
         Operation, on_delete=models.PROTECT, verbose_name="العملية الفنية"
@@ -396,6 +402,12 @@ class OperationLog(TenantAwareModel):
         "reports.Contractor", on_delete=models.PROTECT, null=True, blank=True,
         related_name="operation_logs", verbose_name="كود المقاول"
     )
+    contractors = models.ManyToManyField(
+        "reports.Contractor",
+        blank=True,
+        related_name="operation_logs_m2m",
+        verbose_name="المقاولون"
+    )
     
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
     contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
@@ -484,7 +496,7 @@ class OperationLog(TenantAwareModel):
             raise ValidationError({"contractor": "Invalid tenant relation"})
 
 
-class FertilizationReport(models.Model):
+class FertilizationReport(TenantAwareModel):
     """تقرير التسميد"""
 
     report_date = models.DateField(verbose_name="تاريخ")
@@ -525,7 +537,7 @@ class FertilizationReport(models.Model):
         ordering = ["-report_date"]
 
 
-class IrrigationReport(models.Model):
+class IrrigationReport(TenantAwareModel):
     """تقرير الري"""
 
     report_date = models.DateField(verbose_name="تاريخ")
@@ -562,7 +574,7 @@ class IrrigationReport(models.Model):
         ordering = ["-report_date"]
 
 
-class CustomFieldDefinition(models.Model):
+class CustomFieldDefinition(TenantAwareModel):
     FIELD_TYPES = [
         ("text", "Text"),
         ("number", "Number"),
@@ -601,7 +613,7 @@ class CustomFieldDefinition(models.Model):
         return f"{self.name} ({self.applies_to.model})"
 
 
-class CustomFieldValue(models.Model):
+class CustomFieldValue(TenantAwareModel):
     field = models.ForeignKey(
         CustomFieldDefinition, on_delete=models.CASCADE, related_name="values"
     )
@@ -647,7 +659,12 @@ class LaborEntry(TenantAwareModel):
     ]
 
     report = models.ForeignKey(
-        DailyTaskReport, on_delete=models.CASCADE, related_name="labor_entries"
+        DailyTaskReport, on_delete=models.CASCADE, related_name="labor_entries",
+        null=True, blank=True
+    )
+    harvest_report = models.ForeignKey(
+        "production.HarvestReport", on_delete=models.CASCADE, related_name="labor_entries",
+        null=True, blank=True
     )
     operation_log = models.ForeignKey(
         "reports.OperationLog",
@@ -736,4 +753,30 @@ class Attachment(TenantAwareModel):
         ):
             raise ValidationError({"operation_log": "Invalid tenant relation"})
 
+
+class ApplicationMethod(TenantAwareModel):
+    """طريقة الإضافة (مثال: رش ورقي، حقن في التربة، الخ)"""
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class GalleryMedia(TenantAwareModel):
+    """Media explicitly uploaded for the gallery / slider outside of reports"""
+    
+    FILE_TYPE_CHOICES = Attachment.FILE_TYPE_CHOICES
+    
+    file_url = models.URLField(max_length=1000)
+    file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, default=Attachment.FILE_TYPE_IMAGE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"GalleryMedia {self.id} ({self.file_type})"
 

@@ -24,6 +24,10 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 
+import { getCloudinaryUrl } from '../../../../utils/cloudinary'
+
+import AttachmentGallery from '../../../reports/shared/AttachmentGallery'
+
 const OperationalDetailsDrawer = ({ open, onClose, event }) => {
   if (!event) return null
 
@@ -279,28 +283,16 @@ const OperationalDetailsDrawer = ({ open, onClose, event }) => {
         )}
 
         {renderSection(
-          'المرفقات',
-          <Stack spacing={1}>
-            {event.attachments_count > 0 ? (
-              <Button
-                startIcon={<AttachIcon />}
-                variant="outlined"
-                fullWidth
-                sx={{
-                  justifyContent: 'flex-start',
-                  borderRadius: '6px',
-                  color: '#475569',
-                  borderColor: '#cbd5e1',
-                }}
-              >
-                تحميل المرفقات ({event.attachments_count})
-              </Button>
+          'المرفقات والوسائط الميدانية',
+          <Box sx={{ mt: 1 }}>
+            {event.attachments && event.attachments.length > 0 ? (
+              <AttachmentGallery attachments={event.attachments} />
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                لا توجد مرفقات
+                لا توجد مرفقات تشغيلية لهذه العملية.
               </Typography>
             )}
-          </Stack>
+          </Box>
         )}
       </Box>
     </Drawer>

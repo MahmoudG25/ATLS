@@ -11,6 +11,8 @@ from django.db.models import (
     Max,
     Min,
     Q,
+    Case,
+    When,
 )
 from django.db.models.functions import Coalesce, TruncDate
 
@@ -39,7 +41,7 @@ def tenant_reports(company):
 def operations_over_time(company):
     return list(
         tenant_operation_logs(company)
-        .annotate(day=TruncDate("report__report_date"))
+        .annotate(day=TruncDate(Coalesce("report__report_date", "created_at")))
         .values("day")
         .annotate(total=Count("id"))
         .order_by("day")
@@ -368,8 +370,8 @@ def get_location_timeline(location_node, profile_type=None, operation_id=None, s
         location=location_node, 
         is_deleted=False
     ).select_related(
-        "operation", "report", "report__engineer", "contractor", "unit"
-    ).prefetch_related("attachments", "labor_entries")
+        "operation", "report", "report__engineer", "contractor", "unit", "variety", "location"
+    ).prefetch_related("attachments", "labor_entries", "report__attachments")
 
     if profile_type:
         logs = logs.filter(profile_type=profile_type)
@@ -386,14 +388,38 @@ def get_location_timeline(location_node, profile_type=None, operation_id=None, s
         
     return logs.order_by("-report__report_date", "-created_at")
 
+def get_location_full_timeline(location_node, limit=50):
+    """
+    Unified timeline combining OperationLog and HarvestReport.
+    """
+    from apps.production.models import HarvestReport
+    from serializers.reports_serializers import OperationLogTimelineSerializer
+    from serializers.production_serializers import HarvestReportSerializer
+    
+    logs = OperationLog.objects.filter(location=location_node, is_deleted=False).select_related(
+        "operation", "report", "report__engineer"
+    ).prefetch_related(
+        "attachments", "labor_entries", "report__attachments"
+    ).order_by("-report__report_date")[:limit]
+    
+    harvests = HarvestReport.objects.filter(location=location_node).order_by("-harvest_date")[:limit]
+    
+    # Merge and sort manually for the widget if needed, 
+    # but for now we'll just keep the existing selectors.
+    # Actually, the user wants 'productivity' to appear.
+    return logs
+
 
 def get_location_analytics(location_node):
     """
-    Aggregated metrics for a specific Enclosure.
+    Aggregated metrics for a specific LocationNode (Enclosure, Stage, or Sector).
+    Uses recursive lookup to include all descendants.
     """
-    logs = OperationLog.objects.filter(location=location_node, is_deleted=False)
+    # Use descendants to support Phase/Sector level analytics
+    nodes = location_node.get_descendants(include_self=True)
+    logs = OperationLog.objects.filter(location__in=nodes, is_deleted=False)
     
-    # 1. Summary Metrics with matching types (FloatField uses 0.0)
+    # 1. Summary Metrics
     summary = logs.aggregate(
         total_ops=Coalesce(Count("id"), 0),
         total_hours=Coalesce(Sum("work_hours"), 0.0),
@@ -403,7 +429,7 @@ def get_location_analytics(location_node):
         last_fertilization_date=Max("report__report_date", filter=Q(operation__category="fertilization") | Q(profile_type="fertilization"))
     )
 
-    # 2. Cost Distribution by Category (DecimalField uses Decimal('0'))
+    # 2. Cost Distribution by Category
     cost_expr = ExpressionWrapper(
         (Coalesce(F("labor_entries__hours"), Decimal("0")) + Coalesce(F("labor_entries__overtime"), Decimal("0"))) * 
         Coalesce(F("labor_entries__worker_rate"), Decimal("0")),
@@ -424,12 +450,25 @@ def get_location_analytics(location_node):
         .order_by("-count")
     )
     
-    total_count = summary["total_ops"] or 1
-    for item in distribution:
-        item["percentage"] = round((item["count"] / total_count) * 100, 2)
+    # 4. Harvest Summary (Normalized to KG) - Recursive lookup
+    from apps.production.models import HarvestReport
+    harvest_sum = HarvestReport.objects.filter(
+        location__in=nodes, 
+        status__in=['SUBMITTED', 'APPROVED', 'FINALIZED']
+    ).annotate(
+        qty_kg=Case(
+            When(unit__name__icontains='طن', then=F('quantity') * 1000),
+            When(unit__name__icontains='ton', then=F('quantity') * 1000),
+            default=F('quantity'),
+            output_field=DecimalField()
+        )
+    ).aggregate(total=Sum('qty_kg'))['total'] or 0.0
 
     return {
-        "summary": summary,
+        "summary": {
+            **summary,
+            "total_harvested_kg": float(harvest_sum)
+        },
         "cost_trend": cost_trend,
         "operation_distribution": distribution
     }

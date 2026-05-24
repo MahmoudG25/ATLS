@@ -2,8 +2,8 @@ from decimal import Decimal
 
 import jsonschema
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Sum, Case, When, IntegerField
+from django.db.models.functions import Coalesce, Cast
 
 from apps.reports.models import DailyTaskReport, LaborEntry
 
@@ -77,13 +77,13 @@ def productivity_analytics(company):
         tenant_operation_logs(company)
         .values("operation__name")
         .annotate(
-            output=Coalesce(Sum("actual_productivity"), 0),
+            output=Coalesce(Sum("actual_productivity"), 0.0, output_field=DecimalField(max_digits=12, decimal_places=2)),
             workers=Coalesce(Sum("company_workers") + Sum("contractor_workers"), 0),
         )
         .annotate(
             productivity=ExpressionWrapper(
-                F("output") / Coalesce(F("workers"), 1),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
+                F("output") / Cast(Case(When(workers=0, then=1), default=F("workers"), output_field=IntegerField()), output_field=DecimalField(max_digits=12, decimal_places=2)),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
             )
         )
         .order_by("-productivity")

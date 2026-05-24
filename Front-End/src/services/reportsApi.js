@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 import api from './api'
 
 export const reportsApi = {
@@ -64,6 +66,8 @@ export const reportsApi = {
   createLaborEntry: (data) => api.post('/reports/labor/', data),
   getAttachments: (params) => api.get('/reports/attachments/', { params }),
   createAttachment: (data) => api.post('/reports/attachments/', data),
+  getMediaFeed: (params) => api.get('/reports/media-feed/', { params }),
+  getHarvestReport: (id) => api.get(`/production/harvest-reports/${id}/`),
 
   // Dropdown Options (Legacy - Read Only)
   getOptions: (category) => api.get('/reports/options/', { params: { category } }),
@@ -83,11 +87,20 @@ export const reportsApi = {
   updateContractor: (id, data) => api.put(`/reports/contractors/${id}/`, data),
   deleteContractor: (id) => api.delete(`/reports/contractors/${id}/`),
 
+  // Application Methods (طرق الإضافة)
+  getApplicationMethods: (params) => api.get('/reports/application-methods/', { params }),
+  createApplicationMethod: (data) => api.post('/reports/application-methods/', data),
+  updateApplicationMethod: (id, data) => api.put(`/reports/application-methods/${id}/`, data),
+  deleteApplicationMethod: (id) => api.delete(`/reports/application-methods/${id}/`),
+
+  // Custom Field Values (save helper)
+  saveCustomFieldValues: (data) => api.post('/reports/custom-field-values/', data),
+
   // Additional APIS for Autocompletes
   getUsers: () => api.get('/users'),
   getEngineers: () => api.get('/users/engineers'),
-  getSectors: () => api.get('/farm/sectors'),
-  getFarmHierarchy: () => api.get('/farm/hierarchy'),
+  getSectors: () => api.get('/farm/sectors/'),
+  getFarmHierarchy: () => api.get('/farm/location-tree/'),
   // Type-filtered LocationNode queries — use instead of hierarchy for form dropdowns
   getLocationNodes: (type, parentId = null) => {
     const params = { type }
@@ -98,7 +111,11 @@ export const reportsApi = {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/uploads/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    })
+  },
+  uploadToCloudinary: (cloudinaryUrl, formData, onUploadProgress) => {
+    return axios.post(cloudinaryUrl, formData, {
       onUploadProgress,
     })
   },

@@ -15,19 +15,25 @@ const Register = lazy(() => import('../pages/auth/Register'))
 const UserProfile = lazy(() => import('../pages/auth/UserProfile'))
 const FarmStructure = lazy(() => import('../pages/farm/FarmStructure'))
 const EnclosureProfile = lazy(() => import('../pages/farm/EnclosureProfile/EnclosureDashboard'))
-const PalmRecords = lazy(() => import('../pages/palm/PalmRecords'))
-const OliveRecords = lazy(() => import('../pages/olive/OliveRecords'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const FleetManager = lazy(() => import('../pages/equipment/FleetManager'))
 const FinanceDashboard = lazy(() => import('../pages/accounting/FinanceDashboard'))
 const HarvestManagement = lazy(() => import('../pages/production/HarvestManagement'))
 const HarvestReportCreate = lazy(() => import('../pages/production/HarvestReportCreate'))
+const HarvestReportEdit = lazy(() => import('../pages/production/HarvestReportEdit'))
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'))
 const AdminControls = lazy(() => import('../pages/admin/AdminControls'))
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'))
+const AnnouncementsPage = lazy(() => import('../pages/dashboard/AnnouncementsPage'))
+const MediaControlCenter = lazy(() => import('../pages/dashboard/MediaControlCenter'))
 const PendingApproval = lazy(() => import('../pages/auth/PendingApproval'))
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const Forbidden403 = lazy(() => import('../pages/error/Forbidden403'))
 const NotFound404 = lazy(() => import('../pages/error/NotFound404'))
+
+const HRDashboard = lazy(() => import('../pages/hr/HRDashboard'))
+const PayrollApproval = lazy(() => import('../pages/hr/PayrollApproval'))
+const ContractorDashboard = lazy(() => import('../pages/hr/ContractorDashboard'))
 
 // ─── Page Loader ─────────────────────────────────────────────────────────────
 const PageLoader = () => (
@@ -74,6 +80,14 @@ const AppRoutes = () => (
         }
       />
       <Route
+        path="/forgot-password"
+        element={
+          <ErrorBoundary>
+            <ForgotPassword />
+          </ErrorBoundary>
+        }
+      />
+      <Route
         path="/403"
         element={
           <ErrorBoundary>
@@ -90,6 +104,30 @@ const AppRoutes = () => (
             <DashboardLayout>
               <ErrorBoundary>
                 <Dashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/announcements"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <AnnouncementsPage />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/media"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <MediaControlCenter />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>
@@ -127,30 +165,6 @@ const AppRoutes = () => (
             <DashboardLayout>
               <ErrorBoundary>
                 <EnclosureProfile />
-              </ErrorBoundary>
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/palm"
-        element={
-          <ProtectedRoute requireModule="palm">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <PalmRecords />
-              </ErrorBoundary>
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/olive"
-        element={
-          <ProtectedRoute requireModule="olive">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <OliveRecords />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>
@@ -217,12 +231,61 @@ const AppRoutes = () => (
         }
       />
       <Route
+        path="/production/harvest/edit/:id"
+        element={
+          <ProtectedRoute requireModule="production">
+            <DashboardLayout>
+              <ErrorBoundary>
+                <HarvestReportEdit />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/accounting"
         element={
           <ProtectedRoute requireModule="accounting">
             <DashboardLayout>
               <ErrorBoundary>
                 <FinanceDashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/hr"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <HRDashboard />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/payroll"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <PayrollApproval />
+              </ErrorBoundary>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/contractors"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ErrorBoundary>
+                <ContractorDashboard />
               </ErrorBoundary>
             </DashboardLayout>
           </ProtectedRoute>

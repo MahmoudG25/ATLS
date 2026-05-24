@@ -1,0 +1,239 @@
+# ATLS Validation — Quick Reference Card
+
+**Print this card or keep it handy while testing!**
+
+---
+
+## 🚀 RUN TESTS IN 3 COMMANDS
+
+### Terminal 1 (Start Backend)
+```bash
+cd e:\web\project------------\ATLS-V2\Back-End
+start_server.bat
+```
+**Wait for**: `Starting development server at http://0.0.0.0:8000/`
+
+### Terminal 2 (Run Tests)
+```bash
+cd e:\web\project------------\ATLS-V2\Back-End
+venv\Scripts\activate.bat
+python validate_step4.py
+```
+
+### Result
+```
+✅ PASS → Ready for Step 5
+❌ FAIL → Use troubleshooting guide
+```
+
+---
+
+## 📋 QUICK CHECKLIST
+
+- [ ] PostgreSQL running
+- [ ] Database `erp_db` exists
+- [ ] Admin user approved: `UPDATE users_user SET is_approved = true WHERE email = 'admin@example.com';`
+- [ ] Virtual environment: `venv\Scripts\activate.bat`
+- [ ] Backend starts: `start_server.bat`
+- [ ] Tests run: `python validate_step4.py`
+
+---
+
+## 🔍 WHAT'S TESTED
+
+1. **Database** — Admin user, farms, locations exist
+2. **Auth** — JWT login works
+3. **Farms** — CRUD works, tenant isolation verified (SECURITY)
+4. **Hierarchy** — LocationNodes accessible
+5. **Reports** — Create, read, list work
+6. **Integrity** — All relationships valid
+
+---
+
+## 🆘 TOP FIXES
+
+### "Backend server is running" ❌
+→ Run `start_server.bat` in Terminal 1
+
+### "Admin user exists" ❌
+→ Approve user:
+```sql
+UPDATE users_user SET is_approved = true WHERE email = 'admin@example.com';
+```
+
+### "Farm list respects tenant isolation" ❌ ⚠️
+→ **SECURITY ISSUE** — Edit `services/farm_service.py` to add tenant filter
+
+### "Reports returns 500" ❌
+→ Check Django console for error, usually in serializers
+
+### PostgreSQL error ❌
+→ Start PostgreSQL: `net start postgresql-x64-16`
+
+---
+
+## 📚 DOCUMENTATION
+
+| File | Time | Use |
+|------|------|-----|
+| START_HERE.md | 2 min | Overview |
+| VALIDATION_CHECKLIST.md | 5 min | Step-by-step |
+| TESTING_README.md | 7 min | How-to |
+| VALIDATION_PLAN.md | 15 min | Details |
+| SESSION_SUMMARY.md | 5 min | What was done |
+
+---
+
+## ✅ SUCCESS LOOKS LIKE
+
+```
+✓ PASS | Database state verified
+✓ PASS | Authentication working
+✓ PASS | Farm CRUD operational
+✓ PASS | Tenant isolation verified
+✓ PASS | Hierarchy accessible
+✓ PASS | Reports workflow complete
+✓ PASS | Data integrity confirmed
+
+✅ VALIDATION PASSED
+```
+
+**Next**: Begin Step 5 (pagination, search, mobile UI)
+
+---
+
+## ❌ FAILURE LOOKS LIKE
+
+```
+✗ FAIL | Farm list respects tenant isolation (BLOCKING)
+         Farm company: 2, User company: 1
+
+❌ VALIDATION FAILED
+```
+
+**Next**: Fix the blocking issue, re-run tests
+
+---
+
+## 🔧 QUICK FIXES REFERENCE
+
+| Error | Command |
+|-------|---------|
+| Approve admin | `UPDATE users_user SET is_approved = true WHERE email = 'admin@example.com';` |
+| Start PostgreSQL | `net start postgresql-x64-16` |
+| Activate venv | `venv\Scripts\activate.bat` |
+| Start server | `start_server.bat` |
+| Run tests | `python validate_step4.py` |
+| Install deps | `pip install -r requirements.txt` |
+| Check migrations | `python manage.py migrate --check` |
+
+---
+
+## 🎯 CRITICAL SECURITY TEST
+
+**Phase 3: Tenant Isolation**
+
+Tests if users can see other companies' farms.
+
+- ✅ PASS = Good, security working
+- ❌ FAIL = Fix immediately, security vulnerability!
+
+---
+
+## ⏱️ TIME ESTIMATE
+
+| Task | Time |
+|------|------|
+| Setup | 5 min |
+| Backend startup | 3 min |
+| Test execution | 1 min |
+| Review results | 5 min |
+| Fix issues (if any) | 10-30 min |
+| **Total** | **30-45 min** |
+
+---
+
+## 📍 PATHS TO REMEMBER
+
+```
+Backend:       e:\web\project------------\ATLS-V2\Back-End
+Frontend:      e:\web\project------------\ATLS-V2\Front-End
+Database:      localhost:5432 (erp_db)
+API:           http://localhost:8000/api/
+Frontend Dev:  http://localhost:5173
+```
+
+---
+
+## 💾 DATABASE COMMANDS
+
+```bash
+# Start Django shell
+python manage.py shell
+
+# List users
+from apps.users.models import User
+User.objects.all()
+
+# Approve admin
+User.objects.filter(email='admin@example.com').update(is_approved=True)
+
+# Exit shell
+exit()
+```
+
+---
+
+## 🌐 API ENDPOINTS (Manual Testing)
+
+```bash
+# Login
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d "{\"email\": \"admin@example.com\", \"password\": \"admin\"}"
+
+# Get current user
+curl -X GET http://localhost:8000/api/auth/me/ \
+  -H "Authorization: Bearer {TOKEN}"
+
+# List farms
+curl -X GET http://localhost:8000/api/farm/farms/ \
+  -H "Authorization: Bearer {TOKEN}"
+
+# List reports
+curl -X GET http://localhost:8000/api/reports/tasks/ \
+  -H "Authorization: Bearer {TOKEN}"
+```
+
+---
+
+## 🚨 BLOCKING ISSUES (STOP HERE)
+
+If validation FAILS for any of these:
+- [ ] Backend server won't start
+- [ ] Login endpoint returns 401/403
+- [ ] Farm list shows cross-tenant data (SECURITY)
+- [ ] Reports return 500 error
+
+**FIX THESE BEFORE CONTINUING**
+
+---
+
+## 🎉 WHEN TESTS PASS
+
+Congratulations! Step 4 is validated.
+
+**Next**:
+1. Update CURRENT_PROGRESS.md
+2. Document test results
+3. Begin Step 5 work
+4. Add pagination and search
+5. Improve mobile responsiveness
+
+---
+
+**Print this card and keep it handy!**
+
+**Questions?** See documentation files or TESTING_README.md
+
+**Ready?** Run `start_server.bat` then `python validate_step4.py`

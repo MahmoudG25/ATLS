@@ -8,16 +8,19 @@ def list_items():
     return Item.objects.filter(is_active=True)
 
 
-def get_movements(item_id=None):
-    qs = Movement.objects.select_related("item").all().order_by("-date")
+def get_movements(item_id=None, location_id=None):
+    qs = Movement.objects.select_related("item", "location", "responsible_user").all().order_by("-date")
     if item_id:
         qs = qs.filter(item_id=item_id)
+    if location_id:
+        qs = qs.filter(location_id=location_id)
     return qs
 
 
 def create_item(data, user=None):
     # Cannot set quantity initially, it computes from movements naturally
     data.pop("quantity", None)
+    data.pop("updated_by", None)
     item = Item.objects.create(**data, updated_by=user)
     log_activity(user, f"Created Warehouse Item: {item.name}", "Warehouse")
     return item
@@ -26,6 +29,7 @@ def create_item(data, user=None):
 def update_item(item_id, data, user=None):
     item = Item.objects.get(id=item_id)
     data.pop("quantity", None)  # Prevent direct quantity manipulation
+    data.pop("updated_by", None)
     for attr, value in data.items():
         setattr(item, attr, value)
     item.updated_by = user
@@ -48,15 +52,16 @@ def create_movement(data, user=None):
     if data["quantity"] <= 0:
         raise ValidationError({"quantity": "Quantity must be positive"})
 
+    data.pop("user", None)
     movement = Movement.objects.create(**data, user=user)
     item = movement.item
 
-    if movement.movement_type == "IN":
+    if movement.movement_type in ["IN", "RETURNED"]:
         item.quantity += movement.quantity
-    elif movement.movement_type == "OUT":
+    elif movement.movement_type in ["OUT", "DAMAGED"]:
         if item.quantity < movement.quantity:
             raise ValidationError(
-                {"quantity": "Insufficient stock for this OUT movement."}
+                {"quantity": "Insufficient stock for this movement."}
             )
         item.quantity -= movement.quantity
 

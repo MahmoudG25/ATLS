@@ -6,6 +6,11 @@ class TenantQuerySet(models.QuerySet):
     def for_company(self, company):
         if company is None:
             return self.none()
+        
+        from django.db import models
+        if hasattr(self.model, 'is_system'):
+            return self.filter(models.Q(company=company) | models.Q(is_system=True))
+            
         return self.filter(company=company)
 
 
@@ -17,7 +22,9 @@ class TenantManager(models.Manager):
         return self.get_queryset().for_company(company)
 
 
-class TenantAwareModel(models.Model):
+from core.models import BaseEntity
+
+class TenantAwareModel(BaseEntity):
     company = models.ForeignKey("users.Company", on_delete=models.CASCADE)
     objects = TenantManager()
 

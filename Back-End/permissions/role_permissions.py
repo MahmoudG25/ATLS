@@ -4,9 +4,9 @@ ROLE_FEATURES_MAP = {
     "SUPER_ADMIN": "all",
     "OWNER": "all",
     "MANAGER": "all",
-    "ENGINEER": ["reports", "farm", "palm", "olive", "equipment", "production"],
+    "ENGINEER": ["reports", "farm", "palm", "olive", "production"],
     "ACCOUNTANT": ["accounting", "farm", "reports"],
-    "WAREHOUSE": ["warehouse", "farm", "reports"],
+    "WAREHOUSE": ["warehouse", "farm", "reports", "equipment"],
     "HR": ["farm", "reports"],
 }
 
@@ -54,10 +54,6 @@ class HasModuleAccess(BasePermission):
 
         allowed_domains = ROLE_FEATURES_MAP.get(role, [])
         if allowed_domains == "all":
-            return True
-
-        # Allow open READS for situational awareness globally
-        if request.method in ["GET", "HEAD", "OPTIONS"]:
             return True
 
         path_segments = request.path.strip("/").split("/")

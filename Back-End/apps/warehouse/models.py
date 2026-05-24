@@ -34,6 +34,7 @@ class Item(TenantAwareModel):
     warehouse = models.ForeignKey(
         Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name="items"
     )
+    unit = models.CharField(max_length=50, blank=True, null=True, verbose_name="الوحدة")
     updated_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -51,14 +52,24 @@ class Movement(TenantAwareModel):
     TYPE_CHOICES = [
         ("IN", "In"),
         ("OUT", "Out"),
+        ("RETURNED", "Returned"),
+        ("DAMAGED", "Damaged"),
     ]
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="movements")
-    movement_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    movement_type = models.CharField(max_length=15, choices=TYPE_CHOICES)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     user = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="movements"
     )
+    location = models.ForeignKey(
+        "farm.LocationNode", on_delete=models.SET_NULL, null=True, blank=True, related_name="warehouse_movements", verbose_name="الموقع / الحوشة"
+    )
+    other_location = models.CharField(max_length=255, blank=True, null=True, verbose_name="موقع آخر")
+    responsible_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="responsible_movements", verbose_name="المستخدم المسؤول"
+    )
     date = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
 
     def __str__(self):
         return f"{self.item.name} - {self.movement_type} - {self.quantity}"

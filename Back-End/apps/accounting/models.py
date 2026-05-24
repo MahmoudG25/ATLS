@@ -1,23 +1,24 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from core.tenant import TenantAwareModel
 
 User = get_user_model()
 
 
-class Expense(models.Model):
+class Expense(TenantAwareModel):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     category = models.CharField(max_length=100)
     date = models.DateField()
     notes = models.TextField(null=True, blank=True)
 
 
-class Revenue(models.Model):
+class Revenue(TenantAwareModel):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     source = models.CharField(max_length=100)
     date = models.DateField()
 
 
-class Salary(models.Model):
+class Salary(TenantAwareModel):
     employee = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="salaries"
     )
@@ -28,7 +29,7 @@ class Salary(models.Model):
         return f"{self.employee.name} — {self.amount}"
 
 
-class Invoice(models.Model):
+class Invoice(TenantAwareModel):
     INVOICE_TYPES = [
         ("purchase", "Purchase Invoice"),
         ("sales", "Sales Invoice"),
@@ -60,7 +61,7 @@ class Invoice(models.Model):
         return f"{self.invoice_number} — {self.party_name}"
 
 
-class InvoiceItem(models.Model):
+class InvoiceItem(TenantAwareModel):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
     description = models.CharField(max_length=255)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)

@@ -15,7 +15,7 @@ class ProductionWorkflowService:
         """Enforces strict workflow state transitions."""
         allowed_transitions = {
             HarvestReport.STATE_DRAFT: [HarvestReport.STATE_SUBMITTED],
-            HarvestReport.STATE_SUBMITTED: [HarvestReport.STATE_APPROVED, HarvestReport.STATE_DRAFT],
+            HarvestReport.STATE_SUBMITTED: [HarvestReport.STATE_APPROVED, HarvestReport.STATE_FINALIZED, HarvestReport.STATE_DRAFT],
             HarvestReport.STATE_APPROVED: [HarvestReport.STATE_FINALIZED],
             HarvestReport.STATE_FINALIZED: [],  # Immutable
         }
@@ -69,6 +69,8 @@ class ProductionWorkflowService:
             chain_id=chain_id,
             variety=getattr(report, "variety", None),
             unit=getattr(report, "unit", None),
+            company_workers=getattr(report, "company_workers", 0),
+            contractor_workers=getattr(report, "contractor_workers", 0),
             actual_productivity=getattr(report, "quantity", 0) if isinstance(report, HarvestReport) else getattr(report, "final_quantity", 0),
             work_hours=getattr(report, "labor_hours", 0),
             status="COMPLETED"

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 
-import { Add as AddIcon } from '@mui/icons-material'
-import { Button } from '@mui/material'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useFieldArray } from 'react-hook-form'
 
 import OperationRow from './OperationRow'
@@ -12,6 +12,7 @@ const ENABLE_MULTI_OPERATION = true
 export default function OperationLogPanel({
   control,
   getValues,
+  setValue,
   errors,
   operations,
   varieties,
@@ -37,12 +38,14 @@ export default function OperationLogPanel({
       variety: lastOp ? lastOp.variety : null,
       unit: lastOp ? lastOp.unit : null,
       contractor: lastOp ? lastOp.contractor : null,
+      contractors: lastOp && lastOp.contractors ? [...lastOp.contractors] : [],
       company_workers: 0,
       contractor_workers: 0,
       actual_productivity: 0,
       work_hours: 8,
       overtime_hours: 0,
       overtime_productivity: 0,
+      labor_entries: [],
     })
 
     // Auto-scroll to the newly appended item
@@ -58,6 +61,7 @@ export default function OperationLogPanel({
           key={field.id} // Stable key from useFieldArray
           index={index}
           control={control}
+          setValue={setValue}
           errors={errors}
           operations={operations}
           varieties={varieties}
@@ -74,19 +78,11 @@ export default function OperationLogPanel({
         <div className="flex justify-center mt-2">
           <Button
             type="button"
-            variant="outlined"
+            variant="outline"
             onClick={handleAdd}
-            startIcon={<AddIcon />}
-            sx={{
-              color: '#0f5238',
-              borderColor: '#0f5238',
-              borderRadius: '0.75rem',
-              '&:hover': {
-                borderColor: '#0b3d2a',
-                backgroundColor: '#f4f7f4',
-              },
-            }}
+            className="text-emerald-700 dark:text-emerald-400 border-emerald-700 dark:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 hover:text-emerald-800 dark:hover:text-emerald-300"
           >
+            <Plus className="w-4 h-4 ml-2" />
             إضافة حدث تشغيلي
           </Button>
         </div>

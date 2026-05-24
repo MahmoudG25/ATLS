@@ -47,7 +47,10 @@ class HarvestReport(TenantAwareModel):
     is_partial = models.BooleanField(default=False, verbose_name="حصاد جزئي")
     
     # Labor & Logistics
-    labor_count = models.PositiveIntegerField(default=0, verbose_name="عدد العمال")
+    labor_count = models.PositiveIntegerField(default=0, verbose_name="إجمالي عدد العمال")
+    company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
+    contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
+    contractor_name = models.CharField(max_length=200, blank=True, verbose_name="اسم المقاول")
     labor_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name="ساعات العمل")
     supervisor = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
@@ -56,7 +59,14 @@ class HarvestReport(TenantAwareModel):
         blank=True,
         related_name="supervised_harvests"
     )
-    transportation_info = models.TextField(blank=True, verbose_name="معلومات النقل")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="authored_harvests"
+    )
+    transport_method = models.TextField(blank=True, verbose_name="طريقة النقل / معلومات النقل")
     estimated_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="التكلفة التقديرية")
     
     # Historical Snapshots (Prevent Data Drift)
@@ -64,6 +74,19 @@ class HarvestReport(TenantAwareModel):
     unit_label_snapshot = models.CharField(max_length=50, blank=True)
     
     notes = models.TextField(blank=True, verbose_name="ملاحظات")
+    
+    # Super Admin overrides tracker
+    override_reason = models.TextField(blank=True, verbose_name="سبب التعديل الاستثنائي")
+    override_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="overridden_harvests"
+    )
+    override_at = models.DateTimeField(null=True, blank=True)
+    was_overridden = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -80,12 +103,41 @@ class HarvestReport(TenantAwareModel):
         return f"{self.location.name} | {self.season.name} | {self.harvest_date}"
 
     def save(self, *args, **kwargs):
-        if self.pk:
-            original = HarvestReport.objects.get(pk=self.pk)
-            if original.status == self.STATE_FINALIZED and not kwargs.get("force_update", False):
-                from django.core.exceptions import ValidationError
-                raise ValidationError("Cannot modify a finalized harvest report.")
+        # Since we use UUID7 defaults, self.pk is populated even for new records.
+        # We must check if the record exists in the DB to determine if it's an update.
+        if self.pk and not getattr(self, "_state", None).adding:
+            try:
+                original = HarvestReport.objects.get(pk=self.pk)
+                if original.status == self.STATE_FINALIZED and not kwargs.get("force_update", False) and not getattr(self, "force_update", False):
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError("Cannot modify a finalized harvest report.")
+            except HarvestReport.DoesNotExist:
+                pass
         super().save(*args, **kwargs)
+
+
+class HarvestAttachment(TenantAwareModel):
+    """مرفقات تقرير الحصاد - Images, PDFs, etc."""
+    FILE_TYPE_IMAGE = "IMAGE"
+    FILE_TYPE_VIDEO = "VIDEO"
+    FILE_TYPE_FILE = "FILE"
+    FILE_TYPE_CHOICES = [
+        (FILE_TYPE_IMAGE, "Image"),
+        (FILE_TYPE_VIDEO, "Video"),
+        (FILE_TYPE_FILE, "File"),
+    ]
+
+    report = models.ForeignKey(
+        HarvestReport, 
+        on_delete=models.CASCADE, 
+        related_name="attachments"
+    )
+    file_url = models.URLField(max_length=1000, null=True, blank=True)
+    file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, default=FILE_TYPE_IMAGE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment for {self.report.id} - {self.file_type}"
 
 
 class SortingReport(TenantAwareModel):
@@ -140,11 +192,15 @@ class SortingReport(TenantAwareModel):
         return f"Sorting: {self.harvest_report.location.name} ({self.processing_date})"
 
     def save(self, *args, **kwargs):
-        if self.pk:
-            original = SortingReport.objects.get(pk=self.pk)
-            if original.status == self.STATE_FINALIZED and not kwargs.get("force_update", False):
-                from django.core.exceptions import ValidationError
-                raise ValidationError("Cannot modify a finalized sorting report.")
+        # Same check for UUID7 populated PKs
+        if self.pk and not getattr(self, "_state", None).adding:
+            try:
+                original = SortingReport.objects.get(pk=self.pk)
+                if original.status == self.STATE_FINALIZED and not kwargs.get("force_update", False):
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError("Cannot modify a finalized sorting report.")
+            except SortingReport.DoesNotExist:
+                pass
         super().save(*args, **kwargs)
 
 

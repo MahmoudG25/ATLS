@@ -1,10 +1,11 @@
 from django.db import models
-from apps.farm.models import Plot
+from apps.farm.models import LocationNode
+from core.models import BaseEntity
 
 
-class PalmRecord(models.Model):
-    plot = models.ForeignKey(
-        Plot, on_delete=models.CASCADE, related_name="palm_records"
+class PalmRecord(BaseEntity):
+    location_node = models.ForeignKey(
+        LocationNode, on_delete=models.CASCADE, related_name="palm_records"
     )
     trees_count = models.PositiveIntegerField()
     palm_type = models.CharField(max_length=100)
@@ -19,4 +20,4 @@ class PalmRecord(models.Model):
     sold_offshoots = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f"Palm Record - {self.plot.name}"
+        return f"Palm Record - {self.location_node.name}"

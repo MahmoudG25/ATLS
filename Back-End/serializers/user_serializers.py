@@ -13,6 +13,8 @@ class UserSerializer(serializers.ModelSerializer):
             "name",
             "role",
             "phones",
+            "avatar_url",
+            "company",
             "is_approved",
             "is_active",
             "last_login",

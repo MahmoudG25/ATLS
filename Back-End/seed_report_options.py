@@ -7,92 +7,44 @@ import django, os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
-from apps.reports.models import ReportDropdownOption, Operation
+from apps.reports.models import ReportDropdownOption, Operation, Season, Unit, Variety
+from apps.users.models import Company
+from datetime import date
 
-DATA = {
-    "variety": [
-        "مجدول",
-        "ليمون",
-        "الصوب",
-        "اخرى",
-        "كل الاصناف",
-    ],
-    "contractor": [
-        "1",
-        "2",
-        "3",
-        "7",
-        "8",
-        "1+2",
-        "7+8",
-        "1/7",
-        "2/7",
-        "خارجي",
-        "مقاول خارجي",
-    ],
-    "unit": [
-        "نخلة",
-        "جورة",
-        "فسيلة",
-        "فسيلة+كوز",
-        "كوز",
-        "حوشة",
-        "تحضيرة",
-        "تحضيره",
-    ],
-    "enclosure": [],
-}
+# Attempt to get the first company
+try:
+    default_company = Company.objects.first()
+    if not default_company:
+        default_company = Company.objects.create(name="Seed Company")
+except Exception as e:
+    print(f"Error: {e}")
+    default_company = None
 
-OPERATIONS = [
-    "تلقيح",
-    "إزالة حشائش",
-    "إزالة حشائش+تجوير",
-    "تقليع فسائل",
-    "زراعة فسائل",
-    "زراعة الشتلات",
-    "تجوير",
-    "حفر جور وتجهيز للزراعة",
-    "فك السبايط",
-    "فك الخوص",
-    "إزالة الأربطة",
-    "ازالة العروسه من السبايط",
-    "خصى العروسه",
-    "متابعة عمليات المشتل",
-    "متابعة عملية الفصل",
-    "نقل وتحميل الفسائل",
-    "صيانة صوب وتنشير أكواز دكار",
-    "رش مبيد حشري",
-    "توزيع وتنزيل السماد",
+# Seed Seasons
+SEASONS = [
+    ("2024", date(2024, 1, 1), date(2024, 12, 31)),
+    ("2025", date(2025, 1, 1), date(2025, 12, 31)),
+    ("2026", date(2026, 1, 1), date(2026, 12, 31)),
+    ("2027", date(2027, 1, 1), date(2027, 12, 31)),
 ]
 
-created = 0
-skipped = 0
-
-for category, names in DATA.items():
-    for raw in names:
-        name = raw.strip()
-        if not name:
-            continue
-        obj, is_new = ReportDropdownOption.objects.get_or_create(
-            name=name, category=category, defaults={"is_active": True}
-        )
-        if is_new:
-            created += 1
-            print(f"  [OK] Created [{category}] {name}")
-        else:
-            skipped += 1
-
-for raw in OPERATIONS:
-    name = raw.strip()
-    if not name:
-        continue
-    obj, is_new = Operation.objects.get_or_create(
-        name=name, defaults={"category": "other"}
+for name, start, end in SEASONS:
+    Season.objects.get_or_create(
+        name=name, company=default_company,
+        defaults={"start_date": start, "end_date": end, "status": "OPEN"}
     )
-    if is_new:
-        created += 1
-        print(f"  [OK] Created [operation] {name}")
-    else:
-        skipped += 1
+    print(f"  [OK] Season {name}")
 
-print(f"\nDone. Created: {created}, Skipped (already exist): {skipped}")
+# Seed Units
+UNITS = ["كجم", "طن", "صندوق", "عبوة"]
+for name in UNITS:
+    Unit.objects.get_or_create(name=name, company=default_company)
+    print(f"  [OK] Unit {name}")
+
+# Seed Varieties
+VARIETIES = ["مجدول", "صقعي", "خلاص", "بارحي"]
+for name in VARIETIES:
+    Variety.objects.get_or_create(name=name, company=default_company)
+    print(f"  [OK] Variety {name}")
+
+print("\nSeeding complete.")

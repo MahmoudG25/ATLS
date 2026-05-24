@@ -5,7 +5,7 @@ import enclosureProfileApi from '../../../../services/enclosureProfileApi'
 /**
  * Hook to fetch and manage high-level enclosure profile data.
  */
-export const useEnclosureProfile = (id) => {
+export const useEnclosureProfile = (id, refreshKey) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -27,7 +27,7 @@ export const useEnclosureProfile = (id) => {
     }
 
     fetchProfile()
-  }, [id])
+  }, [id, refreshKey])
 
   return { profile, loading, error }
 }
@@ -53,7 +53,14 @@ export const useEnclosureTimeline = (id, filters = {}) => {
     const fetchTimeline = async () => {
       try {
         setLoading(true)
-        const response = await enclosureProfileApi.getTimeline(id, { ...filters, page })
+        const queryParams = { ...filters, page }
+        if (queryParams.operation_id === 'all') {
+          delete queryParams.operation_id
+        }
+        if (queryParams.type === 'all') {
+          delete queryParams.type
+        }
+        const response = await enclosureProfileApi.getTimeline(id, queryParams)
 
         if (page === 1) {
           setEvents(response.data.results || [])

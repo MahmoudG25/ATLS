@@ -9,15 +9,19 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import SettingsIcon from '@mui/icons-material/Settings';
+import LanguageIcon from '@mui/icons-material/Language';
+import PublicIcon from '@mui/icons-material/Public';
 import NotificationBell from '../components/NotificationBell';
+import { useThemeMode } from '../app/ThemeContext';
+import { getAbsoluteFileUrl } from '../lib/utils';
+
 
 // Maps route paths to their translation keys
 const ROUTE_LABELS = {
   '/dashboard': 'sidebar.dashboard',
   '/farm': 'sidebar.farm',
-  '/palm': 'sidebar.palm',
-  '/olive': 'sidebar.olive',
   '/warehouse': 'sidebar.warehouse',
   '/equipment': 'sidebar.equipment',
   '/reports': 'sidebar.reports',
@@ -29,6 +33,7 @@ const ROUTE_LABELS = {
 
 const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawerWidth }) => {
   const { user, logout } = useAuth();
+  const { mode, toggleTheme } = useThemeMode();
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,7 +90,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           left: 0,
           right: 0,
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           color: 'text.primary',
@@ -143,8 +148,28 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
             </Box>
           </Box>
 
-          {/* Right side: Notifications + User */}
-          <div className="flex items-center gap-1">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton 
+              color="inherit" 
+              onClick={toggleTheme}
+              sx={{ 
+                bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                '&:hover': { bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+              }}
+            >
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+            <IconButton 
+              color="inherit" 
+              onClick={() => navigate('/')}
+              sx={{ 
+                bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                '&:hover': { bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+              }}
+              title={i18n.language === 'ar' ? 'الذهاب للرئيسية العامة' : 'Back to Landing Page'}
+            >
+              <PublicIcon />
+            </IconButton>
             <NotificationBell />
             <Box
               onClick={handleMenuClick}
@@ -182,6 +207,7 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
                 />
               </Box>
               <Avatar
+                src={user?.avatar_url ? getAbsoluteFileUrl(user.avatar_url) : undefined}
                 sx={{
                   width: 38,
                   height: 38,
@@ -192,8 +218,9 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
               >
                 {user?.name?.charAt(0)?.toUpperCase()}
               </Avatar>
+
             </Box>
-          </div>
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -210,9 +237,10 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
         {/* Mini Profile Header */}
         <Box sx={{ px: 2.5, py: 2, bgcolor: 'background.default', borderBottom: 1, borderColor: 'border.subtle' }}>
           <Box display="flex" alignItems="center" gap={1.5}>
-            <Avatar sx={{ width: 36, height: 36, bgcolor: roleColor, fontWeight: 800, fontSize: 14 }}>
+            <Avatar src={user?.avatar_url ? getAbsoluteFileUrl(user.avatar_url) : undefined} sx={{ width: 36, height: 36, bgcolor: roleColor, fontWeight: 800, fontSize: 14 }}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </Avatar>
+
             <Box>
               <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'text.primary' }}>{user?.name}</Typography>
               <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.disabled' }}>{user?.role?.replace('_', ' ')}</Typography>
@@ -225,13 +253,13 @@ const DashboardTopbar = ({ onDrawerToggle, onCollapseToggle, isCollapsed, drawer
           <ListItemText primary={t('nav.dashboard', 'ملفي الشخصي')} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
         </MenuItem>
 
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }} sx={{ py: 1.5 }}>
+        <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }} sx={{ py: 1.5 }}>
           <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary={t('nav.account_settings', 'إعدادات الحساب')} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
         </MenuItem>
 
         <MenuItem onClick={() => { handleMenuClose(); toggleLanguage(); }} sx={{ py: 1.5 }}>
-          <ListItemIcon><Brightness4Icon fontSize="small" /></ListItemIcon>
+          <ListItemIcon><LanguageIcon fontSize="small" /></ListItemIcon>
           <ListItemText
             primary={i18n.language === 'ar' ? 'English' : 'عربي'}
             primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}

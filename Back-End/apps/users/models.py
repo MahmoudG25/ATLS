@@ -3,11 +3,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class Company(models.Model):
+from core.models import BaseEntity
+import uuid6
+
+class Company(BaseEntity):
     name = models.CharField(max_length=255, unique=True)
     subscription_plan = models.CharField(max_length=100, default="starter")
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["name"]
@@ -44,11 +46,10 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class AppPermission(models.Model):
+class AppPermission(BaseEntity):
     code = models.CharField(max_length=100, unique=True, help_text="e.g. 'reports.override', 'reports.delete'")
     name = models.CharField(max_length=255, help_text="e.g. 'Can Override Reports'")
     description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "صلاحية مخصصة"
@@ -69,6 +70,7 @@ class RoleChoices(models.TextChoices):
 
 
 class User(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     username = None  # Remove username field
     email = models.EmailField(_("email address"), unique=True)
     name = models.CharField(max_length=255)
@@ -85,6 +87,7 @@ class User(AbstractUser):
     # Custom flags
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    avatar_url = models.URLField(max_length=1000, blank=True, default="")
 
     # Formal Relational Permission Architecture (Phase 4)
     app_permissions = models.ManyToManyField(
@@ -103,7 +106,7 @@ class User(AbstractUser):
         return f"{self.email} ({self.role})"
 
 
-class LandingContent(models.Model):
+class LandingContent(BaseEntity):
     """
     Singleton CMS Model defining the strings on the Public Facing UI
     in Enlish and Arabic natively.
@@ -126,13 +129,53 @@ class LandingContent(models.Model):
     olive_text_en = models.TextField(default="Synchronized Harvest Operations.")
     olive_text_ar = models.TextField(default="عمليات حصاد متزامنة.")
 
-    updated_at = models.DateTimeField(auto_now=True)
+    logo_text_en = models.CharField(max_length=100, default="Atlas Farm")
+    logo_text_ar = models.CharField(max_length=100, default="أطلس سيوة")
+    logo_url = models.TextField(default="", blank=True)
+
+    # About Section
+    about_title_en = models.CharField(
+        max_length=255, default="Precision Farming Redefined"
+    )
+    about_title_ar = models.CharField(
+        max_length=255, default="نظام أطلس لإدارة حقول النخيل والزيتون الدقيقة"
+    )
+    about_text_en = models.TextField(
+        default="Atlas ERP empowers large-scale agricultural enterprises to register layout elements, tracks trees individually, structures daily engineer reporting sheets, and automates continuous yield metrics."
+    )
+    about_text_ar = models.TextField(
+        default="تم تصميم نظام أطلس الزراعي الموحد ليقود ثورة تكنولوجية في أتمتة وتحليل بيانات المزارع الكبيرة. يساعدك محركنا الذكي على مراقبة الأشجار والإنتاجية وجدولة المهام والأسطول في مكان واحد."
+    )
+
+    # Features Section Title
+    features_title_en = models.CharField(
+        max_length=255, default="Why Choose Atlas ERP for Your Agriculture?"
+    )
+    features_title_ar = models.CharField(
+        max_length=255, default="ما الذي يجعل أطلس الأفضل لإدارة مزارعك؟"
+    )
+
+    # Contact Section
+    contact_title_en = models.CharField(
+        max_length=255, default="Ready to Transform Your Operations?"
+    )
+    contact_title_ar = models.CharField(
+        max_length=255, default="ابدأ في رقمنة وأتمتة مزارعك اليوم"
+    )
+    contact_text_en = models.TextField(
+        default="Sign up today to configure your companies, isolate records, and launch dynamic daily reporting tools."
+    )
+    contact_text_ar = models.TextField(
+        default="تواصل معنا الآن للحصول على استشارة كاملة لربط مزارعك وهيكلها وتجهيز لوحة التحكم المخصصة لشركتك."
+    )
+    contact_email = models.CharField(max_length=100, default="info@atlasfarm.dz")
+    contact_phone = models.CharField(max_length=100, default="+213 (0) 5XX XXX XXX")
 
     def __str__(self):
         return "Atlas Global Layout Config"
 
 
-class Notification(models.Model):
+class Notification(BaseEntity):
     """
     System notification for user alerts — new registrations, low stock, etc.
     """
@@ -152,7 +195,6 @@ class Notification(models.Model):
     message_en = models.CharField(max_length=255)
     type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, default="system")
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
     link = models.CharField(max_length=200, blank=True, default="")
 
     class Meta:
@@ -162,7 +204,7 @@ class Notification(models.Model):
         return f"[{self.type}] → {self.recipient.email}"
 
 
-class ActivityLog(models.Model):
+class ActivityLog(BaseEntity):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="activity_logs"
     )
@@ -170,10 +212,62 @@ class ActivityLog(models.Model):
     module = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.user.email} - {self.action} ({self.created_at})"
+
+
+class PasswordResetRequest(BaseEntity):
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    is_approved = models.BooleanField(default=False)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.email} - Code: {self.code} - Approved: {self.is_approved}"
+
+
+class Announcement(models.Model):
+    """
+    Company-wide bulletin board announcements.
+    Published by admins/users with `can_post_announcement` permission.
+    All company members can read them.
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="announcements",
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(max_length=255)
+    body = models.TextField(blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
+    video_url = models.URLField(max_length=1000, blank=True)
+    file_url = models.URLField(max_length=1000, blank=True)
+    file_name = models.CharField(max_length=255, blank=True)
+    is_pinned = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    category = models.CharField(max_length=50, default="general")
+    is_active = models.BooleanField(default=True)
+    published_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="announcements",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.company})"
