@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from core.tenant import TenantAwareModel
+import uuid
 
 
 class Operation(TenantAwareModel):
@@ -368,13 +369,17 @@ class OperationLog(TenantAwareModel):
     SOURCE_DAILY_TASK = "DAILY_TASK"
     SOURCE_HARVEST = "HARVEST"
     SOURCE_SORTING = "SORTING"
+    SOURCE_IRRIGATION = "IRRIGATION"
+    SOURCE_PEST_CONTROL = "PEST_CONTROL"
     SOURCE_CHOICES = [
         (SOURCE_DAILY_TASK, "Daily Task Report"),
         (SOURCE_HARVEST, "Harvest Report"),
         (SOURCE_SORTING, "Sorting Report"),
+        (SOURCE_IRRIGATION, "Irrigation Report"),
+        (SOURCE_PEST_CONTROL, "Pest Control Report"),
     ]
     source_type = models.CharField(max_length=50, choices=SOURCE_CHOICES, db_index=True, null=True, blank=True)
-    source_id = models.PositiveIntegerField(db_index=True, null=True, blank=True)
+    source_id = models.CharField(max_length=255, db_index=True, null=True, blank=True)
     
     # Backward compatibility / legacy link (will be deprecated once all domains use generic source)
     report = models.ForeignKey(
@@ -507,6 +512,14 @@ class FertilizationReport(TenantAwareModel):
         null=True,
         blank=True,
     )
+    enclosure = models.ForeignKey(
+        "farm.LocationNode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fertilization_reports",
+        verbose_name="الحوشة",
+    )
     variety = models.CharField(max_length=30, verbose_name="الصنف")
     material_name = models.CharField(max_length=100, verbose_name="المادة الفعالة")
     active_percentage = models.FloatField(
@@ -538,40 +551,38 @@ class FertilizationReport(TenantAwareModel):
 
 
 class IrrigationReport(TenantAwareModel):
-    """تقرير الري"""
+    """تقرير الري المحدث"""
 
-    report_date = models.DateField(verbose_name="تاريخ")
-    company = models.ForeignKey(
-        "users.Company",
-        on_delete=models.CASCADE,
-        related_name="irrigation_reports",
+    date = models.DateField(verbose_name="التاريخ")
+    engineer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="irrigation_reports_v2",
+        verbose_name="المهندس المسؤول"
+    )
+    notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
+    attachments = models.JSONField(default=list, blank=True, verbose_name="المرفقات")
+    is_fertilized = models.BooleanField(default=False, verbose_name="مع تسميد")
+    
+    total_shifts = models.IntegerField(default=0, verbose_name="إجمالي التحويلات")
+    total_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0.0, verbose_name="إجمالي الساعات")
+    company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
+    contractor_workers_a = models.PositiveIntegerField(default=0, verbose_name="عمال مقاول أ")
+    contractor_workers_b = models.PositiveIntegerField(default=0, verbose_name="عمال مقاول ب")
+    contractor = models.ForeignKey(
+        "reports.Contractor",
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name="irrigation_reports_v2_linked",
+        verbose_name="المقاول"
     )
-    sector_number = models.IntegerField(verbose_name="رقم القطاع")
-    transfer_number = models.IntegerField(verbose_name="رقم التحويلة")
-    area_feddan = models.FloatField(
-        null=True, blank=True, verbose_name="المساحة (فدان)"
-    )
-    tree_count = models.IntegerField(null=True, blank=True, verbose_name="عدد النخيل")
-    well_flow_m3 = models.FloatField(
-        null=True, blank=True, verbose_name="تصرف البئر م³/ساعة"
-    )
-    water_per_tree = models.FloatField(
-        null=True, blank=True, verbose_name="كمية المياه للنخلة"
-    )
-    irrigation_hours = models.FloatField(
-        null=True, blank=True, verbose_name="ساعات الري"
-    )
-    irrigation_cycles = models.IntegerField(
-        null=True, blank=True, verbose_name="مرات الري"
-    )
-    notes = models.TextField(blank=True, verbose_name="ملاحظات")
+    contractor_workers = models.PositiveIntegerField(default=0, verbose_name="عمال المقاول")
 
     class Meta:
         verbose_name = "تقرير ري"
         verbose_name_plural = "تقارير الري"
-        ordering = ["-report_date"]
+        ordering = ["-date"]
 
 
 class CustomFieldDefinition(TenantAwareModel):
@@ -638,9 +649,31 @@ class CustomFieldValue(TenantAwareModel):
 
 
 class Contractor(TenantAwareModel):
+    ACTIVITY_TYPE_CHOICES = [
+        ("labor_supply", "توريد عمالة"),
+        ("equipment_rental", "تأجير معدات"),
+        ("general_contracting", "مقاولات عامة"),
+        ("specialized_services", "خدمات متخصصة"),
+        ("other", "أخرى"),
+    ]
+
     name = models.CharField(max_length=120)
     rate_per_hour = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
+    phone_number = models.CharField(max_length=50, blank=True, default="", verbose_name="رقم الهاتف")
+    email = models.EmailField(blank=True, default="", verbose_name="البريد الإلكتروني")
+    address = models.CharField(max_length=255, blank=True, default="", verbose_name="العنوان")
+    commercial_registry = models.CharField(max_length=100, blank=True, default="", verbose_name="السجل التجاري")
+    tax_card = models.CharField(max_length=100, blank=True, default="", verbose_name="البطاقة الضريبية")
+    contract_date = models.DateField(null=True, blank=True, verbose_name="تاريخ التعاقد")
+    activity_type = models.CharField(
+        max_length=50,
+        choices=ACTIVITY_TYPE_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="نوع النشاط"
+    )
+    notes = models.TextField(blank=True, default="", verbose_name="ملاحظات")
 
     class Meta:
         unique_together = ("company", "name")
@@ -779,4 +812,113 @@ class GalleryMedia(TenantAwareModel):
 
     def __str__(self):
         return f"GalleryMedia {self.id} ({self.file_type})"
+
+
+class OperationalLocationAllocation(TenantAwareModel):
+    """توزيع العمليات التشغيلية والموارد على الأحواش الفردية"""
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    enclosure = models.ForeignKey('farm.LocationNode', on_delete=models.CASCADE, verbose_name="الحوشة")
+    
+    # توزيع عمالة مخصص
+    allocated_workers_company = models.IntegerField(default=0, verbose_name="عمال شركة")
+    allocated_workers_contractor_a = models.IntegerField(default=0, verbose_name="عمال مقاول أ")
+    allocated_workers_contractor_b = models.IntegerField(default=0, verbose_name="عمال مقاول ب")
+    
+    # الإنتاجية والملاحظات
+    productivity_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, verbose_name="الإنتاجية للموقع")
+    notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات الموقع")
+
+    class Meta:
+        db_table = 'operational_location_allocations'
+        verbose_name = 'توزيع العمليات على المواقع'
+        verbose_name_plural = 'توزيع العمليات على المواقع'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        try:
+            from apps.reports.services import sync_allocation_costs
+            sync_allocation_costs(self)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error syncing allocation costs: {e}", exc_info=True)
+
+
+class IrrigationDetail(TenantAwareModel):
+    """تفاصيل الري لكل مرحلة"""
+    report = models.ForeignKey(IrrigationReport, on_delete=models.CASCADE, related_name='details')
+    phase = models.ForeignKey('farm.LocationNode', on_delete=models.CASCADE, verbose_name="المرحلة")
+    shifts_count = models.IntegerField(verbose_name="عدد التحويلات")
+    hours_per_shift = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="عدد الساعات للتحويلة")
+
+    class Meta:
+        verbose_name = "تفاصيل الري"
+        verbose_name_plural = "تفاصيل الري"
+
+
+class AppliedFertilizer(TenantAwareModel):
+    """الأسمدة المضافة خلال دورة الري"""
+    irrigation_detail = models.ForeignKey(IrrigationDetail, on_delete=models.CASCADE, related_name='fertilizers')
+    fertilizer_item = models.ForeignKey('warehouse.Item', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="السماد")
+    custom_material_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="اسم السماد الخارجي")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="الكمية")
+    unit = models.CharField(max_length=50, default="كجم", verbose_name="الوحدة")
+
+    class Meta:
+        verbose_name = "السماد المضاف"
+        verbose_name_plural = "الأسمدة المضافة"
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new and self.custom_material_name:
+            try:
+                from apps.warehouse.models import MaterialVerificationAlert
+                requested_by = self.irrigation_detail.report.engineer if self.irrigation_detail and self.irrigation_detail.report else None
+                MaterialVerificationAlert.objects.create(
+                    company=self.company,
+                    source_report_type='irrigation',
+                    source_report_id=self.irrigation_detail.report_id,
+                    requested_by=requested_by,
+                    suggested_name=self.custom_material_name
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating material alert: {e}", exc_info=True)
+
+
+class PestControlReport(TenantAwareModel):
+    """تقرير وقاية النبات والمكافحة"""
+    date = models.DateField(verbose_name="التاريخ")
+    engineer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="المهندس المسؤول")
+    pesticide_item = models.ForeignKey('warehouse.Item', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المبيد")
+    custom_pesticide_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="اسم المبيد الخارجي")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="الكمية المستخدمة")
+    notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
+    attachments = models.JSONField(default=list, blank=True, verbose_name="المرفقات")
+
+    class Meta:
+        verbose_name = "تقرير مكافحة"
+        verbose_name_plural = "تقارير المكافحة"
+        ordering = ["-date"]
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new and self.custom_pesticide_name:
+            try:
+                from apps.warehouse.models import MaterialVerificationAlert
+                MaterialVerificationAlert.objects.create(
+                    company=self.company,
+                    source_report_type='pest_control',
+                    source_report_id=self.id,
+                    requested_by=self.engineer,
+                    suggested_name=self.custom_pesticide_name
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating material alert: {e}", exc_info=True)
+
 

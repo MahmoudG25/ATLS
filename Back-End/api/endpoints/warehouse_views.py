@@ -2,8 +2,8 @@ from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from serializers.warehouse_serializers import ItemSerializer, MovementSerializer, WarehouseSerializer
-from apps.warehouse.models import Item, Movement, Warehouse
+from serializers.warehouse_serializers import ItemSerializer, MovementSerializer, WarehouseSerializer, MaterialVerificationAlertSerializer
+from apps.warehouse.models import Item, Movement, Warehouse, MaterialVerificationAlert
 from services.warehouse_service import (
     list_items,
     get_movements,
@@ -86,3 +86,51 @@ def movements_view(request):
         # Use the service to handle critical logic (quantity updates, validation)
         mov = create_movement({**serializer.validated_data, "company": request.user.company}, user=request.user)
         return Response(MovementSerializer(mov).data, status=status.HTTP_201_CREATED)
+
+
+class MaterialAlertFeedView(generics.ListCreateAPIView):
+    serializer_class = MaterialVerificationAlertSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return MaterialVerificationAlert.objects.filter(company=self.request.user.company, is_resolved=False)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+
+class MaterialAlertResolveView(generics.UpdateAPIView):
+    serializer_class = MaterialVerificationAlertSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return MaterialVerificationAlert.objects.filter(company=self.request.user.company)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        mapped_material_id = request.data.get("mapped_material")
+        if not mapped_material_id:
+            return Response({"error": "mapped_material is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        instance.mapped_material_id = mapped_material_id
+        instance.is_resolved = True
+        instance.save()
+        
+        try:
+            if instance.source_report_type == 'irrigation':
+                from apps.reports.models import AppliedFertilizer
+                AppliedFertilizer.objects.filter(
+                    irrigation_detail__report_id=instance.source_report_id,
+                    custom_material_name=instance.suggested_name
+                ).update(fertilizer_item_id=mapped_material_id)
+            elif instance.source_report_type == 'pest_control':
+                from apps.reports.models import PestControlReport
+                PestControlReport.objects.filter(
+                    id=instance.source_report_id,
+                    custom_pesticide_name=instance.suggested_name
+                ).update(pesticide_item_id=mapped_material_id)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(f"Error mapping alert material back to report: {exc}", exc_info=True)
+            
+        return Response(self.get_serializer(instance).data)

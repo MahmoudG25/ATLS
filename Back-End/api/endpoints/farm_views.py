@@ -385,7 +385,15 @@ class LocationNodeTimelineView(APIView):
         operation_id = request.query_params.get("operation_id")
         search = request.query_params.get("search")
         
-        logs = get_location_timeline(node, profile_type=profile_type, operation_id=operation_id, search=search)
+        exclude_irrigation_pest = request.query_params.get("exclude_irrigation_pest") == "true"
+        
+        logs = get_location_timeline(
+            node, 
+            profile_type=profile_type, 
+            operation_id=operation_id, 
+            search=search,
+            exclude_irrigation_pest=exclude_irrigation_pest
+        )
         
         paginator = PageNumberPagination()
         paginator.page_size = 10

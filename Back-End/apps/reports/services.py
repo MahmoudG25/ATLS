@@ -152,3 +152,140 @@ def dashboard_bundle(company):
         "costs": cost_analytics(company),
         "productivity": productivity_analytics(company),
     }
+
+
+def sync_allocation_costs(allocation):
+    """
+    سير العمل لحساب التكلفة المالية تلقائياً بناءً على بيانات الـ HR والمقاولين
+    """
+    from apps.hr.models import Worker
+    from apps.reports.models import Contractor, LaborEntry, OperationLog
+    from django.contrib.contenttypes.models import ContentType
+    
+    company = allocation.company
+    enclosure = allocation.enclosure
+    
+    # 1. تحديد معدل أجر عمال الشركة من الـ HR
+    active_company_workers = Worker.objects.filter(company=company, worker_type='COMPANY', status='active')
+    if active_company_workers.exists():
+        company_hourly_rates = [w.hourly_rate for w in active_company_workers if w.hourly_rate > 0]
+        company_rate = sum(company_hourly_rates) / len(company_hourly_rates) if company_hourly_rates else Decimal("15.00")
+    else:
+        company_rate = Decimal("15.00") # معدل افتراضي
+        
+    # 2. تحديد مقاولي العمالة ومعدلاتهم (مقاول أ ومقاول ب)
+    active_contractors = list(Contractor.objects.filter(company=company, is_active=True).order_by('name'))
+    contractor_a = active_contractors[0] if len(active_contractors) > 0 else None
+    contractor_b = active_contractors[1] if len(active_contractors) > 1 else None
+    
+    rate_a = contractor_a.rate_per_hour if contractor_a else Decimal("15.00")
+    rate_b = contractor_b.rate_per_hour if contractor_b else Decimal("12.50")
+
+    # 3. محاولة العثور على OperationLog المقابل لتسجيل تفاصيل العمالة تحته
+    # يمكن أن يكون التقرير المرتبط هو DailyTaskReport أو IrrigationReport أو PestControlReport
+    parent_report = allocation.content_object
+    if not parent_report:
+        return
+        
+    if parent_report.__class__.__name__ == 'IrrigationReport':
+        report_contractor = getattr(parent_report, 'contractor', None)
+        if report_contractor:
+            contractor_a = report_contractor
+            rate_a = contractor_a.rate_per_hour
+
+    source_type = "IRRIGATION" if parent_report.__class__.__name__ == 'IrrigationReport' else "PEST_CONTROL"
+    
+    # البحث عن أو إنشاء سجل العملية للـ Enclosure المستهدف
+    op_log = OperationLog.objects.filter(
+        company=company,
+        location=enclosure,
+        source_type=source_type,
+        source_id=str(parent_report.id)
+    ).first()
+    
+    if not op_log and hasattr(parent_report, 'operation'):
+        # للمهام اليومية
+        op_log = OperationLog.objects.filter(
+            company=company,
+            location=enclosure,
+            report=parent_report
+        ).first()
+        
+    if not op_log:
+        # إنشاء OperationLog تلقائي للموقع إذا لم يوجد
+        from apps.reports.models import Operation, Season
+        season = Season.objects.filter(company=company, status="OPEN").first()
+        
+        # تحديد العملية الفنية المناسبة
+        op_name = "توزيع عمالة ميداني"
+        if parent_report.__class__.__name__ == 'IrrigationReport':
+            op_name = "تشغيل وصيانة الري بالتنقيط"
+        elif parent_report.__class__.__name__ == 'PestControlReport':
+            op_name = "رش وقائي ضد سوسة النخيل"
+            
+        operation, _ = Operation.objects.get_or_create(
+            name=op_name,
+            company=company,
+            defaults={"category": "maintenance"}
+        )
+        
+        op_log = OperationLog.objects.create(
+            company=company,
+            location=enclosure,
+            operation=operation,
+            season=season,
+            source_type=source_type,
+            source_id=str(parent_report.id),
+            company_workers=allocation.allocated_workers_company,
+            contractor_workers=allocation.allocated_workers_contractor_a + allocation.allocated_workers_contractor_b,
+            actual_productivity=allocation.productivity_value,
+            work_hours=Decimal("8.0")
+        )
+    else:
+        # تحديث أعداد العمالة والإنتاجية في الـ Log الحالي
+        op_log.company_workers = allocation.allocated_workers_company
+        op_log.contractor_workers = allocation.allocated_workers_contractor_a + allocation.allocated_workers_contractor_b
+        op_log.actual_productivity = allocation.productivity_value
+        op_log.save()
+
+    # 4. تنظيف قيود العمالة التلقائية القديمة لهذا الـ Log وإعادة بنائها
+    LaborEntry.objects.filter(operation_log=op_log, note__icontains="تلقائي").delete()
+    
+    # حقن عمال الشركة
+    for i in range(allocation.allocated_workers_company):
+        LaborEntry.objects.create(
+            company=company,
+            operation_log=op_log,
+            worker_name=f"عامل شركة تلقائي {i+1}",
+            worker_type=LaborEntry.WORKER_TYPE_COMPANY,
+            worker_rate=company_rate,
+            hours=Decimal("8.0"),
+            note="توزيع عمالة شركة تلقائي"
+        )
+        
+    # حقن عمال مقاول أ
+    for i in range(allocation.allocated_workers_contractor_a):
+        LaborEntry.objects.create(
+            company=company,
+            operation_log=op_log,
+            worker_name=f"عامل مقاول أ تلقائي {i+1}",
+            worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR,
+            contractor=contractor_a,
+            worker_rate=rate_a,
+            hours=Decimal("8.0"),
+            note="توزيع عمال مقاول أ تلقائي"
+        )
+
+    # حقن عمال مقاول ب
+    for i in range(allocation.allocated_workers_contractor_b):
+        LaborEntry.objects.create(
+            company=company,
+            operation_log=op_log,
+            worker_name=f"عامل مقاول ب تلقائي {i+1}",
+            worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR,
+            contractor=contractor_b,
+            worker_rate=rate_b,
+            hours=Decimal("8.0"),
+            note="توزيع عمال مقاول ب تلقائي"
+        )
+

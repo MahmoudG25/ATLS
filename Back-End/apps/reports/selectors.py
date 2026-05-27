@@ -361,7 +361,7 @@ def operation_location_matrix(company, start_date=None, end_date=None):
 # ─── Enclosure Profile Selectors ───────────────────────────────────────────
 
 
-def get_location_timeline(location_node, profile_type=None, operation_id=None, search=None):
+def get_location_timeline(location_node, profile_type=None, operation_id=None, search=None, exclude_irrigation_pest=False):
     """
     Returns a paginated-ready queryset of OperationLog records for a specific location.
     Optimized for the 'Enclosure Profile' timeline widget.
@@ -372,6 +372,9 @@ def get_location_timeline(location_node, profile_type=None, operation_id=None, s
     ).select_related(
         "operation", "report", "report__engineer", "contractor", "unit", "variety", "location"
     ).prefetch_related("attachments", "labor_entries", "report__attachments")
+
+    if exclude_irrigation_pest:
+        logs = logs.exclude(source_type__in=["IRRIGATION", "PEST_CONTROL"])
 
     if profile_type:
         logs = logs.filter(profile_type=profile_type)

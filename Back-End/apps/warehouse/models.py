@@ -73,3 +73,17 @@ class Movement(TenantAwareModel):
 
     def __str__(self):
         return f"{self.item.name} - {self.movement_type} - {self.quantity}"
+
+
+class MaterialVerificationAlert(TenantAwareModel):
+    source_report_type = models.CharField(max_length=50, choices=[('irrigation', 'ري'), ('pest_control', 'مكافحة')])
+    source_report_id = models.UUIDField()
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    suggested_name = models.CharField(max_length=255, verbose_name="الاسم المكتوب ميدانياً")
+    is_resolved = models.BooleanField(default=False)
+    mapped_material = models.ForeignKey('warehouse.Item', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المادة المربوطة بالمستودع")
+
+    class Meta:
+        db_table = 'warehouse_material_alerts'
+        ordering = ['-created_at']
+

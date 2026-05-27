@@ -96,7 +96,16 @@ urlpatterns = [
     path("warehouse/items/", items_view, name="warehouse-items"),
     path("warehouse/items/<str:pk>/", item_detail_view, name="warehouse-item-detail"),
     path("warehouse/movements/", movements_view, name="warehouse-movements"),
+    path("warehouse/alerts/", warehouse_views.MaterialAlertFeedView.as_view(), name="warehouse-alerts-feed"),
+    path("warehouse/alerts/<uuid:pk>/resolve/", warehouse_views.MaterialAlertResolveView.as_view(), name="warehouse-alerts-resolve"),
     # Equipment Mappings
+    path("equipment/", equipment_views.equipment_list_create_api, name="equipment_list_create_api"),
+    path("equipment/logs/", equipment_views.equipment_logs_create_api, name="equipment_logs_create_api"),
+    path("equipment/alerts/", equipment_views.equipment_alerts_list_api, name="equipment_alerts_list_api"),
+    path("equipment/alerts/<uuid:pk>/resolve/", equipment_views.equipment_alerts_resolve_api, name="equipment_alerts_resolve_api"),
+    path("equipment/profile/<uuid:pk>/", equipment_views.equipment_profile_detail_api, name="equipment_profile_detail_api"),
+    path("equipment/<uuid:pk>/", equipment_views.equipment_detail_api, name="equipment_detail_api"),
+    
     path("equipment/list", equipment_views.equipment_list_view, name="equipment_list"),
     path(
         "equipment/oil-changes",
@@ -230,6 +239,26 @@ urlpatterns = [
         name="reports_irrigation_detail",
     ),
     path(
+        "reports/pest-control/",
+        reports_views.PestControlListCreate.as_view(),
+        name="reports_pest_control",
+    ),
+    path(
+        "reports/pest-control/<str:pk>/",
+        reports_views.PestControlDetail.as_view(),
+        name="reports_pest_control_detail",
+    ),
+    path(
+        "reports/allocations/",
+        reports_views.OperationalLocationAllocationListCreate.as_view(),
+        name="reports_allocations",
+    ),
+    path(
+        "reports/allocations/<str:pk>/",
+        reports_views.OperationalLocationAllocationDetail.as_view(),
+        name="reports_allocations_detail",
+    ),
+    path(
         "reports/operations/",
         reports_views.OperationListView.as_view(),
         name="reports_operations",
@@ -327,10 +356,12 @@ urlpatterns = [
     path("hr/workers/<uuid:pk>/", hr_views.WorkerDetailView.as_view(), name="hr_worker_detail"),
     path("hr/periods/", hr_views.PayrollPeriodListCreateView.as_view(), name="hr_periods"),
     path("hr/transactions/", hr_views.PayrollTransactionListView.as_view(), name="hr_transactions"),
+    path("hr/transactions/<uuid:pk>/", hr_views.PayrollTransactionDetailView.as_view(), name="hr_transaction_detail"),
     path("hr/transactions/bulk-approve/", hr_views.BulkApproveTransactionsView.as_view(), name="hr_transactions_bulk_approve"),
     path("hr/reviews/", hr_views.PendingWorkerReviewListView.as_view(), name="hr_worker_reviews"),
     path("hr/reviews/<uuid:pk>/resolve/", hr_views.ResolvePendingWorkerReviewView.as_view(), name="hr_worker_review_resolve"),
     path("hr/contractors/ledger/", hr_views.ContractorLedgerListView.as_view(), name="hr_contractor_ledger"),
+    path("hr/contractors/ledger/create/", hr_views.ContractorLedgerCreateView.as_view(), name="hr_contractor_ledger_create"),
     path("hr/contractors/<uuid:contractor_id>/dashboard/", hr_views.ContractorDashboardView.as_view(), name="hr_contractor_dashboard"),
 
     # HR Staff, Document, and Payroll Components Mappings

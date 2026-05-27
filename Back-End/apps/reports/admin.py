@@ -16,6 +16,10 @@ from .models import (
     IrrigationReport,
     CustomFieldDefinition,
     CustomFieldValue,
+    OperationalLocationAllocation,
+    IrrigationDetail,
+    AppliedFertilizer,
+    PestControlReport,
 )
 
 
@@ -84,14 +88,39 @@ class FertilizationReportAdmin(admin.ModelAdmin):
 @admin.register(IrrigationReport)
 class IrrigationReportAdmin(admin.ModelAdmin):
     list_display = (
-        "report_date",
-        "sector_number",
-        "transfer_number",
-        "area_feddan",
-        "irrigation_hours",
+        "date",
+        "engineer",
+        "is_fertilized",
+        "total_shifts",
+        "total_hours",
     )
-    list_filter = ("report_date", "sector_number")
-    date_hierarchy = "report_date"
+    list_filter = ("date", "engineer", "is_fertilized")
+    date_hierarchy = "date"
+
+
+@admin.register(OperationalLocationAllocation)
+class OperationalLocationAllocationAdmin(admin.ModelAdmin):
+    list_display = ("content_type", "object_id", "enclosure", "productivity_value")
+    list_filter = ("enclosure",)
+
+
+@admin.register(IrrigationDetail)
+class IrrigationDetailAdmin(admin.ModelAdmin):
+    list_display = ("report", "phase", "shifts_count", "hours_per_shift")
+    list_filter = ("phase",)
+
+
+@admin.register(AppliedFertilizer)
+class AppliedFertilizerAdmin(admin.ModelAdmin):
+    list_display = ("irrigation_detail", "fertilizer_item", "custom_material_name", "quantity", "unit")
+
+
+@admin.register(PestControlReport)
+class PestControlReportAdmin(admin.ModelAdmin):
+    list_display = ("date", "engineer", "pesticide_item", "custom_pesticide_name", "quantity")
+    list_filter = ("date", "engineer")
+    date_hierarchy = "date"
+
 
 
 @admin.register(Season)

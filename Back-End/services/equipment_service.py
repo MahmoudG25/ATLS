@@ -1,13 +1,52 @@
-from apps.equipment.models import Equipment, Maintenance, Usage, OilChangeLog
+from apps.equipment.models import (
+    Equipment,
+    Maintenance,
+    Usage,
+    OilChangeLog,
+    EquipmentLog,
+    FleetMaintenanceAlert,
+)
 from datetime import date
+from django.db import transaction
 
 
 def get_equipment_list(company):
-    return Equipment.objects.filter(company=company)
+    return Equipment.objects.filter(company=company).order_by('-created_at')
 
 
 def create_equipment(data, company):
     data["company"] = company
+    
+    # Map front-end fields if present
+    if "type" in data and not "equipment_type" in data:
+        t_val = data["type"].lower()
+        if t_val == "harvester":
+            data["equipment_type"] = "tractor"
+        elif t_val == "truck":
+            data["equipment_type"] = "car"
+        elif t_val == "irrigation_pump":
+            data["equipment_type"] = "generator"
+        else:
+            data["equipment_type"] = t_val if t_val in ['tractor', 'car', 'motorcycle', 'generator', 'sprayer'] else 'tractor'
+            
+    if "serial_number" in data and not "plate_number" in data:
+        data["plate_number"] = data["serial_number"]
+
+    # Map meter type based on equipment type
+    if not "meter_type" in data:
+        if data.get("equipment_type") == "car":
+            data["meter_type"] = "km"
+        elif data.get("equipment_type") == "motorcycle":
+            data["meter_type"] = "days"
+        else:
+            data["meter_type"] = "hours"
+
+    if "current_hours" in data and not "current_meter" in data:
+        data["current_meter"] = data["current_hours"]
+
+    if "current_meter" in data and not "last_maintenance_meter" in data:
+        data["last_maintenance_meter"] = data["current_meter"]
+
     return Equipment.objects.create(**data)
 
 
@@ -36,6 +75,7 @@ def create_usage(data, company):
     # Automatically update current running hours on the equipment
     eq = usage.equipment
     eq.current_hours += usage.hours_used
+    eq.current_meter = eq.current_hours
     eq.save()
     
     return usage
@@ -94,3 +134,91 @@ def get_oil_change_alerts(company):
             })
             
     return alerts
+
+
+# ── Upgraded API Service Handlers ──
+
+def create_equipment_log(data, company):
+    data["company"] = company
+    
+    with transaction.atomic():
+        eq = data["equipment"]
+        
+        # If days-based, automatically override/calculate meter_reading
+        if eq.meter_type == 'days':
+            start = eq.purchase_date or (eq.created_at.date() if eq.created_at else date.today())
+            data["meter_reading"] = (data["date"] - start).days
+            
+        log = EquipmentLog.objects.create(**data)
+        
+        # Update current meter reading on the equipment
+        if log.meter_reading > eq.current_meter:
+            eq.current_meter = log.meter_reading
+            eq.current_hours = log.meter_reading  # compatibility
+            eq.save()
+            
+        # Double-write to legacy tables to maintain reporting compatibility
+        if log.log_type == 'maintenance':
+            Maintenance.objects.create(
+                company=company,
+                equipment=eq,
+                date=log.date,
+                notes=log.details,
+                cost=log.cost
+            )
+            # Resolve maintenance alerts and update last maintenance counters
+            eq.last_maintenance_meter = eq.current_meter
+            eq.last_maintenance_date = log.date
+            eq.save()
+            FleetMaintenanceAlert.objects.filter(equipment=eq, is_resolved=False).update(is_resolved=True)
+            
+        elif log.log_type == 'oil_change':
+            notes_str = f"{log.details} | الكمية: {log.amount_liters} لتر" if log.amount_liters else log.details
+            OilChangeLog.objects.create(
+                company=company,
+                equipment=eq,
+                date=log.date,
+                hours_at_change=log.meter_reading,
+                notes=notes_str,
+                cost=log.cost
+            )
+            # Update last oil change stats
+            eq.last_oil_change_hours = log.meter_reading
+            eq.last_oil_change_date = log.date
+            # Also reset maintenance counters for this oil change event
+            eq.last_maintenance_meter = eq.current_meter
+            eq.last_maintenance_date = log.date
+            eq.save()
+            FleetMaintenanceAlert.objects.filter(equipment=eq, is_resolved=False).update(is_resolved=True)
+            
+        elif log.log_type == 'fueling':
+            Usage.objects.create(
+                company=company,
+                equipment=eq,
+                date=log.date,
+                hours_used=0.0,
+                fuel_consumption=log.amount_liters,
+                operator=log.assigned_operator.name if log.assigned_operator else ""
+            )
+            
+        return log
+
+
+def get_maintenance_alerts(company):
+    return FleetMaintenanceAlert.objects.filter(company=company, is_resolved=False)
+
+
+def resolve_maintenance_alert(alert_id, company):
+    with transaction.atomic():
+        alert = FleetMaintenanceAlert.objects.get(id=alert_id, company=company)
+        alert.is_resolved = True
+        alert.save()
+        
+        # Update equipment's last maintenance meter to current_meter to reset delta
+        eq = alert.equipment
+        eq.last_maintenance_meter = eq.current_meter
+        eq.last_maintenance_date = date.today()
+        eq.save()
+        
+        return alert
+

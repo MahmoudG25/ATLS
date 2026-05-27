@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from apps.reports.models import (
     Operation,
     Variety,
@@ -16,6 +17,10 @@ from apps.reports.models import (
     OperationLog,
     Season,
     GalleryMedia,
+    OperationalLocationAllocation,
+    IrrigationDetail,
+    AppliedFertilizer,
+    PestControlReport,
 )
 from apps.farm.models import LocationNode, FarmSettings
 
@@ -806,15 +811,276 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
 
 
 class FertilizationReportSerializer(serializers.ModelSerializer):
+    enclosure_name = serializers.CharField(source="enclosure.name", read_only=True)
+
     class Meta:
         model = FertilizationReport
         fields = "__all__"
 
 
+class AppliedFertilizerSerializer(serializers.ModelSerializer):
+    fertilizer_item_name = serializers.CharField(source="fertilizer_item.name", read_only=True)
+
+    class Meta:
+        model = AppliedFertilizer
+        fields = "__all__"
+        read_only_fields = ["company", "irrigation_detail"]
+
+
+class IrrigationDetailSerializer(serializers.ModelSerializer):
+    phase_name = serializers.CharField(source="phase.name", read_only=True)
+    fertilizers = AppliedFertilizerSerializer(many=True, required=False)
+
+    class Meta:
+        model = IrrigationDetail
+        fields = "__all__"
+        read_only_fields = ["company", "report"]
+
+
 class IrrigationReportSerializer(serializers.ModelSerializer):
+    engineer_name = serializers.CharField(source="engineer.name", read_only=True)
+    contractor_name = serializers.CharField(source="contractor.name", read_only=True)
+    details = IrrigationDetailSerializer(many=True, required=False)
+    labor_entries = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
+
     class Meta:
         model = IrrigationReport
         fields = "__all__"
+        read_only_fields = ["company", "created_at", "updated_at"]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        from apps.reports.models import OperationLog
+        from apps.farm.models import LocationNode
+        
+        enclosure_ids = []
+        for d in instance.details.all():
+            phase = d.phase
+            if not phase:
+                continue
+            if phase.type == LocationNode.TYPE_ENCLOSURE:
+                if phase.id not in enclosure_ids:
+                    enclosure_ids.append(phase.id)
+            else:
+                desc_ids = list(phase.get_descendants().filter(type=LocationNode.TYPE_ENCLOSURE, is_active=True).values_list('id', flat=True))
+                for did in desc_ids:
+                    if did not in enclosure_ids:
+                        enclosure_ids.append(did)
+                        
+        if enclosure_ids:
+            op_log = OperationLog.objects.filter(
+                company=instance.company,
+                location_id=enclosure_ids[0],
+                source_type="IRRIGATION",
+                source_id=str(instance.id)
+            ).first()
+            if op_log:
+                representation["labor_entries"] = LaborEntrySerializer(op_log.labor_entries.all(), many=True).data
+            else:
+                representation["labor_entries"] = []
+        else:
+            representation["labor_entries"] = []
+            
+        return representation
+
+    def _sync_allocations(self, report, labor_entries_data=None):
+        from apps.reports.models import OperationalLocationAllocation, LaborEntry, OperationLog
+        from django.contrib.contenttypes.models import ContentType
+        from decimal import Decimal
+        from apps.farm.models import LocationNode
+
+        content_type = ContentType.objects.get_for_model(report)
+        OperationalLocationAllocation.objects.filter(
+            content_type=content_type,
+            object_id=report.id
+        ).delete()
+
+        enclosures = []
+        seen_enclosure_ids = set()
+        for detail in report.details.all():
+            phase = detail.phase
+            if not phase:
+                continue
+            if phase.type == LocationNode.TYPE_ENCLOSURE:
+                if phase.id not in seen_enclosure_ids:
+                    enclosures.append(phase)
+                    seen_enclosure_ids.add(phase.id)
+            else:
+                descendants = phase.get_descendants().filter(type=LocationNode.TYPE_ENCLOSURE, is_active=True)
+                for desc in descendants:
+                    if desc.id not in seen_enclosure_ids:
+                        enclosures.append(desc)
+                        seen_enclosure_ids.add(desc.id)
+
+        if not enclosures:
+            return
+
+        for idx, enclosure in enumerate(enclosures):
+            if idx == 0:
+                allocated_company = report.company_workers
+                allocated_a = report.contractor_workers
+                allocated_b = 0
+            else:
+                allocated_company = 0
+                allocated_a = 0
+                allocated_b = 0
+
+            OperationalLocationAllocation.objects.create(
+                company=report.company,
+                content_type=content_type,
+                object_id=report.id,
+                enclosure=enclosure,
+                allocated_workers_company=allocated_company,
+                allocated_workers_contractor_a=allocated_a,
+                allocated_workers_contractor_b=allocated_b,
+                productivity_value=Decimal("0.0"),
+                notes=""
+            )
+
+        if labor_entries_data is not None:
+            first_enclosure = enclosures[0]
+            op_log = OperationLog.objects.filter(
+                company=report.company,
+                location=first_enclosure,
+                source_type="IRRIGATION",
+                source_id=str(report.id)
+            ).first()
+
+            if op_log:
+                # Delete old labor entries for this log
+                LaborEntry.objects.filter(operation_log=op_log).delete()
+
+                # Recreate manual labor entries
+                for entry in labor_entries_data:
+                    contractor_id = entry.get("contractor")
+                    if isinstance(contractor_id, dict):
+                        contractor_id = contractor_id.get("id")
+                    elif contractor_id == "":
+                        contractor_id = None
+
+                    LaborEntry.objects.create(
+                        company=report.company,
+                        operation_log=op_log,
+                        worker_name=entry.get("worker_name", ""),
+                        worker_type=entry.get("worker_type", "COMPANY"),
+                        contractor_id=contractor_id,
+                        worker_rate=Decimal(str(entry.get("worker_rate", 0))),
+                        hours=Decimal(str(entry.get("hours", 8))),
+                        overtime=Decimal(str(entry.get("overtime", 0))),
+                        note=entry.get("note", "")
+                    )
+
+    @transaction.atomic
+    def create(self, validated_data):
+        details_data = validated_data.pop("details", [])
+        labor_entries_data = validated_data.pop("labor_entries", None)
+        request = self.context.get("request")
+        company = getattr(request, "company", None) if request else None
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+            
+        validated_data["company"] = company
+        report = IrrigationReport.objects.create(**validated_data)
+        
+        for detail_data in details_data:
+            fertilizers_data = detail_data.pop("fertilizers", [])
+            detail_data["company"] = company
+            detail_data["report"] = report
+            detail = IrrigationDetail.objects.create(**detail_data)
+            for fert_data in fertilizers_data:
+                fert_data["company"] = company
+                fert_data["irrigation_detail"] = detail
+                AppliedFertilizer.objects.create(**fert_data)
+                
+        self._sync_allocations(report, labor_entries_data)
+        return report
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop("details", None)
+        labor_entries_data = validated_data.pop("labor_entries", None)
+        company = instance.company
+        
+        instance = super().update(instance, validated_data)
+        
+        if details_data is not None:
+            # Delete old details and recreate
+            instance.details.all().delete()
+            for detail_data in details_data:
+                fertilizers_data = detail_data.pop("fertilizers", [])
+                detail_data["company"] = company
+                detail_data["report"] = instance
+                detail = IrrigationDetail.objects.create(**detail_data)
+                for fert_data in fertilizers_data:
+                    fert_data["company"] = company
+                    fert_data["irrigation_detail"] = detail
+                    AppliedFertilizer.objects.create(**fert_data)
+                    
+        self._sync_allocations(instance, labor_entries_data)
+        return instance
+
+
+class PestControlReportSerializer(serializers.ModelSerializer):
+    engineer_name = serializers.CharField(source="engineer.name", read_only=True)
+    pesticide_item_name = serializers.CharField(source="pesticide_item.name", read_only=True)
+
+    class Meta:
+        model = PestControlReport
+        fields = "__all__"
+        read_only_fields = ["company", "created_at", "updated_at"]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        from apps.reports.models import OperationalLocationAllocation
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(instance)
+        allocs = OperationalLocationAllocation.objects.filter(
+            company=instance.company,
+            content_type=content_type,
+            object_id=instance.id
+        )
+        representation["allocations"] = OperationalLocationAllocationSerializer(allocs, many=True).data
+        return representation
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        company = getattr(request, "company", None) if request else None
+        if not company:
+          from apps.users.models import Company
+          company = Company.objects.first()
+        validated_data["company"] = company
+        return super().create(validated_data)
+
+
+class OperationalLocationAllocationSerializer(serializers.ModelSerializer):
+    enclosure_name = serializers.CharField(source="enclosure.name", read_only=True)
+    content_type_model = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = OperationalLocationAllocation
+        fields = "__all__"
+        read_only_fields = ["company", "created_at", "updated_at"]
+
+    def validate(self, attrs):
+        content_type_model = attrs.pop("content_type_model", None)
+        if content_type_model:
+            from django.contrib.contenttypes.models import ContentType
+            try:
+                attrs["content_type"] = ContentType.objects.get(model=content_type_model.lower())
+            except ContentType.DoesNotExist:
+                raise serializers.ValidationError({"content_type_model": f"Model '{content_type_model}' is not a valid content type."})
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        company = getattr(request, "company", None) if request else None
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        validated_data["company"] = company
+        return super().create(validated_data)
 
 
 class CustomFieldDefinitionSerializer(serializers.ModelSerializer):
@@ -832,10 +1098,21 @@ class CustomFieldDefinitionSerializer(serializers.ModelSerializer):
 class CustomFieldValueSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source="field.name", read_only=True)
     field_type = serializers.CharField(source="field.field_type", read_only=True)
+    content_type_model = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = CustomFieldValue
         fields = "__all__"
+
+    def validate(self, attrs):
+        content_type_model = attrs.pop("content_type_model", None)
+        if content_type_model:
+            from django.contrib.contenttypes.models import ContentType
+            try:
+                attrs["content_type"] = ContentType.objects.get(model=content_type_model.lower())
+            except ContentType.DoesNotExist:
+                raise serializers.ValidationError({"content_type_model": f"Model '{content_type_model}' is not a valid content type."})
+        return super().validate(attrs)
 
 
 class OperationLogTimelineSerializer(serializers.ModelSerializer):
@@ -849,6 +1126,7 @@ class OperationLogTimelineSerializer(serializers.ModelSerializer):
     engineer_name = serializers.SerializerMethodField()
     report_date = serializers.SerializerMethodField()
     
+    is_shared_labor = serializers.SerializerMethodField()
     metrics = serializers.SerializerMethodField()
     attachments_count = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
@@ -869,7 +1147,7 @@ class OperationLogTimelineSerializer(serializers.ModelSerializer):
             "engineer_name", "report_date", "profile_type", "profile_version", 
             "profile_data", "metrics", "attachments_count", "attachments", "created_at",
             "labor_entries", "report_status", "execution_status", "status",
-            "source_type", "source_id", "report_id",
+            "source_type", "source_id", "report_id", "is_shared_labor",
             "company_workers", "contractor_workers", "actual_productivity", "work_hours",
             "overtime_hours", "overtime_productivity", "location_name", "unit_name",
             "variety_name", "contractor_name", "contractors"
@@ -989,6 +1267,15 @@ class OperationLogTimelineSerializer(serializers.ModelSerializer):
             
         merged.sort(key=lambda x: parse_date(x.get("created_at")), reverse=True)
         return merged
+
+    def get_is_shared_labor(self, obj):
+        if obj.source_type == "IRRIGATION" and obj.source_id:
+            return OperationLog.objects.filter(
+                source_type="IRRIGATION",
+                source_id=obj.source_id,
+                is_deleted=False
+            ).count() > 1
+        return False
 
 
 class GalleryMediaSerializer(serializers.ModelSerializer):

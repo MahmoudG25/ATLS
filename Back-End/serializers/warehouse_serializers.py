@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.warehouse.models import Item, Movement, Warehouse
+from apps.warehouse.models import Item, Movement, Warehouse, MaterialVerificationAlert
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -154,3 +154,13 @@ class MovementSerializer(serializers.ModelSerializer):
             request = self.context.get("request")
             validated_data['user'] = request.user
         return super().create(validated_data)
+
+
+class MaterialVerificationAlertSerializer(serializers.ModelSerializer):
+    engineer_name = serializers.CharField(source="requested_by.name", read_only=True)
+    mapped_material_name = serializers.CharField(source="mapped_material.name", read_only=True)
+
+    class Meta:
+        model = MaterialVerificationAlert
+        fields = "__all__"
+        read_only_fields = ["company"]

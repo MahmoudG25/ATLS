@@ -32,7 +32,9 @@ from apps.reports.models import (
     LaborEntry,
     Attachment,
     Season,
-    GalleryMedia
+    GalleryMedia,
+    PestControlReport,
+    OperationalLocationAllocation,
 )
 from serializers.reports_serializers import (
     OperationSerializer,
@@ -57,6 +59,8 @@ from serializers.reports_serializers import (
     WorkersByLocationSerializer,
     OperationLocationMatrixSerializer,
     SeasonSerializer,
+    PestControlReportSerializer,
+    OperationalLocationAllocationSerializer,
 )
 from apps.reports.permissions import IsManagerOrReadOnly
 from apps.reports.services import (
@@ -427,9 +431,21 @@ class DailyTaskReportActionView(APIView):
         return Response({"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class FertilizationFilter(django_filters.FilterSet):
+    start_date = django_filters.DateFilter(field_name="report_date", lookup_expr="gte")
+    end_date = django_filters.DateFilter(field_name="report_date", lookup_expr="lte")
+    enclosure = django_filters.UUIDFilter(field_name="enclosure_id")
+
+    class Meta:
+        model = FertilizationReport
+        fields = ["enclosure"]
+
+
 class FertilizationListCreate(generics.ListCreateAPIView):
     serializer_class = FertilizationReportSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = FertilizationFilter
 
     def get_queryset(self):
         return _for_company(FertilizationReport.objects.all(), self.request)
@@ -446,12 +462,80 @@ class FertilizationDetail(generics.RetrieveUpdateDestroyAPIView):
         return _for_company(FertilizationReport.objects.all(), self.request)
 
 
+class IrrigationFilter(django_filters.FilterSet):
+    start_date = django_filters.DateFilter(field_name="date", lookup_expr="gte")
+    end_date = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+    engineer = django_filters.UUIDFilter(field_name="engineer_id")
+    search = django_filters.CharFilter(method="filter_search")
+    phase = django_filters.UUIDFilter(method="filter_phase")
+    enclosure = django_filters.UUIDFilter(method="filter_enclosure")
+
+    class Meta:
+        model = IrrigationReport
+        fields = ["engineer", "date", "enclosure"]
+
+    def filter_search(self, queryset, name, value):
+        from django.db.models import Q
+        if not value:
+            return queryset
+        
+        id_query = Q()
+        if value.startswith("#"):
+            val = value[1:]
+            if val.isdigit():
+                id_query = Q(id=val)
+        elif value.isdigit():
+            id_query = Q(id=value)
+            
+        return queryset.filter(
+            Q(engineer__username__icontains=value) |
+            Q(engineer__name__icontains=value) |
+            Q(notes__icontains=value) |
+            id_query
+        ).distinct()
+
+    def filter_phase(self, queryset, name, value):
+        if not value:
+            return queryset
+        from apps.farm.models import LocationNode
+        try:
+            node = LocationNode.objects.get(id=value)
+            descendant_ids = list(node.get_descendants(include_self=True).values_list('id', flat=True))
+            return queryset.filter(details__phase_id__in=descendant_ids).distinct()
+        except Exception:
+            return queryset
+
+    def filter_enclosure(self, queryset, name, value):
+        if not value:
+            return queryset
+        from apps.farm.models import LocationNode
+        try:
+            node = LocationNode.objects.get(id=value)
+            ancestor_ids = list(node.get_ancestors(include_self=True).values_list('id', flat=True))
+            return queryset.filter(details__phase_id__in=ancestor_ids).distinct()
+        except Exception:
+            return queryset
+
+
 class IrrigationListCreate(generics.ListCreateAPIView):
     serializer_class = IrrigationReportSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IrrigationFilter
+    pagination_class = TaskPagination
 
     def get_queryset(self):
-        return _for_company(IrrigationReport.objects.all(), self.request)
+        return _for_company(
+            IrrigationReport.objects.select_related("engineer", "contractor")
+            .prefetch_related(
+                "details",
+                "details__phase",
+                "details__fertilizers",
+                "details__fertilizers__fertilizer_item",
+            )
+            .all(),
+            self.request,
+        )
 
     def perform_create(self, serializer):
         serializer.save(company=getattr(self.request, "company", None))
@@ -463,6 +547,73 @@ class IrrigationDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return _for_company(IrrigationReport.objects.all(), self.request)
+
+
+class PestControlFilter(django_filters.FilterSet):
+    start_date = django_filters.DateFilter(field_name="date", lookup_expr="gte")
+    end_date = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+    enclosure = django_filters.UUIDFilter(method="filter_enclosure")
+
+    class Meta:
+        model = PestControlReport
+        fields = ["enclosure"]
+
+    def filter_enclosure(self, queryset, name, value):
+        if not value:
+            return queryset
+        from apps.reports.models import OperationalLocationAllocation
+        from django.contrib.contenttypes.models import ContentType
+        try:
+            content_type = ContentType.objects.get_for_model(PestControlReport)
+            allocs = OperationalLocationAllocation.objects.filter(
+                content_type=content_type,
+                enclosure_id=value
+            )
+            report_ids = allocs.values_list('object_id', flat=True)
+            return queryset.filter(id__in=report_ids)
+        except Exception:
+            return queryset
+
+
+class PestControlListCreate(generics.ListCreateAPIView):
+    serializer_class = PestControlReportSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PestControlFilter
+
+    def get_queryset(self):
+        return _for_company(PestControlReport.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(company=getattr(self.request, "company", None))
+
+
+class PestControlDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = PestControlReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return _for_company(PestControlReport.objects.all(), self.request)
+
+
+class OperationalLocationAllocationListCreate(generics.ListCreateAPIView):
+    serializer_class = OperationalLocationAllocationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return _for_company(OperationalLocationAllocation.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(company=getattr(self.request, "company", None))
+
+
+class OperationalLocationAllocationDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = OperationalLocationAllocationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return _for_company(OperationalLocationAllocation.objects.all(), self.request)
+
 
 
 class DailyTaskSummaryView(APIView):

@@ -181,6 +181,7 @@ class PayrollTransactionSerializer(serializers.ModelSerializer):
     )
     period_name = serializers.CharField(source="period.name", read_only=True)
     report_id = serializers.UUIDField(source="labor_entry.report.id", read_only=True)
+    engineer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollTransaction
@@ -199,7 +200,32 @@ class PayrollTransactionSerializer(serializers.ModelSerializer):
             "notes",
             "labor_entry",
             "report_id",
+            "engineer_name",
         ]
+
+    def get_engineer_name(self, obj):
+        try:
+            if obj.labor_entry:
+                if obj.labor_entry.report and obj.labor_entry.report.engineer:
+                    return obj.labor_entry.report.engineer.name
+                if obj.labor_entry.harvest_report and (obj.labor_entry.harvest_report.supervisor or obj.labor_entry.harvest_report.created_by):
+                    user = obj.labor_entry.harvest_report.supervisor or obj.labor_entry.harvest_report.created_by
+                    return user.name or user.email
+                if obj.labor_entry.operation_log:
+                    op_log = obj.labor_entry.operation_log
+                    if op_log.source_type == "IRRIGATION" and op_log.source_id:
+                        from apps.reports.models import IrrigationReport
+                        rep = IrrigationReport.objects.filter(id=op_log.source_id).first()
+                        if rep and rep.engineer:
+                            return rep.engineer.name
+                    if op_log.source_type == "PEST_CONTROL" and op_log.source_id:
+                        from apps.reports.models import PestControlReport
+                        rep = PestControlReport.objects.filter(id=op_log.source_id).first()
+                        if rep and rep.engineer:
+                            return rep.engineer.name
+        except Exception:
+            pass
+        return "النظام"
 
     def create(self, validated_data):
         request = self.context.get("request")
@@ -253,8 +279,8 @@ class PayrollTransactionSerializer(serializers.ModelSerializer):
 
 class PendingWorkerReviewSerializer(serializers.ModelSerializer):
     labor_entry_worker_type = serializers.CharField(source="labor_entry.worker_type", read_only=True)
-    labor_entry_report_date = serializers.DateField(source="labor_entry.report.report_date", read_only=True)
-    labor_entry_report_id = serializers.UUIDField(source="labor_entry.report.id", read_only=True)
+    labor_entry_report_date = serializers.SerializerMethodField()
+    labor_entry_report_id = serializers.SerializerMethodField()
     labor_entry_hours = serializers.DecimalField(source="labor_entry.hours", max_digits=8, decimal_places=2, read_only=True)
     labor_entry_overtime = serializers.DecimalField(source="labor_entry.overtime", max_digits=8, decimal_places=2, read_only=True)
     labor_entry_note = serializers.CharField(source="labor_entry.note", read_only=True, default="")
@@ -282,6 +308,52 @@ class PendingWorkerReviewSerializer(serializers.ModelSerializer):
             "resolved_worker",
         ]
 
+    def get_labor_entry_report_date(self, obj):
+        try:
+            le = obj.labor_entry
+            if not le:
+                return None
+            if le.report:
+                return le.report.report_date
+            if le.harvest_report:
+                return le.harvest_report.harvest_date
+            if le.operation_log:
+                op_log = le.operation_log
+                if op_log.report:
+                    return op_log.report.report_date
+                if op_log.source_type == "IRRIGATION" and op_log.source_id:
+                    from apps.reports.models import IrrigationReport
+                    rep = IrrigationReport.objects.filter(id=op_log.source_id).first()
+                    if rep:
+                        return rep.date
+                if op_log.source_type == "PEST_CONTROL" and op_log.source_id:
+                    from apps.reports.models import PestControlReport
+                    rep = PestControlReport.objects.filter(id=op_log.source_id).first()
+                    if rep:
+                        return rep.date
+        except Exception:
+            pass
+        return None
+
+    def get_labor_entry_report_id(self, obj):
+        try:
+            le = obj.labor_entry
+            if not le:
+                return None
+            if le.report:
+                return le.report.id
+            if le.harvest_report:
+                return le.harvest_report.id
+            if le.operation_log:
+                op_log = le.operation_log
+                if op_log.report:
+                    return op_log.report.id
+                if op_log.source_id:
+                    return op_log.source_id
+        except Exception:
+            pass
+        return None
+
     def get_location_name(self, obj):
         try:
             if obj.labor_entry and obj.labor_entry.operation_log and obj.labor_entry.operation_log.location:
@@ -302,6 +374,22 @@ class PendingWorkerReviewSerializer(serializers.ModelSerializer):
         try:
             if obj.labor_entry and obj.labor_entry.report and obj.labor_entry.report.engineer:
                 return obj.labor_entry.report.engineer.name
+            if obj.labor_entry and obj.labor_entry.harvest_report and (obj.labor_entry.harvest_report.supervisor or obj.labor_entry.harvest_report.created_by):
+                user = obj.labor_entry.harvest_report.supervisor or obj.labor_entry.harvest_report.created_by
+                return user.name or user.email
+            if obj.labor_entry and obj.labor_entry.operation_log:
+                # Resolve from operation log source report
+                op_log = obj.labor_entry.operation_log
+                if op_log.source_type == "IRRIGATION" and op_log.source_id:
+                    from apps.reports.models import IrrigationReport
+                    rep = IrrigationReport.objects.filter(id=op_log.source_id).first()
+                    if rep and rep.engineer:
+                        return rep.engineer.name
+                if op_log.source_type == "PEST_CONTROL" and op_log.source_id:
+                    from apps.reports.models import PestControlReport
+                    rep = PestControlReport.objects.filter(id=op_log.source_id).first()
+                    if rep and rep.engineer:
+                        return rep.engineer.name
         except Exception:
             pass
         return "مهندس غير محدد"
@@ -406,6 +494,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "notes",
             "documents",
             "payroll_components",
+            "created_at",
         ]
 
     def create(self, validated_data):
@@ -422,7 +511,7 @@ class WorkerListCreateView(generics.ListCreateAPIView):
     serializer_class = WorkerSerializer
 
     def get_queryset(self):
-        qs = Worker.objects.all()
+        qs = Worker.objects.all().order_by("-created_at")
         qs = _for_company(qs, self.request)
         
         # تصفية البحث بالاسم أو الكود
@@ -482,6 +571,14 @@ class PayrollTransactionListView(generics.ListCreateAPIView):
         return qs
 
 
+class PayrollTransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PayrollTransactionSerializer
+
+    def get_queryset(self):
+        return _for_company(PayrollTransaction.objects.all(), self.request)
+
+
 class BulkApproveTransactionsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -506,11 +603,52 @@ class BulkApproveTransactionsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+def _backfill_pending_reviews(company):
+    """
+    تقوم هذه الدالة بمسح كافة بنود العمالة للشركة (LaborEntry) المسجلة يدوياً
+    وتوليد طلبات مراجعة (PendingWorkerReview) معلقة لها إن لم تكن مسجلة مسبقاً بالـ HR.
+    """
+    company_labor = LaborEntry.objects.filter(
+        company=company,
+        worker_type=LaborEntry.WORKER_TYPE_COMPANY
+    )
+    
+    for entry in company_labor:
+        name_clean = (entry.worker_name or "").strip()
+        note_clean = (entry.note or "").strip()
+        
+        # تجاهل الأسماء الفارغة والعمالة التلقائية التي يولدها النظام
+        if not name_clean or "تلقائي" in name_clean or "تلقائي" in note_clean:
+            continue
+            
+        # التحقق مما إذا كان الاسم مسجلاً في عمال الموارد البشرية
+        worker_exists = Worker.objects.filter(
+            company=company,
+            name=name_clean,
+            worker_type="COMPANY"
+        ).exists()
+        
+        if not worker_exists:
+            # التحقق من وجود مراجعة مسبقة (نشطة أو تمت تسويتها) لمنع التكرار
+            review_exists = PendingWorkerReview.objects.filter(labor_entry=entry).exists()
+            if not review_exists:
+                PendingWorkerReview.objects.create(
+                    company=company,
+                    labor_entry=entry,
+                    worker_name_fallback=name_clean,
+                    resolved=False
+                )
+
+
 class PendingWorkerReviewListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = PendingWorkerReviewSerializer
 
     def get_queryset(self):
+        company = _get_company(self.request)
+        if company:
+            _backfill_pending_reviews(company)
+
         qs = PendingWorkerReview.objects.all()
         qs = _for_company(qs, self.request)
         
@@ -601,6 +739,61 @@ class ContractorLedgerListView(generics.ListAPIView):
         return qs
 
 
+class ContractorLedgerCreateView(APIView):
+    """
+    إنشاء حركة مالية يدوية (دفعة مسددة أو خصم) لمقاول معين.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        company = _get_company(request)
+        contractor_id = request.data.get("contractor_id")
+        transaction_type = request.data.get("transaction_type")
+        amount = request.data.get("amount")
+        date = request.data.get("date")
+        notes = request.data.get("notes", "")
+
+        # التحقق من البيانات المطلوبة
+        if not contractor_id or not transaction_type or not amount or not date:
+            return Response(
+                {"error": "يجب تزويد contractor_id و transaction_type و amount و date."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # التحقق من أن نوع الحركة صحيح (يدوي فقط)
+        allowed_types = ["PAYMENT", "DEDUCTION"]
+        if transaction_type not in allowed_types:
+            return Response(
+                {"error": f"نوع الحركة يجب أن يكون أحد: {', '.join(allowed_types)}."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            amount_decimal = float(amount)
+            if amount_decimal <= 0:
+                return Response({"error": "المبلغ يجب أن يكون أكبر من الصفر."}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({"error": "المبلغ غير صحيح."}, status=status.HTTP_400_BAD_REQUEST)
+
+        contractor = get_object_or_404(Contractor.objects.filter(company=company), pk=contractor_id)
+
+        entry = ContractorLedger.objects.create(
+            company=company,
+            contractor=contractor,
+            date=date,
+            transaction_type=transaction_type,
+            hours=0,
+            rate=0,
+            amount=amount_decimal,
+            notes=notes.strip() if notes else ""
+        )
+
+        return Response(
+            ContractorLedgerSerializer(entry).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
 class ContractorDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -609,41 +802,86 @@ class ContractorDashboardView(APIView):
         contractor = get_object_or_404(Contractor.objects.filter(company=company), pk=contractor_id)
         
         # 1. إجمالي العمال المميزين للمقاول
-        total_workers = Worker.objects.filter(
-            company=company, 
-            contractor=contractor
-        ).count()
-        
+        workers_qs = Worker.objects.filter(company=company, contractor=contractor).order_by("-created_at")
+        total_workers = workers_qs.count()
+
         # 2. احتساب الأستاذ العام للمستحقات والخصومات
         ledger = ContractorLedger.objects.filter(company=company, contractor=contractor)
         
+        # فلترة بالتاريخ
+        date_from = request.query_params.get("date_from")
+        date_to = request.query_params.get("date_to")
+        tx_type_filter = request.query_params.get("transaction_type")
+
+        if date_from:
+            ledger = ledger.filter(date__gte=date_from)
+        if date_to:
+            ledger = ledger.filter(date__lte=date_to)
+
         # الإيرادات/المستحقات (EARNING, OVERTIME)
-        total_earnings = ledger.filter(
+        total_earnings = ContractorLedger.objects.filter(
+            company=company, contractor=contractor,
             transaction_type__in=["EARNING", "OVERTIME"]
         ).aggregate(sum=Sum("amount"))["sum"] or 0
         
         # الخصومات (DEDUCTION)
-        total_deductions = ledger.filter(
+        total_deductions = ContractorLedger.objects.filter(
+            company=company, contractor=contractor,
             transaction_type="DEDUCTION"
         ).aggregate(sum=Sum("amount"))["sum"] or 0
         
         # المدفوعات المسددة مسبقاً (PAYMENT)
-        total_paid = ledger.filter(
+        total_paid = ContractorLedger.objects.filter(
+            company=company, contractor=contractor,
             transaction_type="PAYMENT"
         ).aggregate(sum=Sum("amount"))["sum"] or 0
         
         # صافي المستحقات الحالية المتبقية للمقاول
-        total_dues = total_earnings - total_deductions - total_paid
+        total_dues = (ContractorLedger.objects.filter(
+            company=company, contractor=contractor,
+            transaction_type__in=["EARNING", "OVERTIME"]
+        ).aggregate(sum=Sum("amount"))["sum"] or 0) - total_deductions - total_paid
+
+        # 3. قائمة المعاملات مع الفلتر
+        transactions_qs = ledger.order_by("-date", "-created_at")
+        if tx_type_filter and tx_type_filter != "ALL":
+            transactions_qs = transactions_qs.filter(transaction_type=tx_type_filter)
+        transactions = transactions_qs[:200]
+
+        # 4. قائمة العمال التابعين
+        workers_data = [
+            {
+                "id": str(w.id),
+                "name": w.name,
+                "badge_number": w.badge_number,
+                "national_id": w.national_id,
+                "hire_date": str(w.hire_date) if w.hire_date else None,
+                "monthly_salary": float(w.monthly_salary),
+                "hourly_rate": float(w.hourly_rate),
+                "status": w.status,
+                "notes": w.notes,
+            }
+            for w in workers_qs
+        ]
         
-        # 3. قائمة المعاملات للجدول التحليلي
-        transactions = ledger.order_by("-date")[:100]
+        # 5. نوع النشاط
+        activity_type_display = contractor.get_activity_type_display() if hasattr(contractor, 'get_activity_type_display') else ""
         
         return Response({
             "contractor": {
                 "id": contractor.id,
                 "name": contractor.name,
                 "rate_per_hour": float(contractor.rate_per_hour),
-                "is_active": contractor.is_active
+                "is_active": contractor.is_active,
+                "phone_number": contractor.phone_number,
+                "email": contractor.email,
+                "address": contractor.address,
+                "commercial_registry": contractor.commercial_registry,
+                "tax_card": contractor.tax_card,
+                "contract_date": str(contractor.contract_date) if contractor.contract_date else None,
+                "activity_type": contractor.activity_type,
+                "activity_type_display": activity_type_display,
+                "notes": contractor.notes
             },
             "summary": {
                 "total_workers": total_workers,
@@ -652,8 +890,10 @@ class ContractorDashboardView(APIView):
                 "total_paid": float(total_paid),
                 "total_dues": float(total_dues)
             },
-            "transactions": ContractorLedgerSerializer(transactions, many=True).data
+            "transactions": ContractorLedgerSerializer(transactions, many=True).data,
+            "workers": workers_data
         }, status=status.HTTP_200_OK)
+
 
 
 class EmployeeListView(generics.ListCreateAPIView):
@@ -661,7 +901,7 @@ class EmployeeListView(generics.ListCreateAPIView):
     serializer_class = EmployeeSerializer
 
     def get_queryset(self):
-        qs = Employee.objects.select_related("user").prefetch_related("documents", "payroll_components")
+        qs = Employee.objects.select_related("user").prefetch_related("documents", "payroll_components").order_by("-created_at")
         return _for_company(qs, self.request)
 
 
