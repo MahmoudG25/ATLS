@@ -29,6 +29,20 @@ class Operation(TenantAwareModel):
         max_length=50, choices=CATEGORY_CHOICES, default="other"
     )
     
+    coverage_type = models.CharField(
+        max_length=50,
+        choices=[
+            ("TREE_BASED", "Tree Based"),
+            ("AREA_BASED", "Area Based"),
+            ("EVENT_BASED", "Event Based"),
+            ("TIME_BASED", "Time Based"),
+            ("PRODUCTION_BASED", "Production Based"),
+        ],
+        default="TIME_BASED",
+        verbose_name="نوع التغطية"
+    )
+    repeatable = models.BooleanField(default=True, verbose_name="قابلة للتكرار")
+    allow_over_coverage = models.BooleanField(default=False, verbose_name="السماح بتجاوز 100%")
     # JSON Schema Governance
     json_schema = models.JSONField(
         null=True, blank=True, 

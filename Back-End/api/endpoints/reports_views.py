@@ -86,7 +86,7 @@ from services.activity_service import log_activity
 class TaskPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 10000
 
 
 class DailyTaskFilter(django_filters.FilterSet):
@@ -1432,8 +1432,126 @@ class MediaFeedView(APIView):
         return Response(media_items)
 
 
+class OperationCoverageView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = _get_company(request)
+        season_id = request.query_params.get("season")
+        location_id = request.query_params.get("location")
+        operation_id = request.query_params.get("operation")
+        time_frame = request.query_params.get("time_frame", "season")
+
+        if not season_id:
+            return Response({"error": "season parameter is required"}, status=400)
+
+        data = get_operation_coverage(
+            company=company,
+            season_id=season_id,
+            location_id=location_id,
+            operation_id=operation_id,
+            time_frame=time_frame
+        )
+        return Response(data)
+
+
+class IrrigationIntelligenceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = _get_company(request)
+        season_id = request.query_params.get("season")
+        location_id = request.query_params.get("location")
+        time_frame = request.query_params.get("time_frame", "season")
+
+        if not season_id:
+            return Response({"error": "season parameter is required"}, status=400)
+
+        data = irrigation_analytics_by_season(
+            company=company,
+            season_id=season_id,
+            location_id=location_id,
+            time_frame=time_frame
+        )
+        return Response(data)
+
+
+class HarvestIntelligenceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company = _get_company(request)
+        season_id = request.query_params.get("season")
+        location_id = request.query_params.get("location")
+        time_frame = request.query_params.get("time_frame", "season")
+
+        if not season_id:
+            return Response({"error": "season parameter is required"}, status=400)
+
+        data = harvest_analytics_by_season(
+            company=company,
+            season_id=season_id,
+            location_id=location_id,
+            time_frame=time_frame
+        )
+        return Response(data)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_node_tree_count(request, pk):
+    from apps.farm.models import LocationNode, EnclosureProfile, StageProfile
+    company = _get_company(request)
+    try:
+        node = LocationNode.objects.get(id=pk, company=company)
+    except LocationNode.DoesNotExist:
+        return Response({"error": "Location node not found"}, status=404)
+
+    tree_count = request.data.get("tree_count")
+    if tree_count is None:
+        return Response({"error": "tree_count is required"}, status=400)
+
+    try:
+        tree_count = int(tree_count)
+        if tree_count < 0:
+            raise ValueError()
+    except ValueError:
+        return Response({"error": "tree_count must be a positive integer"}, status=400)
+
+    if node.type == LocationNode.TYPE_STAGE:
+        profile, created = StageProfile.objects.update_or_create(
+            location_node=node,
+            company=company,
+            defaults={"tree_count": tree_count}
+        )
+        try:
+            profile.clean()
+            profile.save()
+        except ValidationError as e:
+            return Response({"error": e.message_dict if hasattr(e, 'message_dict') else str(e)}, status=400)
+    elif node.type == LocationNode.TYPE_ENCLOSURE:
+        profile, created = EnclosureProfile.objects.update_or_create(
+            location_node=node,
+            company=company,
+            defaults={"tree_count": tree_count}
+        )
+        try:
+            profile.clean()
+            profile.save()
+        except ValidationError as e:
+            return Response({"error": e.message_dict if hasattr(e, 'message_dict') else str(e)}, status=400)
+    else:
+        return Response({"error": "Tree count can only be updated for Stage or Enclosure nodes"}, status=400)
+
+    return Response({"success": True, "tree_count": tree_count})
+
+
 # Centralized authorization injection for reports views
 import inspect
+
 from rest_framework.views import APIView
 from permissions.role_permissions import HasModuleAccess
 

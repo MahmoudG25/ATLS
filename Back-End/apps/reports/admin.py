@@ -38,9 +38,9 @@ class CustomFieldValueAdmin(admin.ModelAdmin):
 
 @admin.register(Operation)
 class OperationAdmin(admin.ModelAdmin):
-    list_display = ("name", "category")
+    list_display = ("name", "category", "coverage_type", "repeatable", "allow_over_coverage")
     search_fields = ("name",)
-    list_filter = ("category",)
+    list_filter = ("category", "coverage_type", "repeatable", "allow_over_coverage")
 
 
 @admin.register(DailyTaskReport)

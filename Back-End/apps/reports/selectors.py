@@ -475,3 +475,374 @@ def get_location_analytics(location_node):
         "cost_trend": cost_trend,
         "operation_distribution": distribution
     }
+
+
+def get_operation_coverage(company, season_id, location_id=None, operation_id=None, time_frame="season"):
+    """
+    Returns coverage statistics for farm operations.
+    If operation_id is None: Returns a summary matrix of all operations at the current location.
+    If operation_id is provided: Returns a drill-down list of children locations and their coverage for this operation.
+    """
+    from apps.reports.models import Season, Operation
+    from apps.farm.models import LocationNode, EnclosureProfile, StageProfile
+    from django.db.models import Sum, Count, Max
+    from django.db.models.functions import Coalesce, TruncDate
+    from datetime import timedelta
+    from django.utils import timezone
+
+    try:
+        season = Season.objects.get(id=season_id, company=company)
+    except Season.DoesNotExist:
+        return []
+
+    # Get intersected date range
+    start_date = season.start_date
+    end_date = season.end_date
+    today = timezone.localdate()
+
+    if time_frame == "today":
+        start_date = max(start_date, today)
+        end_date = min(end_date, today)
+    elif time_frame == "week":
+        start_date = max(start_date, today - timedelta(days=7))
+        end_date = min(end_date, today)
+    elif time_frame == "month":
+        start_date = max(start_date, today - timedelta(days=30))
+        end_date = min(end_date, today)
+
+    # Base logs query
+    logs = OperationLog.objects.filter(
+        company=company,
+        season=season,
+        is_deleted=False
+    ).annotate(
+        log_date=Coalesce("report__report_date", TruncDate("created_at"))
+    ).filter(
+        log_date__range=(start_date, end_date)
+    )
+
+    # If location is provided, filter logs to its descendants
+    # If location is provided, filter logs to its descendants
+    if location_id:
+        try:
+            current_node = LocationNode.objects.get(id=location_id, company=company)
+            descendants = current_node.get_descendants(include_self=True)
+            logs = logs.filter(location__in=descendants)
+        except LocationNode.DoesNotExist:
+            return []
+    else:
+        current_node = None
+        descendants = LocationNode.objects.filter(company=company)
+
+    # Determine children for drill-down
+    if operation_id:
+        try:
+            operation = Operation.objects.get(id=operation_id, company=company)
+        except Operation.DoesNotExist:
+            return []
+            
+        if current_node:
+            children = current_node.get_children().filter(is_active=True)
+            if not children.exists():
+                children = [current_node]
+        else:
+            children = LocationNode.objects.filter(company=company, parent__isnull=True, is_active=True)
+
+        results = []
+        for child in children:
+            child_descendants = child.get_descendants(include_self=True)
+            child_logs = logs.filter(location__in=child_descendants, operation=operation)
+            
+            total_executed = child_logs.aggregate(total=Sum("actual_productivity"))["total"] or 0.0
+            execution_count = child_logs.count()
+            last_execution = child_logs.aggregate(last=Max("log_date"))["last"]
+            first_execution = child_logs.aggregate(first=Min("log_date"))["first"]
+            
+            # Determine target dynamically based on operation.coverage_type
+            target = 0.0
+            coverage_pct = None
+            
+            if operation.coverage_type == "TREE_BASED":
+                target = child.get_tree_count()
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            elif operation.coverage_type == "PRODUCTION_BASED":
+                enc_profiles = EnclosureProfile.objects.filter(location_node__in=child_descendants)
+                target = float(enc_profiles.aggregate(total=Sum("expected_yield"))["total"] or 0.0)
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            elif operation.coverage_type == "AREA_BASED":
+                enc_profiles = EnclosureProfile.objects.filter(location_node__in=child_descendants)
+                total_area = 0.0
+                for prof in enc_profiles:
+                    total_area += float(prof.profile_data.get("area", prof.profile_data.get("area_feddan", 0.0)))
+                target = total_area
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            
+            # Trend calculation (monthly progress)
+            trend = []
+            temp_date = season.start_date
+            while temp_date <= season.end_date:
+                m_start = temp_date.replace(day=1)
+                if temp_date.month == 12:
+                    m_end = temp_date.replace(year=temp_date.year+1, month=1, day=1) - timedelta(days=1)
+                else:
+                    m_end = temp_date.replace(month=temp_date.month+1, day=1) - timedelta(days=1)
+                
+                m_logs = child_logs.filter(log_date__range=(m_start, m_end))
+                m_sum = m_logs.aggregate(total=Sum("actual_productivity"))["total"] or 0.0
+                trend.append({
+                    "month": m_start.strftime("%b"),
+                    "executed": float(m_sum)
+                })
+                temp_date = m_end + timedelta(days=2)
+
+            results.append({
+                "location_id": str(child.id),
+                "location_name": child.name,
+                "location_type": child.type,
+                "total_executed": float(total_executed),
+                "execution_count": execution_count,
+                "last_execution": last_execution,
+                "first_execution": first_execution,
+                "target": target,
+                "coverage_pct": round(coverage_pct, 2) if coverage_pct is not None else None,
+                "trend": trend
+            })
+        return results
+
+    else:
+        # SUMMARY MATRIX MODE: group by operation type at current_node
+        active_ops = Operation.objects.filter(company=company, is_active=True)
+        results = []
+        for op in active_ops:
+            op_logs = logs.filter(operation=op)
+            total_executed = op_logs.aggregate(total=Sum("actual_productivity"))["total"] or 0.0
+            execution_count = op_logs.count()
+            last_execution = op_logs.aggregate(last=Max("log_date"))["last"]
+            first_execution = op_logs.aggregate(first=Min("log_date"))["first"]
+            
+            target = 0.0
+            coverage_pct = None
+            
+            if op.coverage_type == "TREE_BASED":
+                if current_node:
+                    target = current_node.get_tree_count()
+                else:
+                    target = sum(root.get_tree_count() for root in LocationNode.objects.filter(company=company, parent__isnull=True))
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            elif op.coverage_type == "PRODUCTION_BASED":
+                enc_profiles = EnclosureProfile.objects.filter(location_node__in=descendants)
+                target = float(enc_profiles.aggregate(total=Sum("expected_yield"))["total"] or 0.0)
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            elif op.coverage_type == "AREA_BASED":
+                enc_profiles = EnclosureProfile.objects.filter(location_node__in=descendants)
+                total_area = 0.0
+                for prof in enc_profiles:
+                    total_area += float(prof.profile_data.get("area", prof.profile_data.get("area_feddan", 0.0)))
+                target = total_area
+                if target > 0:
+                    coverage_pct = (total_executed / target) * 100.0
+            
+            trend = []
+            temp_date = season.start_date
+            while temp_date <= season.end_date:
+                m_start = temp_date.replace(day=1)
+                if temp_date.month == 12:
+                    m_end = temp_date.replace(year=temp_date.year+1, month=1, day=1) - timedelta(days=1)
+                else:
+                    m_end = temp_date.replace(month=temp_date.month+1, day=1) - timedelta(days=1)
+                
+                m_logs = op_logs.filter(log_date__range=(m_start, m_end))
+                m_sum = m_logs.aggregate(total=Sum("actual_productivity"))["total"] or 0.0
+                trend.append({
+                    "month": m_start.strftime("%b"),
+                    "executed": float(m_sum)
+                })
+                temp_date = m_end + timedelta(days=2)
+
+            units = list(op_logs.values_list("unit__name", flat=True).distinct())
+            unit_label = units[0] if units else ("نخلة" if op.coverage_type == "TREE_BASED" else ("فدان" if op.coverage_type == "AREA_BASED" else "كمية"))
+
+            results.append({
+                "operation_id": str(op.id),
+                "operation_name": op.name,
+                "coverage_type": op.coverage_type,
+                "allow_over_coverage": op.allow_over_coverage,
+                "repeatable": op.repeatable,
+                "total_executed": float(total_executed),
+                "execution_count": execution_count,
+                "last_execution": last_execution,
+                "first_execution": first_execution,
+                "target": target,
+                "coverage_pct": round(coverage_pct, 2) if coverage_pct is not None else None,
+                "unit_label": unit_label,
+                "trend": trend
+            })
+        return results
+
+
+def irrigation_analytics_by_season(company, season_id, location_id=None, time_frame="season"):
+    """
+    Returns aggregated irrigation metrics by season.
+    """
+    from apps.reports.models import Season, IrrigationReport, IrrigationDetail
+    from apps.farm.models import LocationNode
+    from django.db.models import Sum, Count, Max
+    from django.db.models.functions import Coalesce
+    from datetime import timedelta
+    from django.utils import timezone
+
+    try:
+        season = Season.objects.get(id=season_id, company=company)
+    except Season.DoesNotExist:
+        return []
+
+    start_date = season.start_date
+    end_date = season.end_date
+    today = timezone.localdate()
+
+    if time_frame == "today":
+        start_date = max(start_date, today)
+        end_date = min(end_date, today)
+    elif time_frame == "week":
+        start_date = max(start_date, today - timedelta(days=7))
+        end_date = min(end_date, today)
+    elif time_frame == "month":
+        start_date = max(start_date, today - timedelta(days=30))
+        end_date = min(end_date, today)
+
+    reports = IrrigationReport.objects.filter(
+        company=company,
+        date__range=(start_date, end_date)
+    )
+
+    if location_id:
+        try:
+            current_node = LocationNode.objects.get(id=location_id, company=company)
+        except LocationNode.DoesNotExist:
+            return []
+    else:
+        current_node = LocationNode.objects.filter(company=company, parent__isnull=True).first()
+
+    if not current_node:
+        return []
+
+    descendants = current_node.get_descendants(include_self=True)
+    details = IrrigationDetail.objects.filter(
+        report__in=reports,
+        phase__in=descendants
+    )
+
+    stages = descendants.filter(type=LocationNode.TYPE_STAGE, is_active=True)
+    if not stages.exists():
+        stages = [current_node]
+
+    results = []
+    for stage in stages:
+        stage_descendants = stage.get_descendants(include_self=True)
+        stage_details = details.filter(phase__in=stage_descendants)
+        
+        total_shifts = stage_details.aggregate(total=Sum("shifts_count"))["total"] or 0
+        total_hours = sum(float(d.shifts_count * d.hours_per_shift) for d in stage_details)
+        irrigation_days = stage_details.values("report__date").distinct().count()
+        fertigation_days = stage_details.filter(report__is_fertilized=True).values("report__date").distinct().count()
+        last_date = stage_details.aggregate(last=Max("report__date"))["last"]
+
+        results.append({
+            "stage_id": str(stage.id),
+            "stage_name": stage.name,
+            "total_shifts": total_shifts,
+            "total_hours": total_hours,
+            "irrigation_days": irrigation_days,
+            "fertigation_days": fertigation_days,
+            "last_irrigation_date": last_date
+        })
+
+    return results
+
+
+def harvest_analytics_by_season(company, season_id, location_id=None, time_frame="season"):
+    """
+    Returns aggregated harvest metrics by season.
+    """
+    from apps.reports.models import Season
+    from apps.production.models import HarvestReport
+    from apps.farm.models import LocationNode, EnclosureProfile
+    from django.db.models import Sum, Max
+    from datetime import timedelta
+    from django.utils import timezone
+
+    try:
+        season = Season.objects.get(id=season_id, company=company)
+    except Season.DoesNotExist:
+        return []
+
+    start_date = season.start_date
+    end_date = season.end_date
+    today = timezone.localdate()
+
+    if time_frame == "today":
+        start_date = max(start_date, today)
+        end_date = min(end_date, today)
+    elif time_frame == "week":
+        start_date = max(start_date, today - timedelta(days=7))
+        end_date = min(end_date, today)
+    elif time_frame == "month":
+        start_date = max(start_date, today - timedelta(days=30))
+        end_date = min(end_date, today)
+
+    harvests = HarvestReport.objects.filter(
+        company=company,
+        season=season,
+        harvest_date__range=(start_date, end_date),
+        status__in=["SUBMITTED", "APPROVED", "FINALIZED"]
+    )
+
+    if location_id:
+        try:
+            current_node = LocationNode.objects.get(id=location_id, company=company)
+        except LocationNode.DoesNotExist:
+            return []
+    else:
+        current_node = LocationNode.objects.filter(company=company, parent__isnull=True).first()
+
+    if not current_node:
+        return []
+
+    descendants = current_node.get_descendants(include_self=True)
+    harvests = harvests.filter(location__in=descendants)
+
+    children = current_node.get_children().filter(is_active=True)
+    if not children.exists():
+        children = [current_node]
+
+    results = []
+    for child in children:
+        child_descendants = child.get_descendants(include_self=True)
+        child_harvests = harvests.filter(location__in=child_descendants)
+        
+        total_harvested = child_harvests.aggregate(total=Sum("quantity"))["total"] or 0.0
+        last_harvest_date = child_harvests.aggregate(last=Max("harvest_date"))["last"]
+        
+        enc_profiles = EnclosureProfile.objects.filter(location_node__in=child_descendants)
+        expected_yield = float(enc_profiles.aggregate(total=Sum("expected_yield"))["total"] or 0.0)
+        
+        attainment_pct = None
+        if expected_yield > 0:
+            attainment_pct = (float(total_harvested) / expected_yield) * 100.0
+
+        results.append({
+            "location_id": str(child.id),
+            "location_name": child.name,
+            "location_type": child.type,
+            "total_harvested": float(total_harvested),
+            "expected_yield": expected_yield,
+            "attainment_pct": round(attainment_pct, 2) if attainment_pct is not None else None,
+            "last_harvest_date": last_harvest_date
+        })
+
+    return results

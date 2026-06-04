@@ -29,6 +29,18 @@ def sync_operation_log(report_instance):
     Phase 2 Dual-Write Bridge: Explicitly sync DailyTaskReport fields to a 1:1 OperationLog.
     This ensures all existing APIs continue to function normally while populating the new schema.
     """
+    from apps.reports.models import Season
+    report_date = report_instance.report_date
+    season = None
+    if report_date:
+        season = Season.objects.filter(
+            company_id=report_instance.company_id,
+            start_date__lte=report_date,
+            end_date__gte=report_date
+        ).first()
+    if not season:
+        season = Season.objects.filter(company_id=report_instance.company_id, status="OPEN").first()
+
     op_log, created = OperationLog.objects.update_or_create(
         report=report_instance,
         defaults={
@@ -44,6 +56,7 @@ def sync_operation_log(report_instance):
             "work_hours": report_instance.work_hours,
             "overtime_hours": report_instance.overtime_hours,
             "overtime_productivity": report_instance.overtime_productivity,
+            "season": season,
         }
     )
     return op_log

@@ -293,8 +293,11 @@ urlpatterns = [
     path("reports/units/", reports_views.UnitListView.as_view(), name="reports_units"),
     path("reports/units/<str:pk>/", reports_views.UnitDetailView.as_view(), name="reports_units_detail"),
     path("reports/application-methods/", reports_views.ApplicationMethodListView.as_view(), name="reports_application_methods"),
-    path("reports/application-methods/<str:pk>/", reports_views.ApplicationMethodDetailView.as_view(), name="reports_application_methods_detail"),
     path("reports/seasons/", reports_views.SeasonListView.as_view(), name="reports_seasons"),
+    path("reports/intelligence/coverage/", reports_views.OperationCoverageView.as_view(), name="reports_intelligence_coverage"),
+    path("reports/intelligence/irrigation/", reports_views.IrrigationIntelligenceView.as_view(), name="reports_intelligence_irrigation"),
+    path("reports/intelligence/harvest/", reports_views.HarvestIntelligenceView.as_view(), name="reports_intelligence_harvest"),
+    path("farm/location-nodes/<str:pk>/tree-count/", reports_views.update_node_tree_count, name="farm_node_tree_count_update"),
     path(
         "reports/contractors/",
         reports_views.ContractorListView.as_view(),

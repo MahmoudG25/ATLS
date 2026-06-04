@@ -715,6 +715,20 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
         clean_data["company_id"] = report.company_id
         clean_data["sequence"] = sequence
 
+        # Resolve Season
+        from apps.reports.models import Season
+        report_date = report.report_date
+        season = None
+        if report_date:
+            season = Season.objects.filter(
+                company_id=report.company_id,
+                start_date__lte=report_date,
+                end_date__gte=report_date
+            ).first()
+        if not season:
+            season = Season.objects.filter(company_id=report.company_id, status="OPEN").first()
+        clean_data["season"] = season
+
         # Set legacy contractor field
         if contractors_data:
             clean_data["contractor_id"] = contractors_data[0]
@@ -809,6 +823,22 @@ class DailyTaskReportSerializer(serializers.ModelSerializer):
             else:
                 setattr(log, key, value)
         log.sequence = sequence
+
+        # Resolve Season
+        from apps.reports.models import Season
+        report = log.report
+        report_date = report.report_date if report else None
+        season = None
+        if report_date and report:
+            season = Season.objects.filter(
+                company_id=report.company_id,
+                start_date__lte=report_date,
+                end_date__gte=report_date
+            ).first()
+        if not season and report:
+            season = Season.objects.filter(company_id=report.company_id, status="OPEN").first()
+        log.season = season
+
         log.save()
 
 
