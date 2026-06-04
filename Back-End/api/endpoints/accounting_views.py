@@ -22,11 +22,12 @@ from services.accounting_service import (
     create_invoice,
     update_invoice_status
 )
-from permissions.role_permissions import HasModuleAccess
+from permissions.role_permissions import HasModuleAccess, required_module
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def finance_summary_view(request):
     company = request.user.company
     return Response(get_financial_summary(company))
@@ -34,6 +35,7 @@ def finance_summary_view(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def expenses_view(request):
     company = request.user.company
     if request.method == "GET":
@@ -47,6 +49,7 @@ def expenses_view(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def revenues_view(request):
     company = request.user.company
     if request.method == "GET":
@@ -60,6 +63,7 @@ def revenues_view(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def salaries_view(request):
     company = request.user.company
     if request.method == "GET":
@@ -73,6 +77,7 @@ def salaries_view(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def invoices_view(request):
     company = request.user.company
     if request.method == "GET":
@@ -96,6 +101,7 @@ def invoices_view(request):
 
 @api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated, HasModuleAccess])
+@required_module("accounting")
 def invoice_detail_view(request, id):
     company = request.user.company
     if request.method == "GET":

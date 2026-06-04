@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
+from django.contrib.contenttypes.models import ContentType
 from apps.reports.models import (
     Operation,
     Variety,
@@ -21,6 +22,7 @@ from apps.reports.models import (
     IrrigationDetail,
     AppliedFertilizer,
     PestControlReport,
+    AppliedPesticide,
 )
 from apps.farm.models import LocationNode, FarmSettings
 
@@ -918,12 +920,12 @@ class IrrigationReportSerializer(serializers.ModelSerializer):
         for idx, enclosure in enumerate(enclosures):
             if idx == 0:
                 allocated_company = report.company_workers
-                allocated_a = report.contractor_workers
-                allocated_b = 0
+                allocated_contractor_workers = report.contractor_workers
+                allocated_contractor = report.contractor
             else:
                 allocated_company = 0
-                allocated_a = 0
-                allocated_b = 0
+                allocated_contractor_workers = 0
+                allocated_contractor = None
 
             OperationalLocationAllocation.objects.create(
                 company=report.company,
@@ -931,8 +933,8 @@ class IrrigationReportSerializer(serializers.ModelSerializer):
                 object_id=report.id,
                 enclosure=enclosure,
                 allocated_workers_company=allocated_company,
-                allocated_workers_contractor_a=allocated_a,
-                allocated_workers_contractor_b=allocated_b,
+                contractor=allocated_contractor,
+                contractor_workers=allocated_contractor_workers,
                 productivity_value=Decimal("0.0"),
                 notes=""
             )
@@ -1021,9 +1023,19 @@ class IrrigationReportSerializer(serializers.ModelSerializer):
         return instance
 
 
+class AppliedPesticideSerializer(serializers.ModelSerializer):
+    pesticide_item_name = serializers.CharField(source="pesticide_item.name", read_only=True)
+
+    class Meta:
+        model = AppliedPesticide
+        fields = "__all__"
+        read_only_fields = ["company", "report"]
+
+
 class PestControlReportSerializer(serializers.ModelSerializer):
     engineer_name = serializers.CharField(source="engineer.name", read_only=True)
     pesticide_item_name = serializers.CharField(source="pesticide_item.name", read_only=True)
+    applied_pesticides = AppliedPesticideSerializer(many=True, required=False)
 
     class Meta:
         model = PestControlReport
@@ -1044,24 +1056,74 @@ class PestControlReportSerializer(serializers.ModelSerializer):
         representation["allocations"] = OperationalLocationAllocationSerializer(allocs, many=True).data
         return representation
 
+    @transaction.atomic
     def create(self, validated_data):
+        applied_pesticides_data = validated_data.pop("applied_pesticides", [])
         request = self.context.get("request")
         company = getattr(request, "company", None) if request else None
         if not company:
-          from apps.users.models import Company
-          company = Company.objects.first()
+            from apps.users.models import Company
+            company = Company.objects.first()
         validated_data["company"] = company
-        return super().create(validated_data)
+
+        # Dual-write first pesticide to legacy fields
+        if applied_pesticides_data:
+            first = applied_pesticides_data[0]
+            validated_data["pesticide_item"] = first.get("pesticide_item")
+            validated_data["custom_pesticide_name"] = first.get("custom_pesticide_name")
+            validated_data["quantity"] = first.get("quantity")
+
+        report = PestControlReport.objects.create(**validated_data)
+
+        for pest_data in applied_pesticides_data:
+            pest_data["company"] = company
+            pest_data["report"] = report
+            AppliedPesticide.objects.create(**pest_data)
+
+        return report
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        applied_pesticides_data = validated_data.pop("applied_pesticides", None)
+        company = instance.company
+
+        if applied_pesticides_data:
+            first = applied_pesticides_data[0]
+            validated_data["pesticide_item"] = first.get("pesticide_item")
+            validated_data["custom_pesticide_name"] = first.get("custom_pesticide_name")
+            validated_data["quantity"] = first.get("quantity")
+        elif applied_pesticides_data == []:
+            validated_data["pesticide_item"] = None
+            validated_data["custom_pesticide_name"] = None
+            validated_data["quantity"] = None
+
+        instance = super().update(instance, validated_data)
+
+        if applied_pesticides_data is not None:
+            instance.applied_pesticides.all().delete()
+            for pest_data in applied_pesticides_data:
+                pest_data["company"] = company
+                pest_data["report"] = instance
+                AppliedPesticide.objects.create(**pest_data)
+
+        return instance
 
 
 class OperationalLocationAllocationSerializer(serializers.ModelSerializer):
     enclosure_name = serializers.CharField(source="enclosure.name", read_only=True)
+    contractor_name = serializers.SerializerMethodField()
     content_type_model = serializers.CharField(write_only=True, required=False)
+    content_type = serializers.PrimaryKeyRelatedField(
+        queryset=ContentType.objects.all(), required=False
+    )
 
     class Meta:
         model = OperationalLocationAllocation
         fields = "__all__"
         read_only_fields = ["company", "created_at", "updated_at"]
+
+    def get_contractor_name(self, obj):
+        return obj.contractor.name if obj.contractor else None
 
     def validate(self, attrs):
         content_type_model = attrs.pop("content_type_model", None)
@@ -1099,6 +1161,9 @@ class CustomFieldValueSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source="field.name", read_only=True)
     field_type = serializers.CharField(source="field.field_type", read_only=True)
     content_type_model = serializers.CharField(write_only=True, required=False)
+    content_type = serializers.PrimaryKeyRelatedField(
+        queryset=ContentType.objects.all(), required=False
+    )
 
     class Meta:
         model = CustomFieldValue

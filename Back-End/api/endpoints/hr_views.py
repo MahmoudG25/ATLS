@@ -3,6 +3,7 @@ from rest_framework import generics, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from permissions.role_permissions import HasModuleAccess
 from django.db.models import Sum, Count, Q
 from django.shortcuts import get_object_or_404
 from core.tenant import TenantAwareModel
@@ -507,7 +508,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
 # ─── API VIEWS ────────────────────────────────────────────────────────────────
 
 class WorkerListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = WorkerSerializer
 
     def get_queryset(self):
@@ -537,7 +539,8 @@ class WorkerListCreateView(generics.ListCreateAPIView):
 
 
 class WorkerDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = WorkerSerializer
 
     def get_queryset(self):
@@ -545,7 +548,8 @@ class WorkerDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class PayrollPeriodListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PayrollPeriodSerializer
 
     def get_queryset(self):
@@ -553,7 +557,8 @@ class PayrollPeriodListCreateView(generics.ListCreateAPIView):
 
 
 class PayrollTransactionListView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PayrollTransactionSerializer
 
     def get_queryset(self):
@@ -572,7 +577,8 @@ class PayrollTransactionListView(generics.ListCreateAPIView):
 
 
 class PayrollTransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PayrollTransactionSerializer
 
     def get_queryset(self):
@@ -580,7 +586,8 @@ class PayrollTransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BulkApproveTransactionsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def post(self, request):
         company = _get_company(request)
@@ -641,7 +648,8 @@ def _backfill_pending_reviews(company):
 
 
 class PendingWorkerReviewListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PendingWorkerReviewSerializer
 
     def get_queryset(self):
@@ -661,7 +669,8 @@ class PendingWorkerReviewListView(generics.ListAPIView):
 
 
 class ResolvePendingWorkerReviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def post(self, request, pk):
         company = _get_company(request)
@@ -725,7 +734,8 @@ class ResolvePendingWorkerReviewView(APIView):
 
 
 class ContractorLedgerListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = ContractorLedgerSerializer
 
     def get_queryset(self):
@@ -743,7 +753,8 @@ class ContractorLedgerCreateView(APIView):
     """
     إنشاء حركة مالية يدوية (دفعة مسددة أو خصم) لمقاول معين.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def post(self, request):
         company = _get_company(request)
@@ -795,7 +806,8 @@ class ContractorLedgerCreateView(APIView):
 
 
 class ContractorDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def get(self, request, contractor_id):
         company = _get_company(request)
@@ -897,7 +909,8 @@ class ContractorDashboardView(APIView):
 
 
 class EmployeeListView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = EmployeeSerializer
 
     def get_queryset(self):
@@ -906,7 +919,8 @@ class EmployeeListView(generics.ListCreateAPIView):
 
 
 class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = EmployeeSerializer
 
     def get_queryset(self):
@@ -928,7 +942,8 @@ class EmployeeMeView(APIView):
 
 
 class EmployeeDocumentListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = EmployeeDocumentSerializer
 
     def get_queryset(self):
@@ -943,7 +958,8 @@ class EmployeeDocumentListCreateView(generics.ListCreateAPIView):
 
 
 class EmployeeDocumentVerifyView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def post(self, request, pk):
         company = _get_company(request)
@@ -961,7 +977,8 @@ class EmployeeDocumentVerifyView(APIView):
 
 
 class PayrollComponentListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PayrollComponentSerializer
 
     def get_queryset(self):
@@ -976,7 +993,8 @@ class PayrollComponentListCreateView(generics.ListCreateAPIView):
 
 
 class PayrollComponentDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
     serializer_class = PayrollComponentSerializer
 
     def get_queryset(self):
@@ -985,7 +1003,8 @@ class PayrollComponentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class AvailableUsersListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def get(self, request):
         from django.contrib.auth import get_user_model
@@ -1079,7 +1098,8 @@ class LeaveRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class LeaveRequestReviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "hr"
 
     def post(self, request, pk):
         user = request.user

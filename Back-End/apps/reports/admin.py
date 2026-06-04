@@ -20,6 +20,7 @@ from .models import (
     IrrigationDetail,
     AppliedFertilizer,
     PestControlReport,
+    AppliedPesticide,
 )
 
 
@@ -115,11 +116,22 @@ class AppliedFertilizerAdmin(admin.ModelAdmin):
     list_display = ("irrigation_detail", "fertilizer_item", "custom_material_name", "quantity", "unit")
 
 
+class AppliedPesticideInline(admin.TabularInline):
+    model = AppliedPesticide
+    extra = 1
+
+
+@admin.register(AppliedPesticide)
+class AppliedPesticideAdmin(admin.ModelAdmin):
+    list_display = ("report", "pesticide_item", "custom_pesticide_name", "quantity", "rate_per_feddan")
+
+
 @admin.register(PestControlReport)
 class PestControlReportAdmin(admin.ModelAdmin):
     list_display = ("date", "engineer", "pesticide_item", "custom_pesticide_name", "quantity")
     list_filter = ("date", "engineer")
     date_hierarchy = "date"
+    inlines = [AppliedPesticideInline]
 
 
 

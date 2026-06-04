@@ -21,6 +21,7 @@ from api.endpoints import activity_views
 from api.endpoints import admin_data_views
 
 urlpatterns = [
+    path("admin/config/", admin_data_views.FarmSystemConfigView.as_view(), name="farm-config"),
     path("admin/data-management", admin_data_views.admin_data_management_view, name="admin_data_management"),
     path("auth/activity-logs", activity_views.activity_log_view, name="activity_logs"),
     path("auth/register", auth_views.register_view, name="register"),
@@ -36,6 +37,7 @@ urlpatterns = [
     # Admin User Managment
     path("users", auth_views.users_collection_view, name="users_collection"),
     path("auth/permissions", auth_views.get_app_permissions_view, name="app_permissions"),
+    path("auth/debug-permissions", auth_views.debug_permissions_view, name="debug_permissions"),
     path("users/<uuid:id>/permissions", auth_views.user_permissions_view, name="user_permissions"),
     path("users/engineers", auth_views.engineers_list_view, name="users_engineers"),
     path("users/<uuid:id>/approve", auth_views.approve_user_view, name="approve_user"),

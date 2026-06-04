@@ -173,25 +173,21 @@ def sync_allocation_costs(allocation):
     else:
         company_rate = Decimal("15.00") # معدل افتراضي
         
-    # 2. تحديد مقاولي العمالة ومعدلاتهم (مقاول أ ومقاول ب)
-    active_contractors = list(Contractor.objects.filter(company=company, is_active=True).order_by('name'))
-    contractor_a = active_contractors[0] if len(active_contractors) > 0 else None
-    contractor_b = active_contractors[1] if len(active_contractors) > 1 else None
-    
-    rate_a = contractor_a.rate_per_hour if contractor_a else Decimal("15.00")
-    rate_b = contractor_b.rate_per_hour if contractor_b else Decimal("12.50")
+    # 2. تحديد المقاول ومعدله
+    contractor = allocation.contractor
+    parent_report = allocation.content_object
+    if not contractor and parent_report and hasattr(parent_report, 'contractor'):
+        contractor = getattr(parent_report, 'contractor', None)
+        
+    rate = contractor.rate_per_hour if contractor else Decimal("15.00")
+    contractor_workers = allocation.contractor_workers
+    if not contractor_workers and parent_report and hasattr(parent_report, 'contractor_workers'):
+        contractor_workers = getattr(parent_report, 'contractor_workers', 0)
 
     # 3. محاولة العثور على OperationLog المقابل لتسجيل تفاصيل العمالة تحته
     # يمكن أن يكون التقرير المرتبط هو DailyTaskReport أو IrrigationReport أو PestControlReport
-    parent_report = allocation.content_object
     if not parent_report:
         return
-        
-    if parent_report.__class__.__name__ == 'IrrigationReport':
-        report_contractor = getattr(parent_report, 'contractor', None)
-        if report_contractor:
-            contractor_a = report_contractor
-            rate_a = contractor_a.rate_per_hour
 
     source_type = "IRRIGATION" if parent_report.__class__.__name__ == 'IrrigationReport' else "PEST_CONTROL"
     
@@ -237,14 +233,14 @@ def sync_allocation_costs(allocation):
             source_type=source_type,
             source_id=str(parent_report.id),
             company_workers=allocation.allocated_workers_company,
-            contractor_workers=allocation.allocated_workers_contractor_a + allocation.allocated_workers_contractor_b,
+            contractor_workers=contractor_workers,
             actual_productivity=allocation.productivity_value,
             work_hours=Decimal("8.0")
         )
     else:
         # تحديث أعداد العمالة والإنتاجية في الـ Log الحالي
         op_log.company_workers = allocation.allocated_workers_company
-        op_log.contractor_workers = allocation.allocated_workers_contractor_a + allocation.allocated_workers_contractor_b
+        op_log.contractor_workers = contractor_workers
         op_log.actual_productivity = allocation.productivity_value
         op_log.save()
 
@@ -263,29 +259,17 @@ def sync_allocation_costs(allocation):
             note="توزيع عمالة شركة تلقائي"
         )
         
-    # حقن عمال مقاول أ
-    for i in range(allocation.allocated_workers_contractor_a):
-        LaborEntry.objects.create(
-            company=company,
-            operation_log=op_log,
-            worker_name=f"عامل مقاول أ تلقائي {i+1}",
-            worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR,
-            contractor=contractor_a,
-            worker_rate=rate_a,
-            hours=Decimal("8.0"),
-            note="توزيع عمال مقاول أ تلقائي"
-        )
-
-    # حقن عمال مقاول ب
-    for i in range(allocation.allocated_workers_contractor_b):
-        LaborEntry.objects.create(
-            company=company,
-            operation_log=op_log,
-            worker_name=f"عامل مقاول ب تلقائي {i+1}",
-            worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR,
-            contractor=contractor_b,
-            worker_rate=rate_b,
-            hours=Decimal("8.0"),
-            note="توزيع عمال مقاول ب تلقائي"
-        )
+    # حقن عمال المقاول
+    if contractor_workers:
+        for i in range(contractor_workers):
+            LaborEntry.objects.create(
+                company=company,
+                operation_log=op_log,
+                worker_name=f"عامل مقاول تلقائي {i+1}",
+                worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR,
+                contractor=contractor,
+                worker_rate=rate,
+                hours=Decimal("8.0"),
+                note="توزيع عمال مقاول تلقائي"
+            )
 

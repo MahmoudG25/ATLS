@@ -145,8 +145,8 @@ def test_location_allocation_cost_sync_on_irrigation(setup_data):
         object_id=irrigation_report.id,
         enclosure=enclosure,
         allocated_workers_company=2,
-        allocated_workers_contractor_a=3,
-        allocated_workers_contractor_b=1,
+        contractor=setup_data["contractor_a"],
+        contractor_workers=4,
         productivity_value=Decimal("85.5")
     )
     
@@ -164,7 +164,7 @@ def test_location_allocation_cost_sync_on_irrigation(setup_data):
     
     # 4. Verify LaborEntry rows were created with calculated wages
     labor_entries = LaborEntry.objects.filter(operation_log=op_log)
-    assert labor_entries.count() == 6 # 2 company + 3 contractor A + 1 contractor B
+    assert labor_entries.count() == 6 # 2 company + 4 contractor
     
     company_entries = labor_entries.filter(worker_type=LaborEntry.WORKER_TYPE_COMPANY)
     assert company_entries.count() == 2
@@ -172,15 +172,10 @@ def test_location_allocation_cost_sync_on_irrigation(setup_data):
         assert entry.worker_rate == Decimal("22.50") # average of 25.00 and 20.00
         assert entry.hours == Decimal("8.0")
         
-    contractor_a_entries = labor_entries.filter(worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR, contractor=setup_data["contractor_a"])
-    assert contractor_a_entries.count() == 3
-    for entry in contractor_a_entries:
+    contractor_entries = labor_entries.filter(worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR, contractor=setup_data["contractor_a"])
+    assert contractor_entries.count() == 4
+    for entry in contractor_entries:
         assert entry.worker_rate == Decimal("20.00")
-        
-    contractor_b_entries = labor_entries.filter(worker_type=LaborEntry.WORKER_TYPE_CONTRACTOR, contractor=setup_data["contractor_b"])
-    assert contractor_b_entries.count() == 1
-    for entry in contractor_b_entries:
-        assert entry.worker_rate == Decimal("15.50")
 
 @pytest.mark.django_db
 def test_unregistered_material_alerts(setup_data):
@@ -250,6 +245,7 @@ def test_irrigation_report_post_via_api(setup_data):
         "total_shifts": 1,
         "total_hours": 3.0,
         "company_workers": 4,
+        "contractor": setup_data["contractor_a"].id,
         "contractor_workers": 3,
         "details": [
             {
@@ -279,6 +275,7 @@ def test_irrigation_report_post_via_api(setup_data):
     assert report.company == setup_data["company"]
     assert report.company_workers == 4
     assert report.contractor_workers == 3
+    assert report.contractor == setup_data["contractor_a"]
     
     detail = report.details.first()
     assert detail is not None
@@ -304,8 +301,8 @@ def test_irrigation_report_post_via_api(setup_data):
     
     assert alloc is not None
     assert alloc.allocated_workers_company == 4
-    assert alloc.allocated_workers_contractor_a == 3
-    assert alloc.allocated_workers_contractor_b == 0
+    assert alloc.contractor_workers == 3
+    assert alloc.contractor == setup_data["contractor_a"]
 
     # Verify that OperationLog was created with the correct worker counts
     op_log = OperationLog.objects.filter(
@@ -424,3 +421,181 @@ def test_pending_worker_review_signals(setup_data):
     data = serializer.data
     assert data["labor_entry_worker_type"] == "COMPANY"
     assert data["worker_name_fallback"] == "عامل قديم غير مسجل"
+
+
+@pytest.mark.django_db
+def test_user_role_permissions_and_dynamic_overrides(setup_data):
+    from apps.users.models import AppPermission, User
+    from django.urls import reverse
+    
+    company = setup_data["company"]
+    engineer_user = setup_data["user"] # ENGINEER role
+    
+    # 1. Create a client and authenticate as the engineer
+    client = APIClient()
+    client.force_authenticate(user=engineer_user)
+    
+    # 2. Try to access HR API (e.g. workers list) -> should be denied (403)
+    hr_url = reverse("hr_workers_list")
+    response = client.get(hr_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    # 3. Try to access Warehouse API (e.g. warehouses list) -> should be denied (403)
+    warehouse_url = reverse("warehouse-list")
+    response = client.get(warehouse_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    # 4. Grant dynamic custom override permission for HR to the engineer
+    hr_perm, _ = AppPermission.objects.get_or_create(
+        code="hr",
+        defaults={"name": "Can access HR"}
+    )
+    engineer_user.app_permissions.add(hr_perm)
+    
+    # 5. Retry HR API access -> should succeed now (200)
+    response = client.get(hr_url)
+    assert response.status_code == status.HTTP_200_OK
+    
+    # 6. Retry Warehouse API access -> should still be denied (403)
+    response = client.get(warehouse_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    # 7. Grant sub-permission override "warehouse.manage" to the engineer
+    warehouse_perm, _ = AppPermission.objects.get_or_create(
+        code="warehouse.manage",
+        defaults={"name": "Can manage Warehouse"}
+    )
+    engineer_user.app_permissions.add(warehouse_perm)
+    
+    # 8. Retry Warehouse API access -> should succeed now (200) due to sub-permission starts-with match
+    response = client.get(warehouse_url)
+    assert response.status_code == status.HTTP_200_OK
+
+    # 9. Create an HR role user
+    hr_user = User.objects.create(
+        email="test_hr@example.com",
+        name="HR Test",
+        company=company,
+        role="HR",
+        is_active=True,
+        is_approved=True
+    )
+    hr_user.set_password("password")
+    hr_user.save()
+    
+    client_hr = APIClient()
+    client_hr.force_authenticate(user=hr_user)
+    
+    # 10. HR user accesses HR API -> should succeed (200) by default role mapping
+    response = client_hr.get(hr_url)
+    assert response.status_code == status.HTTP_200_OK
+    
+    # 11. HR user accesses Warehouse API -> should be denied (403)
+    response = client_hr.get(warehouse_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    # 12. HR user accesses Production API -> should be denied (403)
+    production_url = reverse("harvest-report-list")
+    response = client_hr.get(production_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    # 13. Grant custom override permission "production.manage" to HR user
+    production_perm, _ = AppPermission.objects.get_or_create(
+        code="production.manage",
+        defaults={"name": "Can manage Production"}
+    )
+    hr_user.app_permissions.add(production_perm)
+
+    # 14. HR user accesses Production API -> should succeed (200) now
+    response = client_hr.get(production_url)
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_auth_system_hardening_and_regression_checks(setup_data):
+    from apps.users.models import AppPermission, User
+    from django.urls import reverse
+    
+    company = setup_data["company"]
+    engineer_user = setup_data["user"]
+    
+    # 1. Unauthenticated / Guest User -> should get 401/403
+    guest_client = APIClient()
+    response = guest_client.get(reverse("hr_workers_list"))
+    assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+    
+    # 2. Authenticated user has X-User-Permissions-Hash header in response
+    auth_client = APIClient()
+    auth_client.force_authenticate(user=engineer_user)
+    response = auth_client.get(reverse("farms_list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert "X-User-Permissions-Hash" in response
+    
+    # Verify it is a valid SHA256 hash (64 characters long)
+    p_hash = response["X-User-Permissions-Hash"]
+    assert len(p_hash) == 64
+    
+    # 3. Action-level custom override checks
+    wh_user = User.objects.create(
+        email="wh_test_action@example.com",
+        name="WH Action Test",
+        company=company,
+        role="WAREHOUSE",
+        is_active=True,
+        is_approved=True
+    )
+    wh_user.set_password("password")
+    wh_user.save()
+    
+    wh_client = APIClient()
+    wh_client.force_authenticate(user=wh_user)
+    
+    # WH user accesses HR workers list -> 403 Forbidden
+    response = wh_client.get(reverse("hr_workers_list"))
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    # Grant action-level permission hr.read to WAREHOUSE user
+    hr_read_perm, _ = AppPermission.objects.get_or_create(
+        code="hr.read",
+        defaults={"name": "Read HR"}
+    )
+    wh_user.app_permissions.add(hr_read_perm)
+    
+    # WH user accesses HR workers list -> succeeds (200) due to sub-permission match (hr.read starts with hr.)
+    response = wh_client.get(reverse("hr_workers_list"))
+    assert response.status_code == status.HTTP_200_OK
+    
+    # 4. Super Admin bypasses all checks
+    super_user = User.objects.create(
+        email="super_test_bypass@example.com",
+        name="Super Bypass Test",
+        company=company,
+        role="SUPER_ADMIN",
+        is_active=True,
+        is_approved=True
+    )
+    super_user.set_password("password")
+    super_user.save()
+    
+    super_client = APIClient()
+    super_client.force_authenticate(user=super_user)
+    
+    # Access warehouse list -> succeeds
+    response = super_client.get(reverse("warehouse-list"))
+    assert response.status_code == status.HTTP_200_OK
+    
+    # 5. Malformed permissions check: check that empty codes don't crash and default deny
+    malformed_perm, _ = AppPermission.objects.get_or_create(
+        code="",
+        defaults={"name": "Malformed Empty"}
+    )
+    wh_user.app_permissions.add(malformed_perm)
+    
+    # Invalidate cache
+    from django.core.cache import cache
+    cache.delete(f"user_perms_hash_{wh_user.id}")
+    
+    # WH user accessing accounting -> denied (403)
+    response = wh_client.get(reverse("finance_summary"))
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+

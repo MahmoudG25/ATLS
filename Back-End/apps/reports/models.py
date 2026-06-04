@@ -567,8 +567,7 @@ class IrrigationReport(TenantAwareModel):
     total_shifts = models.IntegerField(default=0, verbose_name="إجمالي التحويلات")
     total_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0.0, verbose_name="إجمالي الساعات")
     company_workers = models.PositiveIntegerField(default=0, verbose_name="عمال الشركة")
-    contractor_workers_a = models.PositiveIntegerField(default=0, verbose_name="عمال مقاول أ")
-    contractor_workers_b = models.PositiveIntegerField(default=0, verbose_name="عمال مقاول ب")
+
     contractor = models.ForeignKey(
         "reports.Contractor",
         on_delete=models.SET_NULL,
@@ -824,8 +823,14 @@ class OperationalLocationAllocation(TenantAwareModel):
     
     # توزيع عمالة مخصص
     allocated_workers_company = models.IntegerField(default=0, verbose_name="عمال شركة")
-    allocated_workers_contractor_a = models.IntegerField(default=0, verbose_name="عمال مقاول أ")
-    allocated_workers_contractor_b = models.IntegerField(default=0, verbose_name="عمال مقاول ب")
+    contractor = models.ForeignKey(
+        'reports.Contractor',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="المقاول"
+    )
+    contractor_workers = models.IntegerField(default=0, verbose_name="عمال المقاول")
     
     # الإنتاجية والملاحظات
     productivity_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, verbose_name="الإنتاجية للموقع")
@@ -891,11 +896,11 @@ class AppliedFertilizer(TenantAwareModel):
 
 class PestControlReport(TenantAwareModel):
     """تقرير وقاية النبات والمكافحة"""
-    date = models.DateField(verbose_name="التاريخ")
+    date = models.DateTimeField(verbose_name="التاريخ")
     engineer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="المهندس المسؤول")
     pesticide_item = models.ForeignKey('warehouse.Item', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المبيد")
     custom_pesticide_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="اسم المبيد الخارجي")
-    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="الكمية المستخدمة")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="الكمية المستخدمة")
     notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
     attachments = models.JSONField(default=list, blank=True, verbose_name="المرفقات")
 
@@ -915,6 +920,38 @@ class PestControlReport(TenantAwareModel):
                     source_report_type='pest_control',
                     source_report_id=self.id,
                     requested_by=self.engineer,
+                    suggested_name=self.custom_pesticide_name
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating material alert: {e}", exc_info=True)
+
+
+class AppliedPesticide(TenantAwareModel):
+    """المبيدات المستخدمة في تقرير المكافحة"""
+    report = models.ForeignKey(PestControlReport, on_delete=models.CASCADE, related_name='applied_pesticides')
+    pesticide_item = models.ForeignKey('warehouse.Item', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المبيد")
+    custom_pesticide_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="اسم المبيد الخارجي")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="الكمية المستخدمة")
+    rate_per_feddan = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="معدل الاستخدام للفدان")
+
+    class Meta:
+        db_table = 'applied_pesticides'
+        verbose_name = "المبيد المستخدم"
+        verbose_name_plural = "المبيدات المستخدمة"
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new and self.custom_pesticide_name:
+            try:
+                from apps.warehouse.models import MaterialVerificationAlert
+                requested_by = self.report.engineer if self.report else None
+                MaterialVerificationAlert.objects.create(
+                    company=self.company,
+                    source_report_type='pest_control',
+                    source_report_id=self.report_id,
+                    requested_by=requested_by,
                     suggested_name=self.custom_pesticide_name
                 )
             except Exception as e:

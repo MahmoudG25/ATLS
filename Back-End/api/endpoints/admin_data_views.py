@@ -414,3 +414,33 @@ def admin_data_management_view(request):
                 })
         except Exception as e:
             return Response({"error": f"حدث خطأ أثناء حقن البيانات: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from rest_framework import serializers, generics
+from apps.users.models import FarmSystemConfig
+
+class FarmSystemConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FarmSystemConfig
+        fields = '__all__'
+        read_only_fields = ['id', 'company']
+
+class FarmSystemConfigView(generics.RetrieveUpdateAPIView):
+    serializer_class = FarmSystemConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        company = self.request.user.company
+        if not company:
+            from apps.users.models import Company
+            company = Company.objects.first()
+        obj, created = FarmSystemConfig.objects.get_or_create(company=company)
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role not in ["SUPER_ADMIN", "OWNER"] and not request.user.is_superuser:
+            return Response(
+                {"detail": "غير مصرح لك بتعديل إعدادات النظام والهوية البصرية."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)

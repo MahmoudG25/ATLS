@@ -1,12 +1,11 @@
 import React, { lazy, Suspense } from 'react'
-
-import { CircularProgress } from '@mui/material'
 import { Route, Routes } from 'react-router-dom'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 import ProtectedRoute from './ProtectedRoute'
+import FeatureGuard from './FeatureGuard'
 
 // ─── Lazy Page Imports ───────────────────────────────────────────────────────
 const Landing = lazy(() => import('../pages/public/Landing'))
@@ -17,6 +16,7 @@ const FarmStructure = lazy(() => import('../pages/farm/FarmStructure'))
 const EnclosureProfile = lazy(() => import('../pages/farm/EnclosureProfile/EnclosureDashboard'))
 const InventoryLedger = lazy(() => import('../pages/warehouse/InventoryLedger'))
 const MaterialAlertFeed = lazy(() => import('../pages/warehouse/MaterialAlertFeed'))
+const WarehouseDetails = lazy(() => import('../pages/warehouse/WarehouseDetails'))
 const FleetManager = lazy(() => import('../pages/equipment/FleetManager'))
 const FinanceDashboard = lazy(() => import('../pages/accounting/FinanceDashboard'))
 const HarvestManagement = lazy(() => import('../pages/production/HarvestManagement'))
@@ -37,9 +37,19 @@ const PayrollApproval = lazy(() => import('../pages/hr/PayrollApproval'))
 const ContractorDashboard = lazy(() => import('../pages/hr/ContractorDashboard'))
 
 // ─── Page Loader ─────────────────────────────────────────────────────────────
+// Native Tailwind loader — no MUI dependency.
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50">
-    <CircularProgress sx={{ color: '#16a34a' }} />
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950">
+    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-600 to-emerald-700 flex items-center justify-center shadow-lg">
+      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '120ms' }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-bounce" style={{ animationDelay: '240ms' }} />
+    </div>
   </div>
 )
 
@@ -175,11 +185,13 @@ const AppRoutes = () => (
         path="/warehouse"
         element={
           <ProtectedRoute requireModule="warehouse">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <InventoryLedger />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <InventoryLedger />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -187,11 +199,27 @@ const AppRoutes = () => (
         path="/warehouse/alerts"
         element={
           <ProtectedRoute requireModule="warehouse">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <MaterialAlertFeed />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <MaterialAlertFeed />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/:id"
+        element={
+          <ProtectedRoute requireModule="warehouse">
+            <FeatureGuard featureKey="warehouse">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <WarehouseDetails />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -199,11 +227,13 @@ const AppRoutes = () => (
         path="/equipment"
         element={
           <ProtectedRoute requireModule="equipment">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <FleetManager />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="fleet">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <FleetManager />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -259,11 +289,13 @@ const AppRoutes = () => (
         path="/accounting"
         element={
           <ProtectedRoute requireModule="accounting">
-            <DashboardLayout>
-              <ErrorBoundary>
-                <FinanceDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+            <FeatureGuard featureKey="accounting">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <FinanceDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
@@ -271,36 +303,42 @@ const AppRoutes = () => (
       <Route
         path="/hr"
         element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <HRDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+          <ProtectedRoute requireModule="hr">
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <HRDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
       <Route
         path="/hr/payroll"
         element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <PayrollApproval />
-              </ErrorBoundary>
-            </DashboardLayout>
+          <ProtectedRoute requireModule="hr">
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <PayrollApproval />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />
       <Route
         path="/hr/contractors"
         element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <ErrorBoundary>
-                <ContractorDashboard />
-              </ErrorBoundary>
-            </DashboardLayout>
+          <ProtectedRoute requireModule="hr">
+            <FeatureGuard featureKey="hr">
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <ContractorDashboard />
+                </ErrorBoundary>
+              </DashboardLayout>
+            </FeatureGuard>
           </ProtectedRoute>
         }
       />

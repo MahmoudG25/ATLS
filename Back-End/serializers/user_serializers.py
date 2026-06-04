@@ -4,6 +4,7 @@ from apps.users.models import User, ActivityLog
 
 class UserSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
+    permissions_hash = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -20,6 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
             "permissions",
+            "permissions_hash",
         ]
         read_only_fields = [
             "id",
@@ -28,10 +30,24 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
             "permissions",
+            "permissions_hash",
         ]
 
     def get_permissions(self, obj):
         return list(obj.app_permissions.values_list("code", flat=True))
+
+    def get_permissions_hash(self, obj):
+        import hashlib
+        from django.core.cache import cache
+        
+        cache_key = f"user_perms_hash_{obj.id}"
+        p_hash = cache.get(cache_key)
+        if p_hash is None:
+            codes = sorted(list(obj.app_permissions.values_list("code", flat=True)))
+            content = f"{obj.role}:{','.join(codes)}"
+            p_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+            cache.set(cache_key, p_hash, 300)
+        return p_hash
 
 
 class RegisterSerializer(serializers.ModelSerializer):

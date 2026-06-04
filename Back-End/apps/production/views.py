@@ -1,17 +1,20 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, generics
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from permissions.role_permissions import HasModuleAccess
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import HarvestReport, SortingReport, HarvestAttachment
-from .serializers import HarvestReportSerializer, SortingReportSerializer
+from .serializers import HarvestReportSerializer, SortingReportSerializer, HarvestAttachmentSerializer
 from services.production_workflows import HarvestWorkflowService, SortingWorkflowService
-
-
 from .filters import HarvestFilter
+
 
 class HarvestReportViewSet(viewsets.ModelViewSet):
     serializer_class = HarvestReportSerializer
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "production"
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = HarvestFilter
     search_fields = ["location__name", "notes", "supervisor__name"]
@@ -131,6 +134,8 @@ class HarvestReportViewSet(viewsets.ModelViewSet):
 
 class SortingReportViewSet(viewsets.ModelViewSet):
     serializer_class = SortingReportSerializer
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "production"
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["harvest_report", "status"]
     ordering_fields = ["processing_date"]
@@ -162,13 +167,10 @@ class SortingReportViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
-from .serializers import HarvestAttachmentSerializer
-
 class HarvestAttachmentListCreate(generics.ListCreateAPIView):
     serializer_class = HarvestAttachmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "production"
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["file_type"]
 
@@ -191,7 +193,8 @@ class HarvestAttachmentListCreate(generics.ListCreateAPIView):
 
 class HarvestAttachmentDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HarvestAttachmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "production"
 
     def get_queryset(self):
         user = self.request.user

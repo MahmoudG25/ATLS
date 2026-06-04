@@ -15,14 +15,5 @@ class Migration(migrations.Migration):
             name='company_workers',
             field=models.PositiveIntegerField(default=0, verbose_name='عمال الشركة'),
         ),
-        migrations.AddField(
-            model_name='irrigationreport',
-            name='contractor_workers_a',
-            field=models.PositiveIntegerField(default=0, verbose_name='عمال مقاول أ'),
-        ),
-        migrations.AddField(
-            model_name='irrigationreport',
-            name='contractor_workers_b',
-            field=models.PositiveIntegerField(default=0, verbose_name='عمال مقاول ب'),
-        ),
+
     ]

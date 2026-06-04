@@ -30,8 +30,7 @@ class OperationalLocationAllocation(TenantModel):
     
     # Custom Allocated Resources (Option B)
     allocated_workers_company = models.IntegerField(default=0, verbose_name="عمال شركة")
-    allocated_workers_contractor_a = models.IntegerField(default=0, verbose_name="عمال مقاول أ")
-    allocated_workers_contractor_b = models.IntegerField(default=0, verbose_name="عمال مقاول ب")
+
     
     # Productivity Fields
     productivity_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, verbose_name="الإنتاجية للموقع")
@@ -200,8 +199,7 @@ export default function LocationAllocationMatrix({ enclosures, onChange }) {
                 <tr>
                   <th className="p-2">الموقع</th>
                   <th className="p-2">عمال شركة</th>
-                  <th className="p-2">مقاول أ</th>
-                  <th className="p-2">مقاول ب</th>
+
                   <th className="p-2">الإنتاجية للموقع</th>
                 </tr>
               </thead>

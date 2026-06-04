@@ -30,7 +30,7 @@ def _get_active_farm(user):
 from rest_framework.pagination import PageNumberPagination
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def farms_list_view(request):
     farms = list_farms(company=getattr(request.user, "company", None))
     
@@ -44,9 +44,11 @@ def farms_list_view(request):
     serializer = FarmSerializer(result_page, many=True)
     return paginator.get_paginated_response(serializer.data)
 
+farms_list_view.required_module = "farm"
+
 
 @api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def farm_settings_view(request):
     """
     GET: Retrieve the settings for the active farm.
@@ -77,9 +79,11 @@ def farm_settings_view(request):
     serializer = FarmSettingsSerializer(settings_obj)
     return Response(serializer.data)
 
+farm_settings_view.required_module = "farm"
+
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def location_tree_view(request):
     """
     Returns a recursive tree of LocationNodes for the active farm.
@@ -142,9 +146,11 @@ def location_tree_view(request):
         }
     )
 
+location_tree_view.required_module = "farm"
+
 
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def location_nodes_view(request):
     """
     GET  /farm/location-nodes/?type=STAGE
@@ -204,9 +210,11 @@ def location_nodes_view(request):
     ]
     return Response(data)
 
+location_nodes_view.required_module = "farm"
+
 
 @api_view(["PATCH", "DELETE"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def location_node_detail_view(request, pk):
     """
     PATCH  /farm/location-nodes/<pk>/  — rename or reorder a node
@@ -242,6 +250,8 @@ def location_node_detail_view(request, pk):
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+location_node_detail_view.required_module = "farm"
+
 
 # ─── Enclosure Operational Profile Views ──────────────────────────────────
 
@@ -252,7 +262,7 @@ from serializers.reports_serializers import OperationLogTimelineSerializer
 
 
 @api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def location_node_profile_view(request, pk):
     """
     GET: Returns high-level profile summary for an enclosure (Entity-Centric).
@@ -365,13 +375,16 @@ def location_node_profile_view(request, pk):
         }
     })
 
+location_node_profile_view.required_module = "farm"
+
 
 class LocationNodeTimelineView(APIView):
     """
     Paginated dynamic timeline of operations for an enclosure.
     Uses OperationLog as the atomic event source.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "farm"
 
     def get(self, request, pk):
         try:
@@ -403,7 +416,7 @@ class LocationNodeTimelineView(APIView):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def location_node_analytics_view(request, pk):
     """
     Aggregated analytics with high reliability. Never returns 500.
@@ -422,3 +435,5 @@ def location_node_analytics_view(request, pk):
             "cost_trend": [],
             "error_hint": str(e)
         })
+
+location_node_analytics_view.required_module = "farm"

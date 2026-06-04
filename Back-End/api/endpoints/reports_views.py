@@ -1431,3 +1431,17 @@ class MediaFeedView(APIView):
 
         return Response(media_items)
 
+
+# Centralized authorization injection for reports views
+import inspect
+from rest_framework.views import APIView
+from permissions.role_permissions import HasModuleAccess
+
+for name, obj in list(globals().items()):
+    if inspect.isclass(obj) and issubclass(obj, APIView) and obj.__module__ == __name__:
+        perms = list(getattr(obj, "permission_classes", []))
+        if HasModuleAccess not in perms:
+            perms.insert(0, HasModuleAccess)
+        obj.permission_classes = perms
+        obj.required_module = "reports"
+

@@ -1,6 +1,7 @@
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from permissions.role_permissions import HasModuleAccess
 from rest_framework.response import Response
 from serializers.warehouse_serializers import ItemSerializer, MovementSerializer, WarehouseSerializer, MaterialVerificationAlertSerializer
 from apps.warehouse.models import Item, Movement, Warehouse, MaterialVerificationAlert
@@ -16,7 +17,8 @@ from services.warehouse_service import (
 
 class WarehouseListCreateView(generics.ListCreateAPIView):
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "warehouse"
     pagination_class = None
 
     def get_queryset(self):
@@ -29,7 +31,8 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
 
 class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "warehouse"
 
     def get_queryset(self):
         return Warehouse.objects.filter(company=self.request.user.company)
@@ -40,7 +43,7 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def items_view(request):
     if request.method == "GET":
         items = list_items().filter(company=request.user.company)
@@ -52,9 +55,11 @@ def items_view(request):
         item = create_item({**serializer.validated_data, "company": request.user.company}, user=request.user)
         return Response(ItemSerializer(item).data, status=status.HTTP_201_CREATED)
 
+items_view.required_module = "warehouse"
+
 
 @api_view(["PUT", "DELETE"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def item_detail_view(request, pk):
     try:
         item = Item.objects.get(pk=pk, company=request.user.company)
@@ -71,9 +76,11 @@ def item_detail_view(request, pk):
         delete_item(pk, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+item_detail_view.required_module = "warehouse"
+
 
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasModuleAccess])
 def movements_view(request):
     if request.method == "GET":
         item_id = request.query_params.get("item")
@@ -87,10 +94,13 @@ def movements_view(request):
         mov = create_movement({**serializer.validated_data, "company": request.user.company}, user=request.user)
         return Response(MovementSerializer(mov).data, status=status.HTTP_201_CREATED)
 
+movements_view.required_module = "warehouse"
+
 
 class MaterialAlertFeedView(generics.ListCreateAPIView):
     serializer_class = MaterialVerificationAlertSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "warehouse"
 
     def get_queryset(self):
         return MaterialVerificationAlert.objects.filter(company=self.request.user.company, is_resolved=False)
@@ -101,7 +111,8 @@ class MaterialAlertFeedView(generics.ListCreateAPIView):
 
 class MaterialAlertResolveView(generics.UpdateAPIView):
     serializer_class = MaterialVerificationAlertSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModuleAccess]
+    required_module = "warehouse"
 
     def get_queryset(self):
         return MaterialVerificationAlert.objects.filter(company=self.request.user.company)
@@ -124,9 +135,13 @@ class MaterialAlertResolveView(generics.UpdateAPIView):
                     custom_material_name=instance.suggested_name
                 ).update(fertilizer_item_id=mapped_material_id)
             elif instance.source_report_type == 'pest_control':
-                from apps.reports.models import PestControlReport
+                from apps.reports.models import PestControlReport, AppliedPesticide
                 PestControlReport.objects.filter(
                     id=instance.source_report_id,
+                    custom_pesticide_name=instance.suggested_name
+                ).update(pesticide_item_id=mapped_material_id)
+                AppliedPesticide.objects.filter(
+                    report_id=instance.source_report_id,
                     custom_pesticide_name=instance.suggested_name
                 ).update(pesticide_item_id=mapped_material_id)
         except Exception as exc:

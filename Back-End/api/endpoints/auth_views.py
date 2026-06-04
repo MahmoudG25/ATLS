@@ -511,20 +511,14 @@ def get_app_permissions_view(request):
     Lists all available custom permissions.
     """
     from apps.users.models import AppPermission
-    if AppPermission.objects.count() == 0 or not AppPermission.objects.filter(code="can_post_announcement").exists():
-        defaults = [
-            ("reports.create", "إضافة التقارير", "صلاحية كتابة تقرير يومي أو تقرير حصاد"),
-            ("reports.delete", "حذف التقارير", "صلاحية حذف التقارير اليومية أو الحصاد"),
-            ("farm.manage", "إدارة هيكل المزرعة", "صلاحية إدارة الأقسام والقطاعات والأحواش"),
-            ("warehouse.manage", "إدارة المخازن والمخزون", "صلاحية إضافة وتعديل المخازن وحركات المخزون"),
-            ("accounting.view", "عرض التقارير المالية", "صلاحية استعراض المصروفات والإيرادات في الحسابات"),
-            ("equipment.manage", "إدارة الأسطول والمعدات", "صلاحية إضافة المعدات وتحديثها وتغيير الزيت"),
-            ("hr.manage", "إدارة الموارد البشرية", "صلاحية إدارة شؤون الموظفين والعمال والرواتب"),
-            ("can_post_announcement", "نشر الإعلانات", "صلاحية نشر وإدارة الإعلانات على لوحة الإعلانات"),
-        ]
-        for code, name, desc in defaults:
-            AppPermission.objects.get_or_create(code=code, defaults={"name": name, "description": desc})
-            
+    from permissions.registry import PERMISSIONS as registry_perms
+    
+    for code, info in registry_perms.items():
+        AppPermission.objects.get_or_create(
+            code=code, 
+            defaults={"name": info["label"], "description": info["description"]}
+        )
+        
     perms = AppPermission.objects.all().order_by("name")
     return Response([
         {"id": str(p.id), "code": p.code, "name": p.name, "description": p.description}
@@ -539,7 +533,8 @@ def user_permissions_view(request, id):
     GET /api/users/<uuid:id>/permissions - Get user permissions
     POST /api/users/<uuid:id>/permissions - Update user permissions
     """
-    from apps.users.models import User, AppPermission
+    from apps.users.models import User, AppPermission, ActivityLog
+    from django.core.cache import cache
     try:
         user = User.objects.get(id=id)
         # Check company if not super admin
@@ -553,12 +548,69 @@ def user_permissions_view(request, id):
         elif request.method == "POST":
             permission_codes = request.data.get("permissions", [])
             perms = AppPermission.objects.filter(code__in=permission_codes)
+            
+            # Fetch old permissions for audit logging
+            old_perms = list(user.app_permissions.values_list("code", flat=True))
+            
             user.app_permissions.set(perms)
             user.save()
+            
+            # Invalidate cached permission hash immediately
+            cache_key = f"user_perms_hash_{user.id}"
+            cache.delete(cache_key)
+            
+            # Write to ActivityLog for audit logging
+            try:
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action="CHANGE_PERMISSIONS",
+                    module="governance",
+                    description=f"Admin {request.user.email} changed permissions for user {user.email}. Previous: {old_perms}, New: {permission_codes}."
+                )
+            except Exception as log_err:
+                print(f"Failed to log permission audit: {log_err}")
+                
             return Response({"message": "تم تحديث الصلاحيات بنجاح."})
             
     except User.DoesNotExist:
         return Response({"detail": "المستخدم غير موجود."}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def debug_permissions_view(request):
+    """
+    GET /api/auth/debug-permissions
+    Returns the current user's authorization details and cached/live SHA256 permission hash.
+    """
+    user = request.user
+    role = getattr(user, "role", None)
+    
+    # Custom frontend diagnostic printing
+    msg = request.GET.get("msg")
+    if msg:
+        print(f"\n[FRONTEND LOG] {msg}\n")
+        
+    from permissions.role_permissions import ROLE_FEATURES_MAP
+    from django.core.cache import cache
+    import hashlib
+    
+    role_perms = ROLE_FEATURES_MAP.get(role, [])
+    custom_perms = list(user.app_permissions.values_list("code", flat=True))
+    
+    # Calculate SHA256 permission hash
+    codes = sorted(custom_perms)
+    content = f"{role}:{','.join(codes)}"
+    p_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    
+    return Response({
+        "user": user.email,
+        "role": role,
+        "role_permissions": role_perms,
+        "custom_permissions": custom_perms,
+        "resolved_permissions_hash": p_hash,
+        "is_super_admin": role == "SUPER_ADMIN" or getattr(user, "is_superuser", False),
+    })
 
 
 # ============================================================================

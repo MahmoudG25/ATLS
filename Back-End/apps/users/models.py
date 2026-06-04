@@ -271,3 +271,29 @@ class Announcement(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.company})"
+
+
+from core.tenant import TenantAwareModel
+
+class FarmSystemConfig(TenantAwareModel):
+    # Branding Specs
+    farm_name = models.CharField(max_length=255, default="مزرعة أطلس النموذجية")
+    logo_url = models.URLField(blank=True, null=True)
+    primary_color = models.CharField(max_length=50, default="#1E3A1E") # Deep Academic Green
+    accent_color = models.CharField(max_length=50, default="#D4AF37")  # Wheat Gold
+    currency = models.CharField(max_length=20, default="جنية مصري")
+    active_font = models.CharField(max_length=50, default="Cairo")
+    
+    # Feature Toggles (Global Application Flags)
+    feature_accounting = models.BooleanField(default=True, verbose_name="نظام المحاسبة")
+    feature_hr = models.BooleanField(default=True, verbose_name="نظام الموارد البشرية HR")
+    feature_fleet = models.BooleanField(default=True, verbose_name="منظومة الأسطول والمعدات")
+    feature_warehouse = models.BooleanField(default=True, verbose_name="إدارة المخازن والمستودع")
+
+    class Meta:
+        db_table = 'farm_system_configs'
+        verbose_name = 'إعدادات النظام والمزرعة'
+
+    def __str__(self):
+        return f"Config for {self.company.name if self.company else 'System'}"
+

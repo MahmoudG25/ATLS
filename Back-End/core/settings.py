@@ -95,6 +95,7 @@ MIDDLEWARE = [
     "core.middleware.CompanyMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.UserPermissionsHashMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -212,3 +213,5 @@ CORS_ALLOWED_ORIGINS = [
 CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
+
+CORS_EXPOSE_HEADERS = ["X-User-Permissions-Hash"]
